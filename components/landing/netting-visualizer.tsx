@@ -16,31 +16,41 @@ export function NettingVisualizer() {
         <p className="text-lg text-gray-600 dark:text-gray-400">{nettingVisualizer.description}</p>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-8 items-center justify-center">
+      <div className="flex flex-col lg:flex-row gap-8 items-start justify-center">
         {/* Visualization Canvas */}
         <motion.div 
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.7 }}
-          className="w-full lg:w-2/3 aspect-square md:aspect-[16/9] bg-white dark:bg-black rounded-[2rem] border border-gray-200 dark:border-white/10 shadow-2xl overflow-hidden relative flex flex-col items-center justify-center"
+          className="w-full lg:w-2/3 bg-white dark:bg-black rounded-[2rem] border border-gray-200 dark:border-white/10 shadow-2xl overflow-hidden relative flex flex-col items-center p-8"
         >
-          <div className="absolute inset-0 bg-grid-black/[0.02] dark:bg-grid-white/[0.02] bg-[length:32px_32px]" />
+          {/* Layman Context Banner */}
+          <div className="w-full bg-indigo-50 dark:bg-indigo-500/10 rounded-xl p-4 mb-6 border border-indigo-100 dark:border-indigo-500/20 text-left">
+            <h3 className="font-bold text-indigo-900 dark:text-indigo-300 mb-1 flex items-center gap-2">
+              <Activity className="w-4 h-4" /> Scenario: The Lisbon Trip
+            </h3>
+            <p className="text-sm text-indigo-700 dark:text-indigo-400 leading-relaxed">
+              4 friends travelled to Lisbon. Over the week, they generated <strong>12 separate shared expenses</strong> (hotels, food, vans). In a normal app, settling up means everyone sends multiple international wires back and forth (the chaotic red lines). MeshTab's algorithm collapses these into just <strong>3 direct payments</strong> (the green lines).
+            </p>
+          </div>
+
+          <div className="absolute inset-0 bg-grid-black/[0.02] dark:bg-grid-white/[0.02] bg-[length:32px_32px] pointer-events-none" />
           
-          <div className="relative w-full max-w-md h-72 md:h-96 my-8">
+          <div className="relative w-full max-w-sm aspect-square my-4">
             {/* Ambient Background Glow based on state */}
             <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full blur-[80px] transition-colors duration-1000 ${isNetted ? 'bg-emerald-500/20' : 'bg-rose-500/10'}`} />
 
             {/* Nodes */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-indigo-500/20 border-2 border-indigo-500 rounded-full flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-bold z-20 shadow-[0_0_30px_rgba(99,102,241,0.2)]">
+            <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-indigo-500/20 border-2 border-indigo-500 rounded-full flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-bold z-20 shadow-[0_0_30px_rgba(99,102,241,0.2)]">
               Aisha
             </div>
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center text-sm font-medium border border-gray-200 dark:border-gray-700 z-20">Sarah</div>
-            <div className="absolute bottom-4 left-0 w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center text-sm font-medium border border-gray-200 dark:border-gray-700 z-20">Ben</div>
-            <div className="absolute bottom-4 right-0 w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center text-sm font-medium border border-gray-200 dark:border-gray-700 z-20">Kemi</div>
+            <div className="absolute top-[10%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center text-sm font-medium border border-gray-200 dark:border-gray-700 z-20">Sarah</div>
+            <div className="absolute top-[90%] left-[10%] -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center text-sm font-medium border border-gray-200 dark:border-gray-700 z-20">Ben</div>
+            <div className="absolute top-[90%] left-[90%] -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center text-sm font-medium border border-gray-200 dark:border-gray-700 z-20">Kemi</div>
             
-            {/* SVG Lines Container */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none z-10" overflow="visible">
+            {/* SVG Lines Container - Using absolute viewBox coordinates (0 0 400 400) mapping to percentages */}
+            <svg viewBox="0 0 400 400" className="absolute inset-0 w-full h-full pointer-events-none z-10" overflow="visible">
               
               {/* CHAOTIC LINES (Before Netting) */}
               <AnimatePresence>
@@ -52,14 +62,20 @@ export function NettingVisualizer() {
                     transition={{ duration: 0.5 }}
                     className="text-rose-500/40 dark:text-rose-400/40"
                   >
-                    {/* Crisscrossing Paths */}
-                    <path d="M 50% 0 Q 20% 40% 0 100%" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
-                    <path d="M 50% 0 Q 80% 40% 100% 100%" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
-                    <path d="M 0 100% Q 50% 120% 100% 100%" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
-                    {/* Reverse directed arrows for chaos */}
-                    <path d="M 50% 50% L 0 100%" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
-                    <path d="M 50% 50% L 100% 100%" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
-                    <path d="M 50% 0 L 50% 50%" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
+                    {/* Crisscrossing Paths between all nodes */}
+                    {/* Aisha (200,200), Sarah (200,40), Ben (40,360), Kemi (360,360) */}
+                    
+                    {/* Sarah to Ben */}
+                    <path d="M 200 40 Q 100 200 40 360" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
+                    {/* Sarah to Kemi */}
+                    <path d="M 200 40 Q 300 200 360 360" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
+                    {/* Ben to Kemi */}
+                    <path d="M 40 360 Q 200 380 360 360" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
+                    
+                    {/* To Aisha */}
+                    <path d="M 40 360 L 200 200" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
+                    <path d="M 360 360 L 200 200" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
+                    <path d="M 200 40 L 200 200" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
                   </motion.g>
                 )}
               </AnimatePresence>
@@ -68,31 +84,32 @@ export function NettingVisualizer() {
               <AnimatePresence>
                 {isNetted && (
                   <motion.g
-                    initial={{ opacity: 0, pathLength: 0 }}
-                    animate={{ opacity: 1, pathLength: 1 }}
-                    transition={{ duration: 1, ease: "easeInOut" }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.5 }}
                     className="text-emerald-500 dark:text-emerald-400"
                   >
                     {/* Direct Paths to Aisha */}
                     <motion.path 
-                      d="M 50% 0 L 50% 50%" 
+                      d="M 200 40 L 200 200" 
                       fill="none" stroke="currentColor" strokeWidth="3" 
-                      initial={{ strokeDashoffset: 100, strokeDasharray: 100 }}
-                      animate={{ strokeDashoffset: 0 }}
+                      initial={{ pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
                       transition={{ duration: 1, ease: "easeOut" }}
                     />
                     <motion.path 
-                      d="M 0 100% L 50% 50%" 
+                      d="M 40 360 L 200 200" 
                       fill="none" stroke="currentColor" strokeWidth="3" 
-                      initial={{ strokeDashoffset: 150, strokeDasharray: 150 }}
-                      animate={{ strokeDashoffset: 0 }}
+                      initial={{ pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
                       transition={{ duration: 1, ease: "easeOut", delay: 0.2 }}
                     />
                     <motion.path 
-                      d="M 100% 100% L 50% 50%" 
+                      d="M 360 360 L 200 200" 
                       fill="none" stroke="currentColor" strokeWidth="3" 
-                      initial={{ strokeDashoffset: 150, strokeDasharray: 150 }}
-                      animate={{ strokeDashoffset: 0 }}
+                      initial={{ pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
                       transition={{ duration: 1, ease: "easeOut", delay: 0.4 }}
                     />
                   </motion.g>
@@ -101,7 +118,7 @@ export function NettingVisualizer() {
             </svg>
           </div>
 
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 w-full px-6 flex justify-center">
+          <div className="mt-8 z-30 w-full flex justify-center">
             <button 
               onClick={() => setIsNetted(!isNetted)}
               className={`flex items-center gap-2 px-8 py-4 rounded-full font-bold text-lg transition-all shadow-xl ${isNetted ? 'bg-gray-900 text-white dark:bg-white dark:text-black hover:scale-105' : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105'}`}

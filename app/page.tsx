@@ -9,6 +9,7 @@ import { NettingVisualizer } from "../components/landing/netting-visualizer";
 import { FeatureGrid } from "../components/landing/feature-grid";
 import { ComparisonTable } from "../components/landing/comparison-table";
 import { FAQAccordion } from "../components/landing/faq-accordion";
+import { ThemeToggle } from "../components/theme-toggle";
 import { Network } from "lucide-react";
 import Link from "next/link";
 import { Metadata } from "next";
@@ -36,6 +37,7 @@ export default function LandingPage() {
             <span className="text-xl font-bold tracking-tight">MeshTab</span>
           </div>
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             <Link href="/tab/new" className="btn-primary py-2 text-sm px-6">
               Launch App
             </Link>
