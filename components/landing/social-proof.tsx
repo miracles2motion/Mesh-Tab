@@ -12,17 +12,22 @@ export function SocialProof() {
         </p>
         <div className="flex flex-wrap justify-center items-center gap-10 md:gap-16 opacity-75 transition-all duration-500">
           {socialProof.partners.map((partner) => (
-            <div key={partner.name} className="relative w-36 h-12 md:w-44 md:h-16 flex items-center justify-center hover:opacity-100 transition-opacity">
-              {partner.src.endsWith(".svg") || partner.src.endsWith(".png") ? (
-                <Image 
-                  src={partner.src} 
-                  alt={`${partner.name} Logo`} 
-                  fill 
-                  className="object-contain brightness-0 dark:invert transition-all duration-300" 
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                />
-              ) : (
-                <span className="text-xl font-bold">{partner.name}</span>
+            <div key={partner.name} className="flex items-center justify-center gap-1 hover:opacity-100 transition-opacity">
+              <div className="relative w-36 h-12 md:w-44 md:h-16 flex items-center justify-center">
+                {partner.src.endsWith(".svg") || partner.src.endsWith(".png") ? (
+                  <Image 
+                    src={partner.src} 
+                    alt={`${partner.name} Logo`} 
+                    fill 
+                    className="object-contain brightness-0 dark:invert transition-all duration-300" 
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                  />
+                ) : (
+                  <span className="text-xl font-bold">{partner.name}</span>
+                )}
+              </div>
+              {"showText" in partner && partner.showText && (
+                <span className="text-xl md:text-2xl font-bold lowercase tracking-wide -ml-6">{partner.name}</span>
               )}
             </div>
           ))}

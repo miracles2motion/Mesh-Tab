@@ -19,7 +19,9 @@ export const LANDING_CONTENT = {
       { name: "Dynamic", src: "/logos/dynamic.svg" },
       { name: "Pimlico", src: "/logos/pimlico.svg" },
       { name: "Envio", src: "/logos/envio.png" },
-      { name: "Agora", src: "/logos/agora.svg" }
+      { name: "Agora", src: "/logos/agora.svg" },
+      { name: "Alchemy", src: "/logos/alchemy.svg" },
+      { name: "Mera", src: "/logos/mera.png", showText: true }
     ],
   },
   problemAgitation: {
