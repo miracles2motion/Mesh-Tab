@@ -21,7 +21,7 @@ export const LANDING_CONTENT = {
       { name: "Envio", src: "/logos/envio.png" },
       { name: "Agora", src: "/logos/agora.svg" },
       { name: "Alchemy", src: "/logos/alchemy.svg" },
-      { name: "Mera", src: "/logos/mera.svg" }
+      { name: "Mera", src: "/logos/mera.svg?v=2" }
     ],
   },
   problemAgitation: {
@@ -78,7 +78,7 @@ export const LANDING_CONTENT = {
     headers: ["Feature", "MeshTab", "Splitwise + Bank Transfer"],
     rows: [
       { feature: "Settlement Speed", us: "Instant", them: "3-5 Business Days" },
-      { feature: "FX Fees", us: "0%", them: "3% - 5%" },
+      { feature: "Fee Events / Cost", us: "Reduced to 1–2 (Netted)", them: "Up to 12 Transfers (Crisscrossing)" },
       { feature: "Crisscrossing Payments", us: "Eliminated (Netting)", them: "Required" },
       { feature: "Web3 Onboarding", us: "Passkeys (FaceID)", them: "N/A" }
     ]
@@ -86,11 +86,11 @@ export const LANDING_CONTENT = {
   faq: [
     {
       question: "Do my friends need crypto wallets to join?",
-      answer: "No. MeshTab uses Mera Passkeys, which instantly generates a smart account bound to their FaceID or TouchID. They never see a seed phrase or install a browser extension."
+      answer: "No. MeshTab uses Mera Passkeys, which instantly generate a smart account bound to their FaceID or TouchID. They never see a seed phrase or install a browser extension."
     },
     {
       question: "Who pays for the network gas fees?",
-      answer: "We do. Adding expenses and claiming roster seats are permanently sponsored by our Verifying Paymaster. For final settlement, a tiny sub-cent fee is deducted seamlessly from your stablecoin balance."
+      answer: "Ledger writes (logExpense) are permanently gasless via our Verifying Paymaster, while final settlements deduct a sub-cent fee directly from the AUSD transferred."
     },
     {
       question: "How do I fund my account?",

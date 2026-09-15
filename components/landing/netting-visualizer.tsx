@@ -289,7 +289,7 @@ export function NettingVisualizer() {
                   <TrendingDown className={`w-5 h-5 ${isNetted ? 'text-indigo-600 dark:text-indigo-400' : ''}`} /> Debt Cleared
                 </div>
                 <div className={`text-3xl font-bold transition-colors duration-700 ${isNetted ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-900 dark:text-white'}`}>
-                  {isNetted ? '75.0%' : '0.0%'}
+                  75.0%
                 </div>
               </div>
               <div className="h-10 px-4 bg-white dark:bg-black rounded-full flex items-center justify-center border border-gray-100 dark:border-white/10 shadow-sm shrink-0">
