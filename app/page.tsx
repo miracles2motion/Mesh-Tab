@@ -13,11 +13,14 @@ import { ThemeToggle } from "../components/theme-toggle";
 import { Network } from "lucide-react";
 import Link from "next/link";
 import { Metadata } from "next";
+import Image from "next/image";
 
 export const metadata: Metadata = {
   title: LANDING_CONTENT.metadata.title,
   description: LANDING_CONTENT.metadata.description,
   keywords: [...LANDING_CONTENT.metadata.keywords],
+  openGraph: { images: [{ url: '/og-image.svg' }] },
+  twitter: { images: ['/twitter-card.svg'] }
 };
 
 export default function LandingPage() {
@@ -30,12 +33,10 @@ export default function LandingPage() {
       {/* Navigation */}
       <nav className="fixed top-0 w-full bg-white/80 dark:bg-black/80 backdrop-blur-md z-50 border-b border-gray-100 dark:border-white/10">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-black dark:bg-white rounded-lg flex items-center justify-center">
-              <Network className="w-5 h-5 text-white dark:text-black" />
-            </div>
-            <span className="text-xl font-bold tracking-tight">MeshTab</span>
-          </div>
+          <Link href="/" className="flex items-center">
+            <Image src="/mesh-logo-light.svg" alt="MeshTab Logo" width={140} height={40} className="dark:hidden" priority />
+            <Image src="/mesh-logo-dark.svg" alt="MeshTab Logo" width={140} height={40} className="hidden dark:block" priority />
+          </Link>
           <div className="flex items-center gap-4">
             <ThemeToggle />
             <Link href="/tab/new" className="btn-primary py-2 text-sm px-6">
@@ -71,10 +72,10 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="py-12 border-t border-gray-100 dark:border-white/10 bg-white dark:bg-black">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-2">
-            <Network className="w-5 h-5 text-gray-900 dark:text-white" />
-            <span className="font-bold tracking-tight">MeshTab</span>
-          </div>
+          <Link href="/" className="flex items-center">
+            <Image src="/mesh-logo-light.svg" alt="MeshTab Logo" width={120} height={34} className="dark:hidden" />
+            <Image src="/mesh-logo-dark.svg" alt="MeshTab Logo" width={120} height={34} className="hidden dark:block" />
+          </Link>
           <p className="text-sm text-gray-500">Built for the Monad Metropolis 2026 Hackathon.</p>
           <div className="flex gap-6 text-sm text-gray-500">
             <a href="#" className="hover:text-black dark:hover:text-white transition-colors">Twitter</a>
