@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LANDING_CONTENT } from "../../content/landing";
 import { Activity, RotateCcw, TrendingDown, DollarSign, CheckCircle2 } from "lucide-react";
@@ -8,6 +8,22 @@ import { Activity, RotateCcw, TrendingDown, DollarSign, CheckCircle2 } from "luc
 export function NettingVisualizer() {
   const { nettingVisualizer } = LANDING_CONTENT;
   const [isNetted, setIsNetted] = useState(false);
+  const [floatingNumbers, setFloatingNumbers] = useState<{id: number, val: string, x: number, y: number, delay: number}[]>([]);
+
+  // Generate random floating expenses for the "Chaos" state
+  useEffect(() => {
+    if (!isNetted) {
+      const amounts = ["$12", "$45", "$120", "$8", "$210", "$34", "$65", "$90"];
+      const newNumbers = Array.from({ length: 12 }).map((_, i) => ({
+        id: i,
+        val: amounts[Math.floor(Math.random() * amounts.length)],
+        x: Math.random() * 80 + 10, // 10% to 90%
+        y: Math.random() * 80 + 10, // 10% to 90%
+        delay: Math.random() * 2 // Random start delay
+      }));
+      setFloatingNumbers(newNumbers);
+    }
+  }, [isNetted]);
 
   return (
     <section className="px-6 pb-32 max-w-6xl mx-auto pt-20">
@@ -26,7 +42,7 @@ export function NettingVisualizer() {
           className="w-full lg:w-2/3 bg-white dark:bg-black rounded-[2rem] border border-gray-200 dark:border-white/10 shadow-2xl overflow-hidden relative flex flex-col items-center p-8"
         >
           {/* Layman Context Banner */}
-          <div className="w-full bg-indigo-50 dark:bg-indigo-500/10 rounded-xl p-6 mb-6 border border-indigo-100 dark:border-indigo-500/20 text-left">
+          <div className="w-full bg-indigo-50 dark:bg-indigo-500/10 rounded-xl p-6 mb-6 border border-indigo-100 dark:border-indigo-500/20 text-left z-20 relative">
             <h3 className="font-bold text-xl text-indigo-900 dark:text-indigo-300 mb-4 flex items-center gap-2">
               <Activity className="w-5 h-5" /> The Magic of Netting
             </h3>
@@ -64,7 +80,29 @@ export function NettingVisualizer() {
             <div className="absolute top-[90%] left-[10%] -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center text-sm font-medium border border-gray-200 dark:border-gray-700 z-20">Ben</div>
             <div className="absolute top-[90%] left-[90%] -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center text-sm font-medium border border-gray-200 dark:border-gray-700 z-20">Kemi</div>
             
-            {/* SVG Lines Container - Using absolute viewBox coordinates (0 0 400 400) mapping to percentages */}
+            {/* Floating Expenses (Chaos Mode Only) */}
+            <AnimatePresence>
+              {!isNetted && floatingNumbers.map((num) => (
+                <motion.div
+                  key={num.id}
+                  initial={{ opacity: 0, y: 10, scale: 0.5 }}
+                  animate={{ opacity: [0, 1, 0], y: -30, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0 }}
+                  transition={{ 
+                    duration: 3, 
+                    repeat: Infinity, 
+                    delay: num.delay,
+                    ease: "easeOut"
+                  }}
+                  className="absolute text-xs font-bold text-rose-500/70 dark:text-rose-400/70 pointer-events-none z-10"
+                  style={{ left: `${num.x}%`, top: `${num.y}%` }}
+                >
+                  {num.val}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+
+            {/* SVG Lines Container */}
             <svg viewBox="0 0 400 400" className="absolute inset-0 w-full h-full pointer-events-none z-10" overflow="visible">
               
               {/* CHAOTIC LINES (Before Netting) */}
@@ -78,13 +116,8 @@ export function NettingVisualizer() {
                     className="text-rose-500/40 dark:text-rose-400/40"
                   >
                     {/* Crisscrossing Paths between all nodes */}
-                    {/* Aisha (200,200), Sarah (200,40), Ben (40,360), Kemi (360,360) */}
-                    
-                    {/* Sarah to Ben */}
                     <path d="M 200 40 Q 100 200 40 360" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
-                    {/* Sarah to Kemi */}
                     <path d="M 200 40 Q 300 200 360 360" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
-                    {/* Ben to Kemi */}
                     <path d="M 40 360 Q 200 380 360 360" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
                     
                     {/* To Aisha */}
@@ -131,6 +164,31 @@ export function NettingVisualizer() {
                 )}
               </AnimatePresence>
             </svg>
+
+            {/* Explicit Debt Labels (After Netting) */}
+            <AnimatePresence>
+              {isNetted && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.5, delay: 1 }}
+                  className="absolute inset-0 pointer-events-none z-30"
+                >
+                  {/* Sarah -> Aisha */}
+                  <div className="absolute top-[30%] left-[50%] -translate-x-1/2 -translate-y-1/2 bg-emerald-100 dark:bg-emerald-900/80 text-emerald-800 dark:text-emerald-100 text-xs font-bold px-2 py-1 rounded-full border border-emerald-200 dark:border-emerald-700/50 shadow-sm whitespace-nowrap backdrop-blur-md">
+                    Sarah owes $180
+                  </div>
+                  {/* Ben -> Aisha */}
+                  <div className="absolute top-[75%] left-[25%] -translate-x-1/2 -translate-y-1/2 bg-emerald-100 dark:bg-emerald-900/80 text-emerald-800 dark:text-emerald-100 text-xs font-bold px-2 py-1 rounded-full border border-emerald-200 dark:border-emerald-700/50 shadow-sm whitespace-nowrap backdrop-blur-md">
+                    Ben owes $80
+                  </div>
+                  {/* Kemi -> Aisha */}
+                  <div className="absolute top-[75%] left-[75%] -translate-x-1/2 -translate-y-1/2 bg-emerald-100 dark:bg-emerald-900/80 text-emerald-800 dark:text-emerald-100 text-xs font-bold px-2 py-1 rounded-full border border-emerald-200 dark:border-emerald-700/50 shadow-sm whitespace-nowrap backdrop-blur-md">
+                    Kemi owes $40
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           <div className="mt-8 z-30 w-full flex justify-center">
@@ -156,7 +214,7 @@ export function NettingVisualizer() {
             <div className="text-4xl font-black text-gray-900 dark:text-white line-through decoration-rose-500/50 decoration-4">
               $1,200.00
             </div>
-            <p className="text-sm text-gray-500 mt-2">Total I.O.Us generated on trip</p>
+            <p className="text-sm text-gray-500 mt-2 font-medium">The total sum of all hotel, food, and taxi receipts logged.</p>
           </motion.div>
 
           <motion.div 
@@ -169,7 +227,7 @@ export function NettingVisualizer() {
             <div className={`text-4xl font-black transition-colors duration-700 ${isNetted ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-white'}`}>
               $300.00
             </div>
-            <p className="text-sm text-gray-500 mt-2">Minimum capital needed to settle</p>
+            <p className="text-sm text-gray-500 mt-2 font-medium">The actual money that needs to move to settle all debts.</p>
           </motion.div>
 
           <motion.div 
@@ -191,7 +249,7 @@ export function NettingVisualizer() {
                 <span className="text-lg font-black text-indigo-500">3</span>
               </div>
             </div>
-            <p className="text-sm text-gray-500 mt-2">Transactions reduced</p>
+            <p className="text-sm text-gray-500 mt-2 font-medium">$900 of redundant debt perfectly cancelled out.</p>
           </motion.div>
         </div>
       </div>
