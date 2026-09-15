@@ -10,15 +10,15 @@ export function SocialProof() {
         <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-8 uppercase tracking-widest">
           {socialProof.text}
         </p>
-        <div className="flex flex-wrap justify-center items-center gap-12 md:gap-20 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+        <div className="flex flex-wrap justify-center items-center gap-10 md:gap-16 opacity-75 transition-all duration-500">
           {socialProof.partners.map((partner) => (
-            <div key={partner.name} className="relative w-32 h-12 flex items-center justify-center">
+            <div key={partner.name} className="relative w-36 h-12 md:w-44 md:h-16 flex items-center justify-center hover:opacity-100 transition-opacity">
               {partner.src.endsWith(".svg") || partner.src.endsWith(".png") ? (
                 <Image 
                   src={partner.src} 
                   alt={`${partner.name} Logo`} 
                   fill 
-                  className="object-contain" 
+                  className="object-contain dark:brightness-0 dark:invert mix-blend-multiply dark:mix-blend-normal" 
                   sizes="(max-width: 768px) 100vw, 33vw"
                 />
               ) : (
