@@ -185,10 +185,10 @@ export function NettingVisualizer() {
                   {isNetted ? '75.0%' : '0.0%'}
                 </div>
               </div>
-              <div className="w-12 h-12 bg-white dark:bg-black rounded-full flex items-center justify-center border border-gray-100 dark:border-white/10">
-                <span className="text-xl font-black">12</span>
-                <span className="text-xs text-gray-400 mx-1">→</span>
-                <span className="text-xl font-black text-indigo-500">3</span>
+              <div className="h-10 px-4 bg-white dark:bg-black rounded-full flex items-center justify-center border border-gray-100 dark:border-white/10 shadow-sm shrink-0">
+                <span className="text-lg font-black">12</span>
+                <span className="text-sm text-gray-400 mx-2">→</span>
+                <span className="text-lg font-black text-indigo-500">3</span>
               </div>
             </div>
             <p className="text-sm text-gray-500 mt-2">Transactions reduced</p>
