@@ -21,7 +21,7 @@ export const LANDING_CONTENT = {
       { name: "Envio", src: "/logos/envio.png" },
       { name: "Agora", src: "/logos/agora.svg" },
       { name: "Alchemy", src: "/logos/alchemy.svg" },
-      { name: "Mera", src: "/logos/mera.svg?v=2" }
+      { name: "Mera", src: "/logos/mera.svg" }
     ],
   },
   problemAgitation: {
