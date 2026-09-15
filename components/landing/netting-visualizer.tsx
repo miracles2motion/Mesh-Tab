@@ -191,7 +191,7 @@ export function NettingVisualizer() {
             <motion.div
               animate={currentPos[0]}
               transition={{ duration: 0.8, ease: "easeInOut", delay: isNetted ? 0.2 : 0 }}
-              className={`absolute -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full flex items-center justify-center font-bold z-20 shadow-xl border-2 transition-colors duration-1000 ${isNetted ? 'bg-indigo-500 border-indigo-400 text-white shadow-[0_0_30px_rgba(99,102,241,0.5)]' : 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-900 dark:text-gray-100'}`}
+              className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full flex items-center justify-center font-bold z-20 shadow-xl border-2 transition-all duration-1000 ${isNetted ? 'w-16 h-16 bg-indigo-500 border-indigo-400 text-white shadow-[0_0_30px_rgba(99,102,241,0.5)]' : 'w-12 h-12 bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-900 dark:text-gray-100'}`}
             >
               {roles[0]}
             </motion.div>
