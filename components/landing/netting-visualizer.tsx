@@ -26,13 +26,28 @@ export function NettingVisualizer() {
           className="w-full lg:w-2/3 bg-white dark:bg-black rounded-[2rem] border border-gray-200 dark:border-white/10 shadow-2xl overflow-hidden relative flex flex-col items-center p-8"
         >
           {/* Layman Context Banner */}
-          <div className="w-full bg-indigo-50 dark:bg-indigo-500/10 rounded-xl p-4 mb-6 border border-indigo-100 dark:border-indigo-500/20 text-left">
-            <h3 className="font-bold text-indigo-900 dark:text-indigo-300 mb-1 flex items-center gap-2">
-              <Activity className="w-4 h-4" /> Scenario: The Lisbon Trip
+          <div className="w-full bg-indigo-50 dark:bg-indigo-500/10 rounded-xl p-6 mb-6 border border-indigo-100 dark:border-indigo-500/20 text-left">
+            <h3 className="font-bold text-xl text-indigo-900 dark:text-indigo-300 mb-4 flex items-center gap-2">
+              <Activity className="w-5 h-5" /> The Magic of Netting
             </h3>
-            <p className="text-sm text-indigo-700 dark:text-indigo-400 leading-relaxed">
-              4 friends travelled to Lisbon. Over the week, they generated <strong>12 separate shared expenses</strong> (hotels, food, vans). In a normal app, settling up means everyone sends multiple international wires back and forth (the chaotic red lines). MeshTab's algorithm collapses these into just <strong>3 direct payments</strong> (the green lines).
-            </p>
+            
+            <div className="space-y-4 text-indigo-800 dark:text-indigo-200">
+              <div className="flex gap-3 items-start">
+                <div className="w-3 h-3 mt-1.5 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)] shrink-0" />
+                <p className="leading-relaxed">
+                  <strong className="text-indigo-900 dark:text-indigo-100 block mb-1">Without MeshTab (The Chaos):</strong> 
+                  4 friends on a trip generate 12 shared expenses. Everyone owes everyone, resulting in a chaotic mess of international bank transfers and heavy FX fees.
+                </p>
+              </div>
+              
+              <div className="flex gap-3 items-start">
+                <div className="w-3 h-3 mt-1.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)] shrink-0" />
+                <p className="leading-relaxed">
+                  <strong className="text-indigo-900 dark:text-indigo-100 block mb-1">With MeshTab (The Solution):</strong> 
+                  Click <em>"Calculate Settlement Map"</em> below. Our algorithm instantly cancels out mutual debts, reducing 12 payments down to just 3 direct transfers.
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="absolute inset-0 bg-grid-black/[0.02] dark:bg-grid-white/[0.02] bg-[length:32px_32px] pointer-events-none" />

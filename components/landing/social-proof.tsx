@@ -18,7 +18,7 @@ export function SocialProof() {
                   src={partner.src} 
                   alt={`${partner.name} Logo`} 
                   fill 
-                  className="object-contain dark:brightness-0 dark:invert mix-blend-multiply dark:mix-blend-normal" 
+                  className="object-contain brightness-0 dark:invert transition-all duration-300" 
                   sizes="(max-width: 768px) 100vw, 33vw"
                 />
               ) : (
