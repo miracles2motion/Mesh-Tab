@@ -7,6 +7,9 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Force Tailwind v4 to use class-based dark mode instead of media query */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   /* Clean, professional light mode default for marketing */
   --background: #ffffff;
