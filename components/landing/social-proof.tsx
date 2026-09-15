@@ -11,26 +11,29 @@ export function SocialProof() {
           {socialProof.text}
         </p>
         <div className="flex flex-wrap justify-center items-center gap-10 md:gap-16 opacity-75 transition-all duration-500">
-          {socialProof.partners.map((partner) => (
-            <div key={partner.name} className="flex items-center justify-center gap-1 hover:opacity-100 transition-opacity">
-              <div className="relative w-36 h-12 md:w-44 md:h-16 flex items-center justify-center">
-                {partner.src.endsWith(".svg") || partner.src.endsWith(".png") ? (
-                  <Image 
-                    src={partner.src} 
-                    alt={`${partner.name} Logo`} 
-                    fill 
-                    className="object-contain brightness-0 dark:invert transition-all duration-300" 
-                    sizes="(max-width: 768px) 100vw, 33vw"
-                  />
-                ) : (
-                  <span className="text-xl font-bold">{partner.name}</span>
+          {socialProof.partners.map((partner) => {
+            const hasText = "showText" in partner && partner.showText;
+            return (
+              <div key={partner.name} className="flex items-center justify-center gap-3 hover:opacity-100 transition-opacity">
+                <div className={`relative flex items-center justify-center ${hasText ? "w-10 h-10 md:w-12 md:h-12" : "w-36 h-12 md:w-44 md:h-16"}`}>
+                  {partner.src.endsWith(".svg") || partner.src.endsWith(".png") ? (
+                    <Image 
+                      src={partner.src} 
+                      alt={`${partner.name} Logo`} 
+                      fill 
+                      className="object-contain brightness-0 dark:invert transition-all duration-300" 
+                      sizes="(max-width: 768px) 100vw, 33vw"
+                    />
+                  ) : (
+                    <span className="text-xl font-bold">{partner.name}</span>
+                  )}
+                </div>
+                {hasText && (
+                  <span className="text-3xl md:text-4xl font-bold lowercase tracking-tight -ml-1" style={{ fontFamily: "Georgia, serif" }}>{partner.name}</span>
                 )}
               </div>
-              {"showText" in partner && partner.showText && (
-                <span className="text-xl md:text-2xl font-bold lowercase tracking-wide -ml-6">{partner.name}</span>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>
