@@ -37,53 +37,66 @@ export default function TabDashboard() {
     <div className="flex flex-col h-full bg-black/40">
       
       {/* Header */}
-      <header className="px-6 pt-10 pb-4 flex items-center justify-between sticky top-0 z-10 bg-black/40 backdrop-blur-xl border-b border-white/5">
+      <header className="px-6 md:px-12 pt-10 pb-4 flex items-center justify-between sticky top-0 z-10 bg-black/40 backdrop-blur-xl border-b border-white/5">
         <div>
-          <h1 className="text-xl font-bold text-white">Lisbon Weekend</h1>
-          <div className="flex items-center gap-1.5 text-xs text-emerald-400 mt-1">
-            <Activity className="w-3 h-3 animate-pulse" />
+          <h1 className="text-xl md:text-3xl font-bold text-white">Lisbon Weekend</h1>
+          <div className="flex items-center gap-1.5 text-xs md:text-sm text-emerald-400 mt-1">
+            <Activity className="w-3 h-3 md:w-4 md:h-4 animate-pulse" />
             <span>Monad Mainnet • 0.3s</span>
           </div>
         </div>
-        <button className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10">
-          <UserCircle2 className="w-6 h-6 text-white/70" />
+        <button className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 flex items-center justify-center border border-white/10 hover:bg-white/20 transition-colors">
+          <UserCircle2 className="w-6 h-6 md:w-7 md:h-7 text-white/70" />
         </button>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-8 pb-32">
+      <div className="flex-1 p-6 md:p-12 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-10 pb-32">
         
-        {/* Personal Balance Card */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className={`glass-panel p-6 relative overflow-hidden ${
-            currentUserData?.type === 'debtor' ? 'shadow-rose-500/10' : 'shadow-emerald-500/10'
-          }`}
-        >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        {/* Left Column (Stats & Actions) */}
+        <div className="lg:col-span-4 space-y-8">
+          {/* Personal Balance Card */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`glass-panel p-6 md:p-8 relative overflow-hidden ${
+              currentUserData?.type === 'debtor' ? 'shadow-rose-500/10' : 'shadow-emerald-500/10'
+            }`}
+          >
+            <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+            
+            <p className="text-sm md:text-base text-white/60 mb-1">Your Net Balance</p>
+            <div className="flex items-end gap-3">
+              <h2 className="text-5xl md:text-6xl font-bold text-white tracking-tight">
+                {currentUserData?.type === 'debtor' ? '-' : '+'}{formatCurrency(currentUserData?.balance || 0)}
+              </h2>
+            </div>
+            
+            <div className="mt-8 flex gap-3">
+               {currentUserData?.type === 'debtor' ? (
+                  <button onClick={() => setShowSettlement(true)} className="flex-1 bg-white text-black font-semibold py-4 rounded-xl hover:bg-white/90 transition-colors flex justify-center items-center gap-2 text-lg">
+                    <Zap className="w-5 h-5" /> Settle Debt
+                  </button>
+               ) : (
+                  <button className="flex-1 bg-indigo-500 text-white font-semibold py-4 rounded-xl hover:bg-indigo-600 transition-colors text-lg">
+                    Remind Group
+                  </button>
+               )}
+            </div>
+          </motion.div>
           
-          <p className="text-sm text-white/60 mb-1">Your Net Balance</p>
-          <div className="flex items-end gap-3">
-            <h2 className="text-4xl font-bold text-white">
-              {currentUserData?.type === 'debtor' ? '-' : '+'}{formatCurrency(currentUserData?.balance || 0)}
-            </h2>
+          {/* Desktop Actions (Hidden on mobile) */}
+          <div className="hidden lg:flex flex-col gap-4">
+            <button onClick={() => setShowNetting(true)} className="glass-button w-full py-5 text-white font-semibold gap-3 border-indigo-500/30 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-100 text-lg rounded-2xl">
+              <Activity className="w-6 h-6" /> Run Tangle Netting
+            </button>
+            <button onClick={() => setShowAddExpense(true)} className="w-full py-5 rounded-2xl bg-white text-black font-semibold shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:scale-[1.02] transition-transform active:scale-95 flex items-center justify-center gap-2 text-lg">
+              <Plus className="w-6 h-6" /> Add New Expense
+            </button>
           </div>
-          
-          <div className="mt-6 flex gap-3">
-             {currentUserData?.type === 'debtor' ? (
-                <button onClick={() => setShowSettlement(true)} className="flex-1 bg-white text-black font-semibold py-3 rounded-xl hover:bg-white/90 transition-colors flex justify-center items-center gap-2">
-                  <Zap className="w-4 h-4" /> Settle Debt
-                </button>
-             ) : (
-                <button className="flex-1 bg-indigo-500 text-white font-semibold py-3 rounded-xl hover:bg-indigo-600 transition-colors">
-                  Remind Group
-                </button>
-             )}
-          </div>
-        </motion.div>
+        </div>
 
-        {/* Group Roster Chips */}
-        <div className="space-y-3">
+        {/* Right Column (Roster & Feed) */}
+        <div className="lg:col-span-8 space-y-10">
           <div className="flex justify-between items-center">
             <h3 className="text-sm font-medium text-white/80">Group Roster</h3>
             <span className="text-xs text-white/40">Gross Volume: $1,200.00</span>
@@ -149,16 +162,15 @@ export default function TabDashboard() {
             ))}
           </div>
         </div>
-
       </div>
 
-      {/* Floating Action Bar */}
-      <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none">
-        <div className="flex gap-4 pointer-events-auto">
-          <button onClick={() => setShowNetting(true)} className="glass-button flex-1 py-4 text-white font-medium gap-2 border-indigo-500/30 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-100">
+      {/* Mobile Floating Action Bar (Hidden on Desktop) */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none z-40">
+        <div className="flex gap-4 pointer-events-auto max-w-7xl mx-auto w-full">
+          <button onClick={() => setShowNetting(true)} className="glass-button flex-1 py-4 text-white font-medium gap-2 border-indigo-500/30 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-100 rounded-2xl">
             <Activity className="w-5 h-5" /> Tangle Netting
           </button>
-          <button onClick={() => setShowAddExpense(true)} className="w-14 h-14 rounded-2xl bg-white text-black flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:scale-105 transition-transform active:scale-95">
+          <button onClick={() => setShowAddExpense(true)} className="w-14 h-14 rounded-2xl bg-white text-black flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:scale-105 transition-transform active:scale-95 flex-shrink-0">
             <Plus className="w-6 h-6" />
           </button>
         </div>

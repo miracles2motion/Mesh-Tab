@@ -25,7 +25,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${outfit.variable} ${geistMono.variable} h-full dark`}>
       <body className="min-h-full flex flex-col antialiased selection:bg-indigo-500/30">
-        <main className="flex-1 flex flex-col mx-auto w-full max-w-md bg-black/20 min-h-screen relative shadow-2xl overflow-x-hidden border-x border-white/5">
+        <main className="flex-1 flex flex-col w-full bg-black/20 min-h-screen relative shadow-2xl overflow-x-hidden">
           {children}
         </main>
       </body>
