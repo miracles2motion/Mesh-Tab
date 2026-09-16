@@ -39,7 +39,7 @@ export default function LandingPage() {
           </Link>
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <Link href="/tab/new" className="btn-primary py-2 text-sm px-6">
+            <Link href="/login" className="btn-primary py-2 text-sm px-6">
               Launch App
             </Link>
           </div>
@@ -62,7 +62,7 @@ export default function LandingPage() {
           <div className="max-w-3xl mx-auto">
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">{finalCta.title}</h2>
             <p className="text-indigo-100 text-lg mb-10">{finalCta.description}</p>
-            <Link href="/tab/new" className="bg-white text-indigo-600 px-8 py-4 rounded-full font-bold text-lg hover:scale-105 transition-transform shadow-xl inline-block">
+            <Link href="/login" className="bg-white text-indigo-600 px-8 py-4 rounded-full font-bold text-lg hover:scale-105 transition-transform shadow-xl inline-block">
               {finalCta.cta}
             </Link>
           </div>
