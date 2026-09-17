@@ -44,7 +44,7 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean, onClose:
                   onClick={() => setTab("ai")}
                   className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${tab === "ai" ? "text-indigo-400" : "text-white/40 hover:text-white/70"}`}
                 >
-                  <Sparkles className="w-4 h-4" /> AI Concierge
+                  <Camera className="w-4 h-4" /> Smart Scan
                 </button>
                 <button 
                   onClick={() => setTab("manual")}
@@ -117,7 +117,7 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean, onClose:
                 </motion.div>
               )}
 
-              {/* Manual mode could go here, omitting for brevity to focus on AI wow factor */}
+              {/* Manual mode alternative */}
             </div>
           </motion.div>
         </motion.div>

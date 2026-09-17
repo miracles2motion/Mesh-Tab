@@ -8,13 +8,14 @@ import { Button } from "../../components/ui/button";
 
 import { ThemeToggle } from "../../components/theme-toggle";
 
-import { saveStoredUser, AVATAR_COLORS } from "../../lib/user";
+import { saveStoredUser, AVATAR_COLORS, saveBuddySettings } from "../../lib/user";
 
 function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [name, setName] = useState("");
   const [selectedColor, setSelectedColor] = useState(AVATAR_COLORS[0]);
+  const [enableBuddy, setEnableBuddy] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isInvite = searchParams.get("invite") === "true";
@@ -27,6 +28,11 @@ function OnboardingContent() {
     setIsSubmitting(true);
     const colorIndex = AVATAR_COLORS.indexOf(selectedColor);
     saveStoredUser(name.trim(), colorIndex >= 0 ? colorIndex : 0);
+    saveBuddySettings({
+      enabled: enableBuddy,
+      name: `${name.trim()}'s Buddy`,
+      color: selectedColor
+    });
     await new Promise((resolve) => setTimeout(resolve, 1000));
     
     if (isInvite && inviteTab) {
@@ -88,6 +94,31 @@ function OnboardingContent() {
                 />
               ))}
             </div>
+          </div>
+
+          {/* MeshBuddy Opt-In Toggle */}
+          <div className="p-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl flex items-center justify-between">
+            <div className="space-y-0.5 text-left">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-semibold text-slate-900 dark:text-white">Enable MeshBuddy</span>
+                <span className="text-[10px] bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold px-1.5 py-0.2 rounded-full border border-indigo-500/20">Co-Pilot</span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-white/50">Smart tips, netting suggestions & guidance</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setEnableBuddy(!enableBuddy)}
+              className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
+                enableBuddy ? "bg-indigo-600" : "bg-slate-300 dark:bg-white/10"
+              }`}
+              aria-label="Toggle MeshBuddy"
+            >
+              <div
+                className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${
+                  enableBuddy ? "translate-x-7" : "translate-x-1"
+                }`}
+              />
+            </button>
           </div>
 
           <Button

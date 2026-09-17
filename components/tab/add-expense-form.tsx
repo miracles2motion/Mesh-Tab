@@ -7,6 +7,8 @@ import Image from "next/image";
 import { Check, ChevronDown, Sparkles, Camera, Mic, Zap, Loader2, Upload, FileText, SplitSquareHorizontal, AlertCircle } from "lucide-react";
 
 import { useUserProfile, saveStoredExpense } from "../../lib/user";
+import { toast } from "sonner";
+import { sounds } from "../../lib/sounds";
 
 interface AddExpenseFormProps {
   onSuccess?: () => void;
@@ -60,17 +62,23 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
       setSplitType("equal");
       setIsAiProcessing(false);
       setShowDraft(true);
+      sounds.playSuccessChime();
+      toast.success("Receipt Scanned via OCR", {
+        description: `Extracted $84.50 from ${file.name}. Ready to review.`
+      });
       setAiNotice(`Receipt Verified: ${file.name} • $84.50 total extracted`);
     }, 1500);
   };
 
   const handleTriggerUpload = () => {
+    sounds.playClick();
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
 
   const handleVoiceNote = () => {
+    sounds.playClick();
     // Check browser SpeechRecognition support
     const SpeechRecognition = typeof window !== "undefined" && ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
     if (SpeechRecognition) {
@@ -99,6 +107,10 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
             setSplitType("equal");
             setIsAiProcessing(false);
             setShowDraft(true);
+            sounds.playSuccessChime();
+            toast.success("Voice Expense Parsed", {
+              description: `Extracted $${parsedAmount} for "${transcript.slice(0, 25)}..."`
+            });
             setAiNotice(`Voice Note Parsed: "${transcript}"`);
           }, 1200);
         };
@@ -127,6 +139,10 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
       setSplitType("equal");
       setIsAiProcessing(false);
       setShowDraft(true);
+      sounds.playSuccessChime();
+      toast.success("Voice Expense Parsed", {
+        description: "Extracted $120.00 for Lisbon Airport Vans."
+      });
       setAiNotice("Extracted: Lisbon Airport Vans • $120.00 (Split equally)");
     }, 1500);
   };
@@ -142,6 +158,7 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
   }, [activeUser]);
 
   const toggleSplitMember = (member: string) => {
+    sounds.playClick();
     if (splitBetween.includes(member)) {
       if (splitBetween.length === 1) return; // Prevent deselecting everyone
       setSplitBetween(splitBetween.filter(m => m !== member));
@@ -173,6 +190,10 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
 
     // 4. Success
     setTxState("success");
+    sounds.playSuccessChime();
+    toast.success("Expense Logged to Ledger", {
+      description: `$${amount} logged for "${desc.trim()}". Zero gas fees sponsored.`
+    });
     await new Promise(r => setTimeout(r, 1000));
     
     setTxState("idle");
@@ -206,7 +227,7 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
                 onClick={() => setEntryMode("ai")}
                 className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors ${entryMode === "ai" ? "bg-indigo-600 text-white shadow-sm" : "text-slate-500 dark:text-white/50"}`}
               >
-                <Sparkles className="w-3 h-3 text-amber-400" /> AI Concierge
+                <Camera className="w-3 h-3 text-white" /> Smart Scan
               </button>
             </div>
           </div>
@@ -287,7 +308,7 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                      <span className="text-xs font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider">AI Draft Proposal</span>
+                      <span className="text-xs font-bold text-indigo-900 dark:text-indigo-300 uppercase tracking-wider">Scanned Proposal</span>
                     </div>
                     <span className="text-base font-bold text-slate-900 dark:text-white tabular-nums">${amount}</span>
                   </div>
@@ -338,7 +359,7 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
               <label className="text-sm font-semibold text-slate-700 dark:text-white/80">Amount (AUSD)</label>
               {showDraft && (
                 <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md">
-                  Editable • AI Extracted
+                  Editable • Auto-Extracted
                 </span>
               )}
             </div>
@@ -361,7 +382,7 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
               <label className="text-sm font-semibold text-slate-700 dark:text-white/80">Description</label>
               {showDraft && (
                 <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md">
-                  Editable • AI Extracted
+                  Editable • Auto-Extracted
                 </span>
               )}
             </div>

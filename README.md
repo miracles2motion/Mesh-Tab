@@ -17,7 +17,7 @@
 
 **The Solution:** MeshTab replaces manual notebooks with an automated, zero-friction settlement protocol:
 - **Multilateral Netting Engine ("The Tangle"):** An off-chain graph algorithm cancels out circular debt loops ($A \to B \to C \to A$), reducing total payment volume and cross-transfers by up to **75%**.
-- **Multimodal AI Concierge:** Snap receipt photos via native mobile camera OCR or dictate expenses with live voice recognition. AI extracts line items into an editable staging card for human verification before signing.
+- **Smart Receipt OCR & Voice Recognition:** Snap receipt photos via mobile camera OCR or dictate expenses with live voice recognition. The parser extracts line items into an editable staging card for human verification before signing.
 - **Biometric Passkeys (Mera):** One-tap FaceID/TouchID onboarding using hardware-secured WebAuthn (P-256). Zero seed phrases, extensions, or wallet popups.
 - **Sub-Second Digital Dollar Settlement:** Direct, gasless debt settlement in **Agora AUSD** powered by **Monad's 10,000 TPS** and **Pimlico Account Abstraction**.
 - **Radical Web3→Web2 Abstraction:** Complex blockchain mechanics (gas, nonces, RPCs, hex signatures) are completely abstracted into a clean, modern consumer fintech UI.
@@ -29,7 +29,7 @@
 | Feature | Description |
 |---|---|
 | 🔄 **Multilateral Netting** | Resolves complex group debts into the absolute minimum direct settlement transactions. |
-| 📸 **Receipt OCR & Voice AI** | Camera photo parsing and voice note transcription with human-in-the-loop overrides. |
+| 📸 **Receipt OCR & Voice Recognition** | Camera photo parsing and voice note transcription with human-in-the-loop overrides. |
 | 🛡️ **Active Balance Protection** | Prevents group members with active debts from being removed until settled ($0.00). |
 | ⛽ **Sponsored Gas (ERC-4337)** | All user operations (expenses, joins, netting) are permanently sponsored by Paymasters. |
 | 🌓 **Light & Dark Parity** | High-contrast Day mode and sleek Dark mode with instant toggle and zero layout shift. |
@@ -43,7 +43,7 @@
 graph TD
     subgraph Client ["Client Layer (Next.js 16 + React 19)"]
         UI["Consumer UI & Mobile Sticky Dock"]
-        AI["Multimodal AI Concierge (OCR + Voice)"]
+        PARSER["Smart Receipt & Voice Parser (OCR + Web Speech)"]
     end
 
     subgraph Auth ["Biometric Auth (Mera)"]
@@ -144,7 +144,7 @@ NEXT_PUBLIC_AUSD_CONTRACT_ADDRESS=your_deployed_ausd_address
 3. **The Financial Hub (`/home`):** View your aggregate net balance (*You Owe* vs. *You're Owed*). Filter tabs or tap **Lisbon Weekend**.
 4. **Multimodal Expense Logging (`/tab/lisbon-24/expense/new`):** 
    - Click **Add New Expense** $\to$ tap **Receipt OCR** or **Voice Input**.
-   - Notice the **Staging Proposal Card** with `Editable • AI Extracted` badges. Adjust any numbers or splits directly.
+   - Notice the **Staging Proposal Card** with `Editable • Auto-Extracted` badges. Adjust any numbers or splits directly.
 5. **Netting & Settlement (`/tab/lisbon-24`):**
    - Click **Run Tangle Netting** to visualize cycle simplification.
    - Tap **Settle Up** on the balance card to execute a sponsored AUSD payoff on Monad. Your balance immediately reflects **$0.00 (Settled)** with an instant feed receipt.

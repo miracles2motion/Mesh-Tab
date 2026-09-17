@@ -2,21 +2,29 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode, Settings, Search, Filter, Crown, CheckCircle2, TrendingDown, TrendingUp, ArrowDownToLine } from "lucide-react";
+import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode, Settings, Search, Filter, Crown, CheckCircle2, TrendingDown, TrendingUp, ArrowDownToLine, Coins, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { TransactionOverlay, TransactionState } from "../../components/ui/transaction-overlay";
 import { formatCurrency } from "../../lib/utils";
 import { ThemeToggle } from "../../components/theme-toggle";
-import { useUserProfile, useStoredTabs } from "../../lib/user";
+import { useUserProfile, useStoredTabs, useVirtualBalance, useWorkspaceMode } from "../../lib/user";
 import { CashOutDrawer } from "../../components/tab/cash-out-drawer";
+import { FaucetModal } from "../../components/tab/faucet-modal";
+import { MeshBuddy } from "../../components/ui/mesh-buddy";
+import { toast } from "sonner";
+import { sounds } from "../../lib/sounds";
+import { AnimatedCounter } from "../../components/ui/animated-counter";
 
 export default function GlobalHub() {
   const router = useRouter();
   const profile = useUserProfile();
   const { tabs: mockTabs, saveTab } = useStoredTabs();
+  const { balance: virtualBalance } = useVirtualBalance();
+  const { mode: workspaceMode, setMode: setWorkspaceMode } = useWorkspaceMode();
 
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showCashOutModal, setShowCashOutModal] = useState(false);
+  const [showFaucetModal, setShowFaucetModal] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [txState, setTxState] = useState<TransactionState>("idle");
   const [searchQuery, setSearchQuery] = useState("");
@@ -88,10 +96,26 @@ export default function GlobalHub() {
       {/* Header */}
       <header className="px-6 md:px-12 pt-10 pb-6 flex items-center justify-between max-w-5xl mx-auto w-full">
         <div>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Demo Sandbox (Monad Testnet)
+            </span>
+          </div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{greeting}, {profile.name} {emoji}</h1>
-          <p className="text-slate-500 dark:text-white/60 mt-1">Ready to settle up?</p>
+          <p className="text-slate-500 dark:text-white/60 mt-0.5 text-sm">Ready to settle up?</p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            onClick={() => setShowFaucetModal(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold text-xs hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors shadow-sm"
+            title="Sandbox Virtual Faucet"
+          >
+            <Coins className="w-3.5 h-3.5" />
+            <span className="tabular-nums">
+              <AnimatedCounter value={virtualBalance / 100} prefix="$" decimals={2} />
+            </span>
+          </button>
           <ThemeToggle />
           <Link 
             href="/notifications" 
@@ -125,7 +149,7 @@ export default function GlobalHub() {
             <div>
               <span className="text-slate-600 dark:text-white/70 font-semibold text-xs uppercase tracking-wider">Total Net Balance</span>
               <div className={`text-4xl md:text-5xl font-bold mt-1 tracking-tight ${netBalance < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-                {netBalance < 0 ? "-" : "+"}{formatCurrency(Math.abs(netBalance))}
+                {netBalance < 0 ? "-" : "+"}<AnimatedCounter value={Math.abs(netBalance) / 100} prefix="$" decimals={2} />
               </div>
               <p className="text-slate-500 dark:text-white/50 text-xs mt-2 font-medium">Across {mockTabs.length} active shared groups</p>
               {totalOwedToYou > 0 && (
@@ -165,9 +189,49 @@ export default function GlobalHub() {
         {/* Active Tabs with Search & Filter Chips */}
         <div>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <h2 className="text-xl font-bold flex items-center gap-2 text-slate-900 dark:text-white">
-              <Users className="w-5 h-5 text-slate-400 dark:text-white/50" /> Active Tabs
-            </h2>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h2 className="text-xl font-bold flex items-center gap-2 text-slate-900 dark:text-white">
+                <Users className="w-5 h-5 text-slate-400 dark:text-white/50" /> Active Tabs
+              </h2>
+
+              {/* Workspace Sandbox Mode Toggle */}
+              <div className="flex p-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWorkspaceMode("sample");
+                    sounds.playClick();
+                    toast.info("Switched to Sample Trip Mode", {
+                      description: "Loaded Lisbon '24 and Lake Tahoe demo tabs."
+                    });
+                  }}
+                  className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                    workspaceMode === "sample"
+                      ? "bg-white dark:bg-white/15 text-indigo-600 dark:text-white shadow-sm"
+                      : "text-slate-500 hover:text-slate-900 dark:text-white/50 dark:hover:text-white"
+                  }`}
+                >
+                  🏖️ Sample Trip
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWorkspaceMode("blank");
+                    sounds.playClick();
+                    toast.info("Switched to Blank Slate Mode", {
+                      description: "Workspace cleared for custom tab testing."
+                    });
+                  }}
+                  className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                    workspaceMode === "blank"
+                      ? "bg-white dark:bg-white/15 text-indigo-600 dark:text-white shadow-sm"
+                      : "text-slate-500 hover:text-slate-900 dark:text-white/50 dark:hover:text-white"
+                  }`}
+                >
+                  ✨ Blank Slate
+                </button>
+              </div>
+            </div>
 
             <div className="flex items-center gap-2 flex-wrap">
               {/* Search input */}
@@ -347,6 +411,15 @@ export default function GlobalHub() {
         availableAmount={totalOwedToYou > 0 ? totalOwedToYou : 30000} 
         currentUserName={profile.name} 
       />
+
+      {/* Faucet Modal */}
+      <FaucetModal
+        isOpen={showFaucetModal}
+        onClose={() => setShowFaucetModal(false)}
+      />
+
+      {/* MeshBuddy Tab Co-Pilot */}
+      <MeshBuddy />
     </div>
     </>
   );

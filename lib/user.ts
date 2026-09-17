@@ -114,15 +114,54 @@ export const DEFAULT_TABS: TabSummary[] = [
   { id: "house-groceries", name: "House Groceries", role: "Member", balance: 4500, memberCount: 2, lastActivity: "Yesterday" },
 ];
 
+export type WorkspaceMode = "sample" | "blank";
+
+export function getWorkspaceMode(): WorkspaceMode {
+  if (typeof window === "undefined") return "sample";
+  const mode = localStorage.getItem("meshTab_workspaceMode");
+  return mode === "blank" ? "blank" : "sample";
+}
+
+export function setWorkspaceMode(mode: WorkspaceMode) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem("meshTab_workspaceMode", mode);
+  window.dispatchEvent(new Event("meshTab-workspace-update"));
+  window.dispatchEvent(new Event("meshTab-tabs-update"));
+}
+
+export function useWorkspaceMode() {
+  const [mode, setMode] = useState<WorkspaceMode>(getWorkspaceMode);
+
+  useEffect(() => {
+    const sync = () => setMode(getWorkspaceMode());
+    sync();
+    window.addEventListener("meshTab-workspace-update", sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener("meshTab-workspace-update", sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+
+  return { mode, setMode: setWorkspaceMode };
+}
+
 export function getStoredTabs(): TabSummary[] {
   if (typeof window === "undefined") return DEFAULT_TABS;
+  const mode = getWorkspaceMode();
   try {
     const stored = localStorage.getItem("meshTab_tabs");
-    if (!stored) return DEFAULT_TABS;
-    const parsed = JSON.parse(stored);
-    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        if (mode === "blank") {
+          return parsed.filter(t => t.id !== "lisbon-24" && t.id !== "house-groceries");
+        }
+        return parsed;
+      }
+    }
   } catch (e) {}
-  return DEFAULT_TABS;
+  return mode === "blank" ? [] : DEFAULT_TABS;
 }
 
 export function saveNewTab(tab: TabSummary) {
@@ -247,4 +286,115 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
     time: "Just now"
   });
 }
+
+// -------------------------------------------------------------
+// Virtual Sandbox Faucet Balance (AUSD play money)
+// -------------------------------------------------------------
+export function getVirtualBalance(): number {
+  if (typeof window === "undefined") return 50000; // default $500.00
+  const val = localStorage.getItem("meshTab_virtualBalance");
+  if (val === null) return 50000;
+  const parsed = parseInt(val, 10);
+  return isNaN(parsed) ? 50000 : parsed;
+}
+
+export function topUpVirtualBalance(amountCents: number = 50000) {
+  if (typeof window === "undefined") return;
+  const current = getVirtualBalance();
+  const next = current + amountCents;
+  localStorage.setItem("meshTab_virtualBalance", String(next));
+  window.dispatchEvent(new Event("meshTab-balance-update"));
+}
+
+export function deductVirtualBalance(amountCents: number): boolean {
+  if (typeof window === "undefined") return false;
+  const current = getVirtualBalance();
+  if (current < amountCents) return false;
+  const next = current - amountCents;
+  localStorage.setItem("meshTab_virtualBalance", String(next));
+  window.dispatchEvent(new Event("meshTab-balance-update"));
+  return true;
+}
+
+export function useVirtualBalance() {
+  const [balance, setBalance] = useState<number>(getVirtualBalance);
+
+  useEffect(() => {
+    const sync = () => setBalance(getVirtualBalance());
+    sync();
+    window.addEventListener("meshTab-balance-update", sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener("meshTab-balance-update", sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+
+  return { 
+    balance, 
+    topUp: topUpVirtualBalance, 
+    deduct: deductVirtualBalance 
+  };
+}
+
+// -------------------------------------------------------------
+// MeshBuddy Tab Co-Pilot Preferences
+// -------------------------------------------------------------
+export interface BuddySettings {
+  enabled: boolean;
+  name: string;
+  voice: "mute" | "deep-male" | "warm-female";
+  color: string;
+}
+
+export function getBuddySettings(): BuddySettings {
+  const defaultName = typeof window !== "undefined" && localStorage.getItem("meshTab_displayName")
+    ? `${localStorage.getItem("meshTab_displayName")}'s Buddy`
+    : "Demo Buddy";
+
+  if (typeof window === "undefined") {
+    return { enabled: true, name: defaultName, voice: "mute", color: AVATAR_COLORS[0] };
+  }
+
+  try {
+    const raw = localStorage.getItem("meshTab_buddySettings");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        enabled: parsed.enabled ?? true,
+        name: parsed.name || defaultName,
+        voice: parsed.voice || "mute",
+        color: parsed.color || AVATAR_COLORS[0]
+      };
+    }
+  } catch (e) {}
+
+  return { enabled: true, name: defaultName, voice: "mute", color: AVATAR_COLORS[0] };
+}
+
+export function saveBuddySettings(settings: Partial<BuddySettings>) {
+  if (typeof window === "undefined") return;
+  const current = getBuddySettings();
+  const updated: BuddySettings = { ...current, ...settings };
+  localStorage.setItem("meshTab_buddySettings", JSON.stringify(updated));
+  window.dispatchEvent(new Event("meshTab-buddy-update"));
+}
+
+export function useBuddySettings() {
+  const [settings, setSettings] = useState<BuddySettings>(getBuddySettings);
+
+  useEffect(() => {
+    const sync = () => setSettings(getBuddySettings());
+    sync();
+    window.addEventListener("meshTab-buddy-update", sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener("meshTab-buddy-update", sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+
+  return { settings, updateSettings: saveBuddySettings };
+}
+
 

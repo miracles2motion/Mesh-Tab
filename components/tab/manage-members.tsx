@@ -14,6 +14,8 @@ interface MemberItem {
 }
 
 import { useUserProfile } from "../../lib/user";
+import { toast } from "sonner";
+import { sounds } from "../../lib/sounds";
 
 export function ManageMembers({ 
   tabId, 
@@ -64,6 +66,8 @@ export function ManageMembers({
   const copyToClipboard = () => {
     navigator.clipboard.writeText(inviteLink);
     setCopied(true);
+    sounds.playClick();
+    toast.success("Invite Link Copied!", { description: inviteLink });
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -74,6 +78,7 @@ export function ManageMembers({
         type: "error",
         message: `${member.name} is the Tab Creator/Admin and cannot be removed.`
       });
+      toast.error("Removal Blocked", { description: `${member.name} is the Tab Creator/Admin.` });
       setTimeout(() => setNotification(null), 3500);
       return;
     }
@@ -81,6 +86,7 @@ export function ManageMembers({
     // 2. Financial Protection: Member has active unsettled debt/credit
     if (member.balance !== 0) {
       setBlockedRemovalMember(member);
+      toast.error("Removal Blocked", { description: `${member.name} has an active unsettled balance.` });
       return;
     }
 
@@ -93,6 +99,10 @@ export function ManageMembers({
     const removedName = pendingRemovalMember.name;
     setMemberList(prev => prev.filter(m => m.name !== removedName));
     setPendingRemovalMember(null);
+    sounds.playSuccessChime();
+    toast.success("Member Removed", {
+      description: `${removedName} removed. Historical contributions remain preserved.`
+    });
     setNotification({
       type: "success",
       message: `${removedName} removed from active roster. Historical contributions remain preserved in the ledger.`

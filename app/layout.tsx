@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Outfit, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "sonner";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -43,6 +44,7 @@ export default function RootLayout({
         <main className="flex-1 flex flex-col w-full min-h-screen relative overflow-x-hidden">
           {children}
         </main>
+        <Toaster position="top-right" richColors closeButton />
       </body>
     </html>
   );

@@ -4,6 +4,7 @@ import Image from "next/image";
 import { ThemeToggle } from "../../components/theme-toggle";
 
 import { Settings, LayoutGrid } from "lucide-react";
+import { MeshBuddy } from "../../components/ui/mesh-buddy";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -41,6 +42,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 flex flex-col relative">
         {children}
       </main>
+      <MeshBuddy />
     </div>
   );
 }

@@ -3,14 +3,23 @@
 import { motion } from "framer-motion";
 import { Network, ArrowRight, Zap, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
+import { sounds } from "../lib/sounds";
+import { fireSettlementConfetti } from "../lib/confetti";
 
 export function NettingCanvas() {
   const [nettingState, setNettingState] = useState<"chaotic" | "calculating" | "simplified">("chaotic");
 
   const runSimplification = () => {
     setNettingState("calculating");
+    sounds.playClick();
     setTimeout(() => {
       setNettingState("simplified");
+      sounds.playSuccessChime();
+      fireSettlementConfetti();
+      toast.success("Tangle Graph Optimized!", {
+        description: "Cleared $900.00 (75%) of crisscrossing debt on Monad."
+      });
     }, 2500);
   };
 
