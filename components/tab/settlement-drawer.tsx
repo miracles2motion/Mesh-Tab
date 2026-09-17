@@ -8,13 +8,19 @@ import { formatCurrency } from "../../lib/utils";
 import Image from "next/image";
 import { ReceiptView } from "../ReceiptView";
 
+import { useUserProfile, settleTab } from "../../lib/user";
+
 interface SettlementDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   debtAmount: number; // in cents
+  tabId?: string;
+  currentUserName?: string;
 }
 
-export function SettlementDrawer({ isOpen, onClose, debtAmount }: SettlementDrawerProps) {
+export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-24", currentUserName }: SettlementDrawerProps) {
+  const profile = useUserProfile();
+  const activeUser = currentUserName || profile.name || "David";
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -22,6 +28,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount }: SettlementDraw
     setIsProcessing(true);
     // Simulate Dynamic SDK widget loading + transaction
     await new Promise(r => setTimeout(r, 2000));
+    settleTab(tabId, activeUser, debtAmount);
     setIsProcessing(false);
     setIsSuccess(true);
   };

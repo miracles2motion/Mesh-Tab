@@ -7,6 +7,8 @@ import { ArrowRight, Fingerprint, Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import Image from "next/image";
 
+import { saveNewTab } from "../../../lib/user";
+
 export default function CreateTab() {
   const router = useRouter();
   const [step, setStep] = useState<1 | 2>(1);
@@ -18,9 +20,21 @@ export default function CreateTab() {
     
     setStep(2);
     // Simulate API tab creation
-    await new Promise(r => setTimeout(r, 2000));
-    // Immediately redirect to the new tab instead of showing a static success screen with a fake link
-    router.push('/tab/lisbon-24');
+    await new Promise(r => setTimeout(r, 1500));
+
+    const cleanId = tabName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const newTabId = cleanId || "custom-tab";
+    
+    saveNewTab({
+      id: newTabId,
+      name: tabName.trim(),
+      role: "Creator",
+      balance: 0,
+      memberCount: 1,
+      lastActivity: "Just created"
+    });
+
+    router.push(`/tab/${newTabId}`);
   };
 
   return (

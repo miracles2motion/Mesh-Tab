@@ -2,6 +2,7 @@
 
 import { X, Receipt, Clock, User, ArrowRight } from "lucide-react";
 import { formatCurrency } from "../../lib/utils";
+import { useUserProfile } from "../../lib/user";
 
 interface ExpenseDetailsProps {
   onClose?: () => void;
@@ -9,6 +10,9 @@ interface ExpenseDetailsProps {
 }
 
 export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
+  const profile = useUserProfile();
+  const currentUserName = profile.name || "David";
+
   // Mock data for the specific expense based on ID
   const isMock1 = expenseId === "1";
   
@@ -21,7 +25,7 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
       { name: "Aisha", amount: isMock1 ? 15000 : 6500 },
       { name: "Kemi", amount: isMock1 ? 15000 : 6500 },
       { name: "Ben", amount: isMock1 ? 15000 : 6500 },
-      { name: "Sarah", amount: isMock1 ? 15000 : 6500 }
+      { name: currentUserName, amount: isMock1 ? 15000 : 6500 }
     ]
   };
 
@@ -74,7 +78,7 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
                 <div className="w-10 h-10 rounded-full bg-indigo-500/10 dark:bg-white/10 flex items-center justify-center font-bold text-sm text-indigo-600 dark:text-white/70">
                   {split.name[0]}
                 </div>
-                <span className="font-semibold text-slate-900 dark:text-white/90">{split.name === "Sarah" ? "You" : split.name}</span>
+                <span className="font-semibold text-slate-900 dark:text-white/90">{split.name === currentUserName ? "You" : split.name}</span>
               </div>
               
               <div className="flex items-center gap-4">

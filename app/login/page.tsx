@@ -22,9 +22,9 @@ function LoginContent() {
     // Mock Passkey / FaceID delay
     await new Promise((resolve) => setTimeout(resolve, 2000));
     
-    // Simulate New vs Returning user for demonstration
-    const isNewUser = Math.random() > 0.5;
-    if (isNewUser) {
+    // Check if user has an existing profile
+    const hasProfile = typeof window !== "undefined" && Boolean(localStorage.getItem("meshTab_displayName"));
+    if (!hasProfile) {
       router.push(`/onboarding${isInvite ? `?invite=true&tab=${inviteTab}` : ""}`);
     } else {
       router.push(isInvite ? `/tab/${inviteTab}?invite=true` : "/home");

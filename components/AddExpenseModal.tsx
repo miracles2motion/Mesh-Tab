@@ -3,8 +3,11 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Camera, Mic, SplitSquareHorizontal, Sparkles, Check } from "lucide-react";
 import { useState } from "react";
+import { useUserProfile } from "../lib/user";
 
 export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
+  const profile = useUserProfile();
+  const currentUserName = profile.name || "David";
   const [tab, setTab] = useState<"manual" | "ai">("ai");
   const [amount, setAmount] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -99,7 +102,7 @@ export function AddExpenseModal({ isOpen, onClose }: { isOpen: boolean, onClose:
                     <div className="space-y-3 pt-4 border-t border-white/10">
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-white/60">Paid By</span>
-                        <span className="text-white font-medium bg-white/10 px-2 py-1 rounded-md">Sarah</span>
+                        <span className="text-white font-medium bg-white/10 px-2 py-1 rounded-md">{currentUserName}</span>
                       </div>
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-white/60">Split Method</span>

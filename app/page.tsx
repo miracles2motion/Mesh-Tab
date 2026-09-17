@@ -78,8 +78,8 @@ export default function LandingPage() {
           </Link>
           <p className="text-sm text-gray-500">Built for the Monad Metropolis 2026 Hackathon.</p>
           <div className="flex gap-6 text-sm text-gray-500">
-            <a href="#" className="hover:text-black dark:hover:text-white transition-colors">Twitter</a>
-            <a href="#" className="hover:text-black dark:hover:text-white transition-colors">GitHub</a>
+            <a href="https://twitter.com/monad_xyz" target="_blank" rel="noopener noreferrer" className="hover:text-black dark:hover:text-white transition-colors">Twitter (X)</a>
+            <a href="https://github.com/monad-developers" target="_blank" rel="noopener noreferrer" className="hover:text-black dark:hover:text-white transition-colors">GitHub</a>
           </div>
         </div>
       </footer>

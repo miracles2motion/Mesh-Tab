@@ -13,27 +13,35 @@ interface MemberItem {
   role?: "admin" | "member";
 }
 
+import { useUserProfile } from "../../lib/user";
+
 export function ManageMembers({ 
   tabId, 
   members,
-  currentUser = "Sarah" 
+  currentUser 
 }: { 
   tabId: string; 
   members: any[];
   currentUser?: string;
 }) {
+  const profile = useUserProfile();
+  const activeUser = currentUser || profile.name;
   const [copied, setCopied] = useState(false);
   
   // Default creator is Aisha
   const creatorName = "Aisha";
-  const isCurrentUserAdmin = currentUser === creatorName;
+  const isCurrentUserAdmin = activeUser === creatorName;
 
   // Initialize with members enriched with roles and include a settled member if not present
   const [memberList, setMemberList] = useState<MemberItem[]>(() => {
-    const enriched = members.map(m => ({
-      ...m,
-      role: m.name === creatorName ? ("admin" as const) : ("member" as const)
-    }));
+    const enriched = members.map(m => {
+      const resolvedName = (m.name === "Sarah" && activeUser !== "Sarah") ? activeUser : m.name;
+      return {
+        ...m,
+        name: resolvedName,
+        role: resolvedName === creatorName ? ("admin" as const) : ("member" as const)
+      };
+    });
     // If no settled member exists, add Leo for demonstration of settled removal
     if (!enriched.some(m => m.balance === 0)) {
       enriched.push({
@@ -183,7 +191,7 @@ export function ManageMembers({
                             Creator / Admin
                           </span>
                         )}
-                        {member.name === currentUser && (
+                        {member.name === activeUser && (
                           <span className="text-[11px] font-semibold text-slate-400 dark:text-white/40">(You)</span>
                         )}
                       </div>

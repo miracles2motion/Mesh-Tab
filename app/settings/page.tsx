@@ -5,38 +5,24 @@ import Link from "next/link";
 import { ArrowLeft, User, Shield, Settings2, Key, Copy, Check, Palette, Smartphone, Sparkles } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { ThemeToggle } from "../../components/theme-toggle";
-
-const AVATAR_COLORS = [
-  "bg-indigo-600",
-  "bg-rose-500",
-  "bg-emerald-500",
-  "bg-amber-500",
-  "bg-sky-500",
-  "bg-purple-600"
-];
+import { useUserProfile, saveStoredUser, AVATAR_COLORS, useDeveloperMode } from "../../lib/user";
 
 export default function SettingsPage() {
+  const profile = useUserProfile();
+  const { showAddress: showAddressOnDashboard, toggleAddress } = useDeveloperMode();
+
   const [activeTab, setActiveTab] = useState<"profile" | "advanced">("profile");
   const [copied, setCopied] = useState(false);
-  const [showAddressOnDashboard, setShowAddressOnDashboard] = useState(false);
-  const [displayName, setDisplayName] = useState("David");
-  const [avatarColorIndex, setAvatarColorIndex] = useState(0);
+  const [displayName, setDisplayName] = useState(profile.name);
+  const [avatarColorIndex, setAvatarColorIndex] = useState(profile.avatarColorIndex);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [isManagingPasskey, setIsManagingPasskey] = useState(false);
   const [passkeyNotice, setPasskeyNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem("meshTab_showAddress");
-    if (saved === "true") setShowAddressOnDashboard(true);
-    const savedName = localStorage.getItem("meshTab_displayName");
-    if (savedName) setDisplayName(savedName);
-  }, []);
-
-  const toggleAddress = () => {
-    const newVal = !showAddressOnDashboard;
-    setShowAddressOnDashboard(newVal);
-    localStorage.setItem("meshTab_showAddress", String(newVal));
-  };
+    setDisplayName(profile.name);
+    setAvatarColorIndex(profile.avatarColorIndex);
+  }, [profile.name, profile.avatarColorIndex]);
 
   const fullAddress = "0x7F5c0919245151522A1Bc65261dE3b1111923b9A";
 
@@ -47,13 +33,15 @@ export default function SettingsPage() {
   };
 
   const handleSaveChanges = () => {
-    localStorage.setItem("meshTab_displayName", displayName);
-    setSaveStatus("Profile updated successfully!");
+    saveStoredUser(displayName, avatarColorIndex);
+    setSaveStatus("Profile updated across all groups!");
     setTimeout(() => setSaveStatus(null), 3000);
   };
 
   const handleChangeAvatar = () => {
-    setAvatarColorIndex((prev) => (prev + 1) % AVATAR_COLORS.length);
+    const nextIdx = (avatarColorIndex + 1) % AVATAR_COLORS.length;
+    setAvatarColorIndex(nextIdx);
+    saveStoredUser(displayName, nextIdx);
   };
 
   const handleManagePasskey = () => {
@@ -146,20 +134,28 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 
-                <div className="space-y-4 max-w-sm">
+                <form 
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSaveChanges();
+                  }}
+                  className="space-y-4 max-w-sm"
+                >
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold text-slate-700 dark:text-white/70">Display Name</label>
                     <input 
                       type="text" 
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
+                      onBlur={handleSaveChanges}
+                      placeholder="Your name"
                       className="w-full bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 transition-colors font-medium" 
                     />
                   </div>
-                  <Button onClick={handleSaveChanges} variant="primary" className="mt-2">
+                  <Button type="submit" variant="primary" className="mt-2">
                     Save Changes
                   </Button>
-                </div>
+                </form>
               </div>
 
               {/* Appearance / Theme preference */}

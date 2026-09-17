@@ -9,7 +9,7 @@ export default function NotificationsPage() {
       icon: <Receipt className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />,
       bg: "bg-indigo-500/10",
       title: "New Expense Added",
-      desc: "Sarah added 'Villa booking' for $600 to Lisbon Weekend.",
+      desc: "Aisha added 'Villa booking' for $600 to Lisbon Weekend.",
       time: "2m ago",
       unread: true
     },

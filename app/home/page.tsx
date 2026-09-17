@@ -2,21 +2,21 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode, Settings, Search, Filter, Crown, CheckCircle2, TrendingDown, TrendingUp } from "lucide-react";
+import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode, Settings, Search, Filter, Crown, CheckCircle2, TrendingDown, TrendingUp, ArrowDownToLine } from "lucide-react";
 import { useState } from "react";
 import { TransactionOverlay, TransactionState } from "../../components/ui/transaction-overlay";
 import { formatCurrency } from "../../lib/utils";
 import { ThemeToggle } from "../../components/theme-toggle";
-
-// Mock Data for the Hub
-const mockTabs = [
-  { id: "lisbon-24", name: "Lisbon Weekend", role: "Creator", balance: -18000, memberCount: 4, lastActivity: "2 hours ago" },
-  { id: "house-groceries", name: "House Groceries", role: "Member", balance: 4500, memberCount: 2, lastActivity: "Yesterday" },
-];
+import { useUserProfile, useStoredTabs } from "../../lib/user";
+import { CashOutDrawer } from "../../components/tab/cash-out-drawer";
 
 export default function GlobalHub() {
   const router = useRouter();
+  const profile = useUserProfile();
+  const { tabs: mockTabs, saveTab } = useStoredTabs();
+
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showCashOutModal, setShowCashOutModal] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [txState, setTxState] = useState<TransactionState>("idle");
   const [searchQuery, setSearchQuery] = useState("");
@@ -49,8 +49,20 @@ export default function GlobalHub() {
     setTxState("success");
     await new Promise(r => setTimeout(r, 1000));
     setTxState("idle");
+    
+    // Persist joined tab
+    const joinedId = `joined-${joinCode.toLowerCase()}`;
+    saveTab({
+      id: joinedId,
+      name: `Group #${joinCode}`,
+      role: "Member",
+      balance: 0,
+      memberCount: 3,
+      lastActivity: "Just joined"
+    });
+
     setJoinCode("");
-    router.push(`/tab/joined-${joinCode}`);
+    router.push(`/tab/${joinedId}`);
   };
 
   // Filter and search tabs
@@ -76,7 +88,7 @@ export default function GlobalHub() {
       {/* Header */}
       <header className="px-6 md:px-12 pt-10 pb-6 flex items-center justify-between max-w-5xl mx-auto w-full">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{greeting}, David {emoji}</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{greeting}, {profile.name} {emoji}</h1>
           <p className="text-slate-500 dark:text-white/60 mt-1">Ready to settle up?</p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
@@ -98,10 +110,10 @@ export default function GlobalHub() {
           </Link>
           <Link 
             href="/settings" 
-            className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-md hover:scale-105 transition-transform text-lg font-bold"
-            title="Profile (David)"
+            className={`w-10 h-10 md:w-12 md:h-12 rounded-full ${profile.avatarColor} text-white flex items-center justify-center shadow-md hover:scale-105 transition-transform text-lg font-bold`}
+            title={`Profile (${profile.name})`}
           >
-            D
+            {profile.name ? profile.name[0].toUpperCase() : "U"}
           </Link>
         </div>
       </header>
@@ -116,6 +128,15 @@ export default function GlobalHub() {
                 {netBalance < 0 ? "-" : "+"}{formatCurrency(Math.abs(netBalance))}
               </div>
               <p className="text-slate-500 dark:text-white/50 text-xs mt-2 font-medium">Across {mockTabs.length} active shared groups</p>
+              {totalOwedToYou > 0 && (
+                <button 
+                  onClick={() => setShowCashOutModal(true)}
+                  className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-transform active:scale-95 cursor-pointer"
+                  title="Withdraw settled funds to your bank account"
+                >
+                  <ArrowDownToLine className="w-3.5 h-3.5" /> Cash Out to Bank
+                </button>
+              )}
             </div>
 
             {/* Split Breakdown */}
@@ -319,6 +340,13 @@ export default function GlobalHub() {
           </div>
         </div>
       )}
+      {/* Cash Out Drawer */}
+      <CashOutDrawer 
+        isOpen={showCashOutModal} 
+        onClose={() => setShowCashOutModal(false)} 
+        availableAmount={totalOwedToYou > 0 ? totalOwedToYou : 30000} 
+        currentUserName={profile.name} 
+      />
     </div>
     </>
   );

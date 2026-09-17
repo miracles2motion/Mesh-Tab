@@ -15,23 +15,23 @@ export function NettingCanvas() {
   };
 
   return (
-    <div className="w-full bg-black/40 border border-white/10 rounded-[32px] overflow-hidden flex flex-col">
-      <div className="p-6 border-b border-white/10 flex justify-between items-center bg-black/20">
+    <div className="w-full bg-white dark:bg-black/60 border border-slate-200 dark:border-white/10 rounded-[32px] overflow-hidden flex flex-col shadow-2xl text-slate-900 dark:text-white transition-colors">
+      <div className="p-6 border-b border-slate-100 dark:border-white/10 flex justify-between items-center bg-slate-50/70 dark:bg-black/30">
         <div>
-          <h3 className="text-white font-semibold flex items-center gap-2">
-            <Network className="w-5 h-5 text-indigo-400" /> The Tangle
+          <h3 className="text-slate-900 dark:text-white font-bold flex items-center gap-2">
+            <Network className="w-5 h-5 text-indigo-600 dark:text-indigo-400" /> The Tangle
           </h3>
-          <p className="text-sm text-white/50">Multilateral Debt Netting</p>
+          <p className="text-sm text-slate-500 dark:text-white/50">Multilateral Debt Netting</p>
         </div>
         
         {nettingState === "simplified" && (
-          <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+          <span className="bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 dark:border-emerald-500/30 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
             <CheckCircle2 className="w-3 h-3" /> Optimized
           </span>
         )}
       </div>
 
-      <div className="relative h-64 w-full bg-[#0a0a0b] flex items-center justify-center overflow-hidden">
+      <div className="relative h-64 w-full bg-slate-950 dark:bg-[#0a0a0b] flex items-center justify-center overflow-hidden">
         {/* Nodes */}
         <div className="absolute top-8 left-1/2 -translate-x-1/2 w-14 h-14 rounded-full bg-emerald-500/20 border-2 border-emerald-500/50 flex items-center justify-center text-white font-bold shadow-[0_0_15px_rgba(16,185,129,0.3)] z-10">A</div>
         
@@ -78,23 +78,23 @@ export function NettingCanvas() {
         )}
       </div>
 
-      <div className="p-6 bg-white/5 grid grid-cols-2 gap-4">
+      <div className="p-6 bg-slate-50 dark:bg-white/5 border-t border-slate-100 dark:border-white/10 grid grid-cols-2 gap-4">
         <div>
-          <p className="text-xs text-white/50 mb-1">Gross Volume</p>
-          <p className="text-lg font-bold text-white line-through decoration-rose-500 decoration-2">$1,200.00</p>
+          <p className="text-xs text-slate-500 dark:text-white/50 mb-1 font-medium">Gross Volume</p>
+          <p className="text-lg font-bold text-slate-900 dark:text-white line-through decoration-rose-500 decoration-2 tabular-nums">$1,200.00</p>
         </div>
         <div>
-          <p className="text-xs text-white/50 mb-1">Residual Capital</p>
-          <p className="text-lg font-bold text-emerald-400">$300.00</p>
+          <p className="text-xs text-slate-500 dark:text-white/50 mb-1 font-medium">Residual Capital</p>
+          <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">$300.00</p>
         </div>
         <div className="col-span-2 mt-2">
           {nettingState === "chaotic" ? (
-            <button onClick={runSimplification} className="w-full py-3 bg-indigo-500 text-white rounded-xl font-semibold hover:bg-indigo-600 transition-colors shadow-[0_0_20px_rgba(99,102,241,0.3)]">
+            <button onClick={runSimplification} className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all shadow-md shadow-indigo-500/25 active:scale-[0.98] cursor-pointer">
               Calculate Settlement Map
             </button>
           ) : (
-            <div className="w-full py-3 bg-white/10 text-white/70 rounded-xl font-semibold flex justify-center items-center gap-2">
-              <CheckCircle2 className="w-5 h-5" /> 75.0% Debt Volume Cleared
+            <div className="w-full py-3.5 bg-slate-100 dark:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/80 rounded-xl font-bold flex justify-center items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" /> 75.0% Debt Volume Cleared
             </div>
           )}
         </div>

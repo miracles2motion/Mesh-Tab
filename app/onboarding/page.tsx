@@ -8,16 +8,13 @@ import { Button } from "../../components/ui/button";
 
 import { ThemeToggle } from "../../components/theme-toggle";
 
-const COLORS = [
-  "bg-indigo-500", "bg-rose-500", "bg-emerald-500", 
-  "bg-amber-500", "bg-sky-500", "bg-fuchsia-500"
-];
+import { saveStoredUser, AVATAR_COLORS } from "../../lib/user";
 
 function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [name, setName] = useState("");
-  const [selectedColor, setSelectedColor] = useState(COLORS[0]);
+  const [selectedColor, setSelectedColor] = useState(AVATAR_COLORS[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isInvite = searchParams.get("invite") === "true";
@@ -28,8 +25,8 @@ function OnboardingContent() {
     if (!name.trim()) return;
     
     setIsSubmitting(true);
-    // Mock DB save
-    localStorage.setItem("meshTab_displayName", name.trim());
+    const colorIndex = AVATAR_COLORS.indexOf(selectedColor);
+    saveStoredUser(name.trim(), colorIndex >= 0 ? colorIndex : 0);
     await new Promise((resolve) => setTimeout(resolve, 1000));
     
     if (isInvite && inviteTab) {
@@ -78,7 +75,7 @@ function OnboardingContent() {
           <div className="space-y-3">
             <label className="text-sm font-semibold text-slate-700 dark:text-white/80 ml-1">Avatar Color</label>
             <div className="flex items-center gap-3 justify-between px-1">
-              {COLORS.map((color) => (
+              {AVATAR_COLORS.map((color) => (
                 <button
                   key={color}
                   type="button"

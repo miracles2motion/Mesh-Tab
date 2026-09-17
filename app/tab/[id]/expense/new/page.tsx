@@ -3,18 +3,16 @@
 import { AddExpenseForm } from "@/components/tab/add-expense-form";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-
-const mockMembers = [
-  { name: "Aisha", balance: 30000, type: "creditor" as const },
-  { name: "Kemi", balance: -4000, type: "debtor" as const },
-  { name: "Ben", balance: -8000, type: "debtor" as const },
-  { name: "Sarah", balance: -18000, type: "debtor" as const }
-];
 import { useRouter, useParams } from "next/navigation";
+import { useUserProfile } from "@/lib/user";
 
 export default function AddExpenseFallbackPage() {
   const router = useRouter();
   const params = useParams();
+  const profile = useUserProfile();
+  const currentUserName = profile.name || "David";
+
+  const memberNames = ["Aisha", "Kemi", "Ben", currentUserName];
   
   if (!params?.id) return null;
 
@@ -25,7 +23,11 @@ export default function AddExpenseFallbackPage() {
       </Link>
       
       <div className="w-full max-w-lg bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden">
-        <AddExpenseForm members={mockMembers.map(m => m.name)} onSuccess={() => router.push(`/tab/${params.id}`)} />
+        <AddExpenseForm 
+          members={memberNames} 
+          currentUser={currentUserName}
+          onSuccess={() => router.push(`/tab/${params.id}`)} 
+        />
       </div>
     </div>
   );

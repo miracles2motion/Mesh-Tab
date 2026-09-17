@@ -4,17 +4,20 @@ import { ManageMembers } from "@/components/tab/manage-members";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { useParams } from "next/navigation";
-
-// Mock data to match the dashboard
-const mockMembers = [
-  { name: "Aisha", balance: 30000, type: "creditor" as const },
-  { name: "Kemi", balance: -4000, type: "debtor" as const },
-  { name: "Ben", balance: -8000, type: "debtor" as const },
-  { name: "Sarah", balance: -18000, type: "debtor" as const }
-];
+import { useUserProfile } from "@/lib/user";
 
 export default function MembersFallbackPage() {
   const params = useParams();
+  const profile = useUserProfile();
+  const currentUserName = profile.name || "David";
+
+  const membersList = [
+    { name: "Aisha", balance: 30000, type: "creditor" as const },
+    { name: "Kemi", balance: -4000, type: "debtor" as const },
+    { name: "Ben", balance: -8000, type: "debtor" as const },
+    { name: currentUserName, balance: -18000, type: "debtor" as const }
+  ];
+
   if (!params?.id) return null;
 
   return (
@@ -24,7 +27,7 @@ export default function MembersFallbackPage() {
       </Link>
       
       <div className="w-full max-w-lg bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden">
-        <ManageMembers tabId={params.id as string} members={mockMembers} />
+        <ManageMembers tabId={params.id as string} members={membersList} currentUser={currentUserName} />
       </div>
     </div>
   );
