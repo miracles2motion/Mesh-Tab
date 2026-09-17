@@ -2,15 +2,16 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode } from "lucide-react";
+import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode, Settings, Search, Filter, Crown, CheckCircle2, TrendingDown, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { TransactionOverlay, TransactionState } from "../../components/ui/transaction-overlay";
 import { formatCurrency } from "../../lib/utils";
+import { ThemeToggle } from "../../components/theme-toggle";
 
 // Mock Data for the Hub
 const mockTabs = [
-  { id: "lisbon-24", name: "Lisbon Weekend", role: "Creator", balance: -18000 },
-  { id: "house-groceries", name: "House Groceries", role: "Member", balance: 4500 },
+  { id: "lisbon-24", name: "Lisbon Weekend", role: "Creator", balance: -18000, memberCount: 4, lastActivity: "2 hours ago" },
+  { id: "house-groceries", name: "House Groceries", role: "Member", balance: 4500, memberCount: 2, lastActivity: "Yesterday" },
 ];
 
 export default function GlobalHub() {
@@ -18,8 +19,12 @@ export default function GlobalHub() {
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [txState, setTxState] = useState<TransactionState>("idle");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState<"all" | "owe" | "owed">("all");
 
   const netBalance = mockTabs.reduce((acc, tab) => acc + tab.balance, 0);
+  const totalYouOwe = mockTabs.filter(t => t.balance < 0).reduce((acc, t) => acc + Math.abs(t.balance), 0);
+  const totalOwedToYou = mockTabs.filter(t => t.balance > 0).reduce((acc, t) => acc + t.balance, 0);
 
   // Dynamic Greeting Logic
   const hour = new Date().getHours();
@@ -48,6 +53,15 @@ export default function GlobalHub() {
     router.push(`/tab/joined-${joinCode}`);
   };
 
+  // Filter and search tabs
+  const filteredTabs = mockTabs.filter(tab => {
+    const matchesSearch = tab.name.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!matchesSearch) return false;
+    if (activeFilter === "owe") return tab.balance < 0;
+    if (activeFilter === "owed") return tab.balance > 0;
+    return true;
+  });
+
   return (
     <>
     <TransactionOverlay 
@@ -58,119 +72,246 @@ export default function GlobalHub() {
         success: "Joined successfully!"
       }}
     />
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300 pb-28 md:pb-16">
       {/* Header */}
       <header className="px-6 md:px-12 pt-10 pb-6 flex items-center justify-between max-w-5xl mx-auto w-full">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{greeting}, David {emoji}</h1>
-          <p className="text-white/60 mt-1">Ready to settle up?</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{greeting}, David {emoji}</h1>
+          <p className="text-slate-500 dark:text-white/60 mt-1">Ready to settle up?</p>
         </div>
-        <div className="flex items-center gap-4">
-          <Link href="/notifications" className="relative w-12 h-12 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
-            <Bell className="w-5 h-5 text-white/80" />
-            <div className="absolute top-3 right-3 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-[#0a0a0a]" />
+        <div className="flex items-center gap-2 sm:gap-3">
+          <ThemeToggle />
+          <Link 
+            href="/notifications" 
+            className="relative w-10 h-10 md:w-12 md:h-12 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shadow-sm text-slate-700 dark:text-white/80"
+            title="Notifications"
+          >
+            <Bell className="w-5 h-5" />
+            <div className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white dark:border-[#0a0a0a]" />
           </Link>
-          <Link href="/settings" className="w-12 h-12 rounded-full bg-indigo-500 flex items-center justify-center border-2 border-[#0a0a0a] shadow-[0_0_0_2px_rgba(255,255,255,0.1)] hover:scale-105 transition-transform text-xl font-bold">
+          <Link 
+            href="/settings" 
+            className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shadow-sm text-slate-700 dark:text-white/80"
+            title="Settings"
+          >
+            <Settings className="w-5 h-5" />
+          </Link>
+          <Link 
+            href="/settings" 
+            className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-md hover:scale-105 transition-transform text-lg font-bold"
+            title="Profile (David)"
+          >
             D
           </Link>
         </div>
       </header>
 
-      <main className="px-6 md:px-12 max-w-5xl mx-auto w-full space-y-10 pb-32">
-        {/* Overall Balance Summary */}
-        <div className="bg-gradient-to-br from-indigo-500/20 to-purple-500/10 border border-indigo-500/20 rounded-3xl p-8 relative overflow-hidden">
-          <div className="relative z-10">
-            <span className="text-white/70 font-medium text-sm uppercase tracking-wider">Total Net Balance</span>
-            <div className={`text-5xl md:text-6xl font-bold mt-2 tracking-tight ${netBalance < 0 ? "text-rose-400" : "text-emerald-400"}`}>
-              {netBalance < 0 ? "-" : "+"}{formatCurrency(Math.abs(netBalance))}
+      <main className="px-6 md:px-12 max-w-5xl mx-auto w-full space-y-10">
+        {/* Overall Balance Summary Card with Web2 Financial Breakdown */}
+        <div className="bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-indigo-500/15 dark:from-indigo-500/20 dark:to-purple-500/10 border border-indigo-200/80 dark:border-indigo-500/20 rounded-3xl p-6 md:p-8 relative overflow-hidden shadow-sm">
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+              <span className="text-slate-600 dark:text-white/70 font-semibold text-xs uppercase tracking-wider">Total Net Balance</span>
+              <div className={`text-4xl md:text-5xl font-bold mt-1 tracking-tight ${netBalance < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                {netBalance < 0 ? "-" : "+"}{formatCurrency(Math.abs(netBalance))}
+              </div>
+              <p className="text-slate-500 dark:text-white/50 text-xs mt-2 font-medium">Across {mockTabs.length} active shared groups</p>
             </div>
-            <p className="text-white/50 text-sm mt-3">Across {mockTabs.length} active groups</p>
+
+            {/* Split Breakdown */}
+            <div className="flex items-center gap-4 bg-white/70 dark:bg-black/30 backdrop-blur-md p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/10 text-xs">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-1 text-rose-600 dark:text-rose-400 font-semibold">
+                  <TrendingDown className="w-3.5 h-3.5" />
+                  <span>You Owe</span>
+                </div>
+                <div className="font-bold text-slate-900 dark:text-white text-sm">{formatCurrency(totalYouOwe)}</div>
+              </div>
+              <div className="w-px h-8 bg-slate-200 dark:bg-white/10" />
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  <span>You're Owed</span>
+                </div>
+                <div className="font-bold text-slate-900 dark:text-white text-sm">{formatCurrency(totalOwedToYou)}</div>
+              </div>
+            </div>
           </div>
           {/* Decorative Mesh */}
-          <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-500/30 blur-[80px] rounded-full pointer-events-none" />
+          <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-500/10 dark:bg-indigo-500/30 blur-[80px] rounded-full pointer-events-none" />
         </div>
 
-        {/* Active Tabs */}
+        {/* Active Tabs with Search & Filter Chips */}
         <div>
-          <h2 className="text-xl font-bold mb-6 flex items-center gap-2"><Users className="w-5 h-5 text-white/50" /> Active Tabs</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <h2 className="text-xl font-bold flex items-center gap-2 text-slate-900 dark:text-white">
+              <Users className="w-5 h-5 text-slate-400 dark:text-white/50" /> Active Tabs
+            </h2>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Search input */}
+              <div className="relative w-full sm:w-48">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input 
+                  type="text" 
+                  placeholder="Search tabs..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 text-xs bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              {/* Filter chips */}
+              <div className="flex p-0.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs">
+                <button 
+                  onClick={() => setActiveFilter("all")}
+                  className={`px-3 py-1 rounded-lg font-semibold transition-colors ${activeFilter === "all" ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-sm" : "text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"}`}
+                >
+                  All
+                </button>
+                <button 
+                  onClick={() => setActiveFilter("owe")}
+                  className={`px-3 py-1 rounded-lg font-semibold transition-colors ${activeFilter === "owe" ? "bg-white dark:bg-white/10 text-rose-600 dark:text-rose-400 shadow-sm" : "text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"}`}
+                >
+                  You Owe
+                </button>
+                <button 
+                  onClick={() => setActiveFilter("owed")}
+                  className={`px-3 py-1 rounded-lg font-semibold transition-colors ${activeFilter === "owed" ? "bg-white dark:bg-white/10 text-emerald-600 dark:text-emerald-400 shadow-sm" : "text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"}`}
+                >
+                  Owed
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {mockTabs.map(tab => (
+            {filteredTabs.map(tab => (
               <Link 
                 href={`/tab/${tab.id}`}
                 key={tab.id} 
-                className="bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 rounded-3xl p-6 transition-all hover:scale-[1.02] cursor-pointer group flex flex-col h-[220px]"
+                className="bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-3xl p-6 transition-all hover:scale-[1.02] shadow-sm hover:shadow-md cursor-pointer group flex flex-col h-[220px]"
               >
                 <div className="flex justify-between items-start mb-auto">
                   <div>
-                    <h3 className="font-bold text-lg text-white/90 group-hover:text-white transition-colors">{tab.name}</h3>
-                    <p className="text-white/40 text-sm mt-1">{tab.memberCount} members</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-bold text-lg text-slate-900 dark:text-white/90 group-hover:text-indigo-600 dark:group-hover:text-white transition-colors">{tab.name}</h3>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-500 dark:text-white/40 text-xs">{tab.memberCount} members</span>
+                      <span className="text-slate-300 dark:text-white/20">•</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${tab.role === "Creator" ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/20" : "bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-white/50"}`}>
+                        {tab.role === "Creator" ? "Creator (Admin)" : "Member"}
+                      </span>
+                    </div>
                   </div>
-                  <div className={`px-3 py-1.5 rounded-xl text-sm font-bold ${tab.balance >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                  <div className={`px-3 py-1.5 rounded-xl text-sm font-bold tabular-nums ${tab.balance >= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
                     {tab.balance > 0 ? '+' : ''}{formatCurrency(tab.balance)}
                   </div>
                 </div>
                 
-                <div className="flex items-center justify-between border-t border-white/10 pt-4 mt-4">
-                  <div className="flex items-center gap-2 text-white/50 text-sm">
-                    <Receipt className="w-4 h-4" />
+                <div className="flex items-center justify-between border-t border-slate-100 dark:border-white/10 pt-4 mt-4">
+                  <div className="flex items-center gap-2 text-slate-500 dark:text-white/50 text-xs font-medium">
+                    <Receipt className="w-3.5 h-3.5" />
                     <span>{tab.lastActivity}</span>
                   </div>
-                  <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-indigo-500 group-hover:text-white transition-all text-white/30">
+                  <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all text-slate-400 dark:text-white/30 shadow-sm">
                     <ArrowRight className="w-4 h-4" />
                   </div>
                 </div>
               </Link>
             ))}
+
+            {filteredTabs.length === 0 && (
+              <div className="col-span-full py-12 text-center bg-white dark:bg-white/5 border border-dashed border-slate-200 dark:border-white/10 rounded-3xl">
+                <Users className="w-10 h-10 text-slate-300 dark:text-white/20 mx-auto mb-2" />
+                <p className="text-sm font-semibold text-slate-700 dark:text-white/70">No tabs match your filter</p>
+                <button onClick={() => { setActiveFilter("all"); setSearchQuery(""); }} className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold mt-1">
+                  Reset filters
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-4">
+        {/* Desktop Actions */}
+        <div className="hidden md:flex gap-4">
           <Link 
             href="/tab/new" 
-            className="flex-1 bg-white hover:bg-white/90 text-black px-6 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+            className="flex-1 bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:hover:bg-white/90 dark:text-black px-6 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-md"
           >
             <Plus className="w-5 h-5" />
-            <span className="hidden sm:inline">Create New Tab</span>
-            <span className="sm:hidden">New Tab</span>
+            <span>Create New Tab</span>
           </Link>
           <button 
             onClick={() => setShowJoinModal(true)}
-            className="flex-1 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 px-6 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+            className="flex-1 bg-white dark:bg-indigo-500/10 hover:bg-slate-100 dark:hover:bg-indigo-500/20 border border-slate-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 px-6 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm cursor-pointer"
           >
             <QrCode className="w-5 h-5" />
-            <span className="hidden sm:inline">Join via Code</span>
-            <span className="sm:hidden">Join Tab</span>
+            <span>Join via Code</span>
           </button>
         </div>
       </main>
 
+      {/* Modern Web2 Sticky Bottom Action Dock on Mobile */}
+      <div className="md:hidden fixed bottom-6 inset-x-4 z-40">
+        <div className="bg-white/95 dark:bg-[#121212]/95 backdrop-blur-2xl border border-slate-200/90 dark:border-white/15 rounded-full p-2 flex items-center justify-between gap-2 shadow-2xl max-w-sm mx-auto">
+          <Link 
+            href="/tab/new" 
+            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-4 rounded-full font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-indigo-500/25 active:scale-95 transition-transform"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New Tab</span>
+          </Link>
+
+          <button 
+            onClick={() => setShowJoinModal(true)}
+            className="flex-1 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-800 dark:text-white py-3 px-4 rounded-full font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-transform cursor-pointer"
+          >
+            <QrCode className="w-4 h-4" />
+            <span>Join Code</span>
+          </button>
+
+          <Link 
+            href="/settings"
+            className="p-3 rounded-full bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-white/80 hover:bg-slate-200 dark:hover:bg-white/15 transition-colors"
+            title="Settings"
+          >
+            <Settings className="w-4 h-4" />
+          </Link>
+        </div>
+      </div>
+
       {/* Join Modal */}
       {showJoinModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#121212] border border-white/10 rounded-3xl p-6 md:p-8 max-w-md w-full space-y-6">
+        <div className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#121212] border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 max-w-md w-full space-y-6 shadow-2xl text-slate-900 dark:text-white">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-bold">Join Group via Code</h3>
-              <button onClick={() => setShowJoinModal(false)} className="text-white/40 hover:text-white">
+              <button 
+                onClick={() => setShowJoinModal(false)} 
+                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/10 flex items-center justify-center text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white transition-colors"
+                aria-label="Close modal"
+              >
                 ✕
               </button>
             </div>
             <form onSubmit={handleJoin} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-white/60 uppercase tracking-wider mb-2">6-Digit Code</label>
+                <label className="block text-xs font-semibold text-slate-500 dark:text-white/60 uppercase tracking-wider mb-2">6-Digit Code</label>
                 <input 
                   type="text" 
                   maxLength={6}
                   value={joinCode}
                   onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                   placeholder="e.g. A3F9K2" 
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-center tracking-widest text-2xl font-mono uppercase text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-center tracking-widest text-2xl font-mono uppercase text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
                 />
               </div>
               <button 
                 type="submit"
                 disabled={joinCode.length !== 6}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:hover:bg-indigo-600 text-white font-bold py-4 rounded-xl transition-all"
+                className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:hover:bg-indigo-600 text-white font-bold py-4 rounded-xl transition-all shadow-md"
               >
                 Join Group
               </button>

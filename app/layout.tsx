@@ -13,6 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://mesh-tab.vercel.app"),
   title: "MeshTab | Smart Settlement",
   description: "Gasless micro-expense tracking and multilateral debt netting on Monad.",
 };
@@ -23,9 +24,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${outfit.variable} ${geistMono.variable} h-full dark scroll-smooth`}>
-      <body className="min-h-full flex flex-col antialiased selection:bg-indigo-500/30">
-        <main className="flex-1 flex flex-col w-full bg-black/20 min-h-screen relative shadow-2xl overflow-x-hidden">
+    <html lang="en" className={`${outfit.variable} ${geistMono.variable} h-full dark scroll-smooth`} suppressHydrationWarning>
+      <body className="min-h-full flex flex-col antialiased selection:bg-indigo-500/30 bg-slate-50 dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300">
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                const theme = localStorage.getItem('theme');
+                if (theme === 'light') {
+                  document.documentElement.classList.remove('dark');
+                } else if (theme === 'dark') {
+                  document.documentElement.classList.add('dark');
+                }
+              } catch (e) {}
+            `,
+          }}
+        />
+        <main className="flex-1 flex flex-col w-full min-h-screen relative overflow-x-hidden">
           {children}
         </main>
       </body>

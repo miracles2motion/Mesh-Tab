@@ -9,10 +9,15 @@ const mockMembers = [
   { name: "Sarah", balance: -18000, type: "debtor" as const }
 ];
 
-export default function InterceptedManageMembers({ params }: { params: { id: string } }) {
+export default async function InterceptedManageMembers({ 
+  params 
+}: { 
+  params: Promise<{ id: string }> 
+}) {
+  const { id } = await params;
   return (
     <Modal>
-      <ManageMembers tabId={params.id} members={mockMembers} />
+      <ManageMembers tabId={id} members={mockMembers} />
     </Modal>
   );
 }

@@ -22,13 +22,18 @@ export function Sheet({ isOpen, onClose, children, className }: SheetProps) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
+      const handleEscape = (e: KeyboardEvent) => {
+        if (e.key === "Escape") onClose();
+      };
+      window.addEventListener("keydown", handleEscape);
+      return () => {
+        document.body.style.overflow = "auto";
+        window.removeEventListener("keydown", handleEscape);
+      };
     } else {
       document.body.style.overflow = "auto";
     }
-    return () => {
-      document.body.style.overflow = "auto";
-    };
-  }, [isOpen]);
+  }, [isOpen, onClose]);
 
   if (!mounted) return null;
 
@@ -58,19 +63,19 @@ export function Sheet({ isOpen, onClose, children, className }: SheetProps) {
               }
             }}
             className={cn(
-              "relative w-full max-w-lg bg-[#0a0a0a] border-t sm:border border-white/10 shadow-2xl",
+              "relative w-full max-w-lg bg-white dark:bg-[#0a0a0a] border-t sm:border border-slate-200 dark:border-white/10 shadow-2xl text-slate-900 dark:text-white",
               "rounded-t-3xl sm:rounded-3xl max-h-[90vh] flex flex-col overflow-hidden",
               className
             )}
           >
             {/* Drag Handle */}
             <div className="w-full flex justify-center pt-3 pb-1 sm:hidden">
-              <div className="w-12 h-1.5 bg-white/20 rounded-full" />
+              <div className="w-12 h-1.5 bg-slate-300 dark:bg-white/20 rounded-full" />
             </div>
 
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 p-2 rounded-full bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-colors z-10 hidden sm:block"
+              className="absolute top-4 right-4 p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 dark:bg-white/5 dark:hover:bg-white/10 dark:text-white/50 dark:hover:text-white transition-colors z-10 hidden sm:block shadow-sm"
             >
               <X className="w-5 h-5" />
             </button>

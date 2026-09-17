@@ -24,13 +24,13 @@ export default function CreateTab() {
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-6 bg-[#0a0a0a] relative overflow-hidden h-screen">
+    <div className="flex-1 flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-[#0a0a0a] text-slate-900 dark:text-white relative overflow-hidden min-h-[calc(100vh-64px)] transition-colors duration-300">
       {/* Background Mesh */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-500/10 dark:bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none" />
       
       <motion.div 
         layout
-        className="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-3xl relative z-10 shadow-2xl"
+        className="w-full max-w-md bg-white dark:bg-white/5 backdrop-blur-xl border border-slate-200 dark:border-white/10 p-8 rounded-3xl relative z-10 shadow-2xl"
       >
         <AnimatePresence mode="wait">
           {step === 1 && (
@@ -43,27 +43,27 @@ export default function CreateTab() {
               className="space-y-6"
             >
               <div className="text-center mb-8">
-                <h1 className="text-2xl font-bold text-white mb-2">Create Group Space</h1>
-                <p className="text-white/60">Set up a shared tab for your friends.</p>
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Create Group Space</h1>
+                <p className="text-slate-500 dark:text-white/60 text-sm">Set up a shared tab for your friends.</p>
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-white/80 ml-1">Tab Name</label>
+                <label className="text-sm font-semibold text-slate-700 dark:text-white/80 ml-1">Tab Name</label>
                 <input
                   autoFocus
                   type="text"
                   placeholder="e.g., Lisbon Weekend"
                   value={tabName}
                   onChange={e => setTabName(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-lg"
+                  className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-lg font-medium"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-white/80 ml-1">Group Currency</label>
-                <div className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white/70 flex items-center justify-between opacity-70 cursor-not-allowed">
-                  <span>US Dollars (AUSD)</span>
-                  <span className="text-xs bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded">Default</span>
+                <label className="text-sm font-semibold text-slate-700 dark:text-white/80 ml-1">Group Currency</label>
+                <div className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-slate-700 dark:text-white/70 flex items-center justify-between opacity-80 cursor-not-allowed">
+                  <span className="font-medium">US Dollars (AUSD)</span>
+                  <span className="text-xs bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 px-2.5 py-1 rounded-full font-semibold border border-indigo-200 dark:border-indigo-500/20">Default</span>
                 </div>
               </div>
 
@@ -73,9 +73,9 @@ export default function CreateTab() {
               </Button>
               
               {/* Partner Branding */}
-              <div className="pt-2 flex items-center justify-center gap-3 text-white/30 text-[11px] font-medium">
+              <div className="pt-2 flex items-center justify-center gap-3 text-slate-400 dark:text-white/30 text-[11px] font-medium">
                 <span>Powered by</span>
-                <div className="flex gap-2 opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all">
+                <div className="flex gap-2 opacity-70 dark:opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all">
                   <Image src="/logos/monad.svg" alt="Monad" width={60} height={16} />
                   <Image src="/logos/agora.svg" alt="Agora" width={40} height={16} />
                 </div>
@@ -92,14 +92,14 @@ export default function CreateTab() {
               className="py-12 flex flex-col items-center justify-center text-center space-y-6"
             >
               <div className="relative">
-                <Loader2 className="w-16 h-16 text-indigo-500 animate-spin" />
+                <Loader2 className="w-16 h-16 text-indigo-600 dark:text-indigo-500 animate-spin" />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <CheckCircle2 className="w-6 h-6 text-white/50" />
+                  <CheckCircle2 className="w-6 h-6 text-slate-400 dark:text-white/50" />
                 </div>
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white mb-1">Setting up secure space</h2>
-                <p className="text-white/50 text-sm">Creating your group tab and finalizing settings...</p>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Setting up secure space</h2>
+                <p className="text-slate-500 dark:text-white/50 text-sm">Creating your group tab and finalizing settings...</p>
               </div>
             </motion.div>
           )}

@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 export default function TabLayout({
   children,
   modal,
@@ -12,3 +14,4 @@ export default function TabLayout({
     </>
   );
 }
+

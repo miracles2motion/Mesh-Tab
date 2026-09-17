@@ -33,9 +33,9 @@ export function Hero() {
         <Link href="/tab/new" className="btn-primary flex items-center justify-center gap-2 text-lg px-8 py-4">
           {hero.primaryCta} <ChevronRight className="w-5 h-5" />
         </Link>
-        <button className="btn-secondary flex items-center justify-center gap-2 text-lg px-8 py-4">
+        <Link href="/tab/lisbon-24" className="btn-secondary flex items-center justify-center gap-2 text-lg px-8 py-4">
           {hero.secondaryCta}
-        </button>
+        </Link>
       </div>
     </section>
   );

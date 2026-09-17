@@ -6,6 +6,8 @@ import { motion } from "framer-motion";
 import { ArrowRight, User } from "lucide-react";
 import { Button } from "../../components/ui/button";
 
+import { ThemeToggle } from "../../components/theme-toggle";
+
 const COLORS = [
   "bg-indigo-500", "bg-rose-500", "bg-emerald-500", 
   "bg-amber-500", "bg-sky-500", "bg-fuchsia-500"
@@ -27,6 +29,7 @@ function OnboardingContent() {
     
     setIsSubmitting(true);
     // Mock DB save
+    localStorage.setItem("meshTab_displayName", name.trim());
     await new Promise((resolve) => setTimeout(resolve, 1000));
     
     if (isInvite && inviteTab) {
@@ -37,38 +40,43 @@ function OnboardingContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] text-slate-900 dark:text-white flex flex-col items-center justify-center p-6 relative overflow-hidden transition-colors duration-300">
+      {/* Top Controls */}
+      <div className="absolute top-6 right-6 z-20">
+        <ThemeToggle />
+      </div>
+
       {/* Background Glow */}
       <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] opacity-20 blur-[100px] rounded-full pointer-events-none transition-colors duration-500 ${selectedColor}`} />
 
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md bg-white/5 border border-white/10 p-8 rounded-3xl relative z-10 shadow-2xl"
+        className="w-full max-w-md bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 p-8 rounded-3xl relative z-10 shadow-2xl"
       >
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/20">
-            <User className="w-8 h-8 text-white/50" />
+          <div className="w-16 h-16 bg-slate-100 dark:bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-200 dark:border-white/20">
+            <User className="w-8 h-8 text-slate-600 dark:text-white/50" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Welcome to MeshTab</h1>
-          <p className="text-white/60 text-sm">Let's set up your profile.</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Welcome to MeshTab</h1>
+          <p className="text-slate-500 dark:text-white/60 text-sm">Let's set up your profile.</p>
         </div>
 
         <form onSubmit={handleContinue} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-white/80 ml-1">Display Name</label>
+            <label className="text-sm font-semibold text-slate-700 dark:text-white/80 ml-1">Display Name</label>
             <input
               autoFocus
               type="text"
               placeholder="e.g., David"
               value={name}
               onChange={e => setName(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-lg"
+              className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-lg font-medium"
             />
           </div>
 
           <div className="space-y-3">
-            <label className="text-sm font-medium text-white/80 ml-1">Avatar Color</label>
+            <label className="text-sm font-semibold text-slate-700 dark:text-white/80 ml-1">Avatar Color</label>
             <div className="flex items-center gap-3 justify-between px-1">
               {COLORS.map((color) => (
                 <button
@@ -77,7 +85,7 @@ function OnboardingContent() {
                   onClick={() => setSelectedColor(color)}
                   className={`w-10 h-10 rounded-full ${color} transition-all duration-300 ${
                     selectedColor === color 
-                      ? "ring-2 ring-white ring-offset-4 ring-offset-[#121212] scale-110" 
+                      ? "ring-2 ring-indigo-600 dark:ring-white ring-offset-4 ring-offset-white dark:ring-offset-[#121212] scale-110" 
                       : "opacity-50 hover:opacity-100"
                   }`}
                 />
@@ -104,7 +112,7 @@ function OnboardingContent() {
 
 export default function OnboardingPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#0a0a0a]" />}>
+    <Suspense fallback={<div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a]" />}>
       <OnboardingContent />
     </Suspense>
   );

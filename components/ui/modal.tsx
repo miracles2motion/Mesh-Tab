@@ -59,14 +59,14 @@ export function Modal({ children, onClose, className }: ModalProps) {
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
           className={cn(
-            "relative w-full max-w-lg bg-[#0a0a0a] border border-white/10 shadow-2xl overflow-hidden",
+            "relative w-full max-w-lg bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden text-slate-900 dark:text-white",
             "sm:rounded-3xl sm:h-auto h-full flex flex-col",
             className
           )}
         >
           <button
             onClick={handleClose}
-            className="absolute top-4 right-4 p-2 rounded-full bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-colors z-10"
+            className="absolute top-4 right-4 p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 dark:bg-white/5 dark:hover:bg-white/10 dark:text-white/50 dark:hover:text-white transition-colors z-10 shadow-sm"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />
