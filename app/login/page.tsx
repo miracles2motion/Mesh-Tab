@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, Suspense } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Fingerprint, Loader2 } from "lucide-react";
@@ -68,6 +69,21 @@ function LoginContent() {
             "Continue with Passkey"
           )}
         </Button>
+
+        <div className="mt-5 pt-5 border-t border-slate-200/80 dark:border-white/10 w-full flex flex-col gap-2 text-xs">
+          <Link
+            href="/demo"
+            className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline"
+          >
+            Start Fresh Demo or Explore Sandbox →
+          </Link>
+          <Link
+            href="/onboarding?fresh=true"
+            className="text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white transition-colors"
+          >
+            Create New Profile with Custom Name & Color
+          </Link>
+        </div>
       </motion.div>
 
       {/* Powered by Mera branding in bottom left */}

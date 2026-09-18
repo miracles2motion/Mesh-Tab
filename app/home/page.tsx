@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode, Settings, Search, Filter, Crown, CheckCircle2, TrendingDown, TrendingUp, ArrowDownToLine, Coins, Sparkles } from "lucide-react";
+import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode, Settings, Search, Filter, Crown, CheckCircle2, TrendingDown, TrendingUp, ArrowDownToLine, Coins, Sparkles, Award } from "lucide-react";
 import { useState } from "react";
 import { TransactionOverlay, TransactionState } from "../../components/ui/transaction-overlay";
 import { formatCurrency } from "../../lib/utils";
@@ -10,6 +10,7 @@ import { ThemeToggle } from "../../components/theme-toggle";
 import { useUserProfile, useStoredTabs, useVirtualBalance, useWorkspaceMode } from "../../lib/user";
 import { CashOutDrawer } from "../../components/tab/cash-out-drawer";
 import { FaucetModal } from "../../components/tab/faucet-modal";
+import { PitchModal } from "../../components/home/pitch-modal";
 import { MeshBuddy } from "../../components/ui/mesh-buddy";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
@@ -25,6 +26,7 @@ export default function GlobalHub() {
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showCashOutModal, setShowCashOutModal] = useState(false);
   const [showFaucetModal, setShowFaucetModal] = useState(false);
+  const [showPitchModal, setShowPitchModal] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [txState, setTxState] = useState<TransactionState>("idle");
   const [searchQuery, setSearchQuery] = useState("");
@@ -109,6 +111,17 @@ export default function GlobalHub() {
               <Sparkles className="w-3 h-3" />
               <span>Change Mode</span>
             </Link>
+            <button
+              onClick={() => {
+                sounds.playClick();
+                setShowPitchModal(true);
+              }}
+              className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20 hover:bg-purple-500/20 transition-colors cursor-pointer"
+              title="Open Monad Metropolis Pitch Mode"
+            >
+              <Award className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+              <span>Pitch Mode</span>
+            </button>
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{greeting}, {profile.name} {emoji}</h1>
           <p className="text-slate-500 dark:text-white/60 mt-0.5 text-sm">Ready to settle up?</p>
@@ -424,6 +437,12 @@ export default function GlobalHub() {
       <FaucetModal
         isOpen={showFaucetModal}
         onClose={() => setShowFaucetModal(false)}
+      />
+
+      {/* Monad Metropolis Pitch Presentation Modal */}
+      <PitchModal 
+        isOpen={showPitchModal}
+        onClose={() => setShowPitchModal(false)}
       />
 
       {/* MeshBuddy Tab Co-Pilot */}

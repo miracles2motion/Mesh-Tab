@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { AlertCircle, RefreshCw, Home } from "lucide-react";
+import { MeshBuddy } from "../components/ui/mesh-buddy";
 
 export default function GlobalError({
   error,
@@ -17,7 +18,7 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white flex flex-col items-center justify-center p-6 text-center transition-colors duration-300">
+    <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white flex flex-col items-center justify-center p-6 text-center transition-colors duration-300 relative">
       <div className="w-16 h-16 rounded-3xl bg-rose-500/10 dark:bg-rose-500/20 border border-rose-500/20 flex items-center justify-center mb-6 shadow-sm">
         <AlertCircle className="w-8 h-8 text-rose-600 dark:text-rose-400" />
       </div>
@@ -26,7 +27,7 @@ export default function GlobalError({
         Something unexpected happened
       </h1>
       <p className="text-sm text-slate-500 dark:text-white/60 max-w-md mb-8 leading-relaxed">
-        Your group tab data and ledger remain safe in your local storage. Tap below to reload the screen or return to the main hub.
+        Your group tab data and ledger remain safe in your local storage. Tap below to reload the screen, return to the main hub, or ask MeshBuddy for instant assistance.
       </p>
 
       <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
@@ -46,6 +47,9 @@ export default function GlobalError({
           <span>Return to Hub</span>
         </Link>
       </div>
+
+      {/* MeshBuddy remains available on error screen for live recovery and troubleshooting */}
+      <MeshBuddy />
     </div>
   );
 }

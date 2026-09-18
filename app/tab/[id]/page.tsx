@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { Activity, Plus, ArrowLeft, Settings, Users } from "lucide-react";
+import { Activity, Plus, ArrowLeft, Settings, Users, Download } from "lucide-react";
 import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { BalanceCard } from "../../../components/tab/balance-card";
@@ -12,6 +12,8 @@ import { FeedList, ExpenseItem } from "../../../components/tab/feed-list";
 import { TransactionOverlay, TransactionState } from "../../../components/ui/transaction-overlay";
 import { NettingCanvas } from "../../../components/NettingCanvas";
 import { Modal } from "../../../components/ui/modal";
+import { toast } from "sonner";
+import { sounds } from "../../../lib/sounds";
 
 import { useUserProfile, useDeveloperMode, useStoredTabs, useStoredExpenses } from "../../../lib/user";
 
@@ -94,6 +96,57 @@ function DashboardContent() {
     await new Promise(r => setTimeout(r, 2000));
     setNettingTxState("idle");
   };
+
+  const exportLedgerCSV = () => {
+    sounds.playClick();
+    const rows: (string | number)[][] = [];
+
+    // Tab Information Header
+    rows.push(["TAB_NAME", `"${currentTab.name.replace(/"/g, '""')}"`]);
+    rows.push(["TAB_ID", currentTab.id]);
+    rows.push(["EXPORTED_AT", new Date().toLocaleString()]);
+    rows.push(["MEMBER_COUNT", mockMembers.length]);
+    rows.push([]);
+
+    // Member Balances Section
+    rows.push(["--- MEMBER BALANCES ---"]);
+    rows.push(["Member Name", "Net Balance (AUSD)", "Status / Direction"]);
+    mockMembers.forEach(m => {
+      rows.push([
+        m.name,
+        (m.balance / 100).toFixed(2),
+        m.balance === 0 ? "Settled ($0.00)" : m.balance > 0 ? "Creditor (Owed funds)" : "Debtor (Owes group)"
+      ]);
+    });
+    rows.push([]);
+
+    // Itemized Expenses Section
+    rows.push(["--- ITEMIZED EXPENSES & TRANSACTIONS ---"]);
+    rows.push(["Expense ID", "Timestamp", "Description", "Paid By", "Amount (AUSD)"]);
+    expenses.forEach(exp => {
+      rows.push([
+        exp.id,
+        exp.time || "Recent",
+        `"${(exp.desc || "").replace(/"/g, '""')}"`,
+        exp.payer,
+        (exp.amount / 100).toFixed(2),
+      ]);
+    });
+
+    const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `MeshTab-${currentTab.name.replace(/\s+/g, "_")}-Ledger.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    sounds.playSuccessChime();
+    toast.success("Ledger Exported Successfully", {
+      description: `Downloaded MeshTab-${currentTab.name.replace(/\s+/g, "_")}-Ledger.csv`
+    });
+  };
   
   return (
     <>
@@ -142,6 +195,15 @@ function DashboardContent() {
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            onClick={exportLedgerCSV}
+            className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-white/70 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+            title="Export Tab Ledger (CSV)"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Export</span>
+            <span className="sm:hidden text-xs font-bold">CSV</span>
+          </button>
           <Link 
             href={`/tab/${params?.id || 'default'}/members`} 
             className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-white/70 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full transition-colors flex items-center gap-1.5 shadow-sm"

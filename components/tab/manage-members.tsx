@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Users, Check, QrCode, Crown, ShieldAlert, AlertCircle, Info, Trash2 } from "lucide-react";
+import { Copy, Users, Check, QrCode, Crown, ShieldAlert, AlertCircle, Info, Trash2, Sparkles, UserPlus } from "lucide-react";
 import { Button } from "../ui/button";
 import { QRCodeSVG } from "qrcode.react";
 import { formatCurrency } from "../../lib/utils";
+import confetti from "canvas-confetti";
 
 interface MemberItem {
   name: string;
@@ -69,6 +70,55 @@ export function ManageMembers({
     sounds.playClick();
     toast.success("Invite Link Copied!", { description: inviteLink });
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const [isSimulating, setIsSimulating] = useState(false);
+
+  const handleSimulateJoin = async () => {
+    if (isSimulating) return;
+    setIsSimulating(true);
+    sounds.playClick();
+
+    const candidateNames = ["Liam", "Zoe", "Marcus", "Elena", "Devon"];
+    const existingNames = new Set(memberList.map(m => m.name));
+    const nextName = candidateNames.find(n => !existingNames.has(n)) || `Guest_${memberList.length + 1}`;
+
+    toast.info("Simulating QR Scan...", {
+      description: `${nextName} is authenticating with Mera WebAuthn passkey...`
+    });
+
+    await new Promise(r => setTimeout(r, 1200));
+
+    const newMember: MemberItem = {
+      name: nextName,
+      balance: 0,
+      type: "settled",
+      role: "member"
+    };
+
+    setMemberList(prev => [...prev, newMember]);
+    setIsSimulating(false);
+    sounds.playSuccessChime();
+
+    try {
+      confetti({
+        particleCount: 75,
+        spread: 65,
+        origin: { y: 0.6 }
+      });
+    } catch {
+      // ignore
+    }
+
+    toast.success("🎉 Friend Joined Tab!", {
+      description: `${nextName} scanned the QR code & securely joined the active roster.`
+    });
+
+    setNotification({
+      type: "success",
+      message: `${nextName} successfully joined the group via QR code invite!`
+    });
+    setTimeout(() => setNotification(null), 5000);
   };
 
   const handleAttemptRemove = (member: MemberItem) => {
@@ -159,6 +209,20 @@ export function ManageMembers({
                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                </Button>
              </div>
+          </div>
+
+          <div className="w-full pt-3 border-t border-slate-200/80 dark:border-white/10">
+            <button
+              onClick={handleSimulateJoin}
+              disabled={isSimulating}
+              className="w-full py-2.5 px-4 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm disabled:opacity-50"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 animate-pulse" />
+              <span>{isSimulating ? "Authenticating WebAuthn Passkey..." : "⚡ Simulate Friend Scanning QR & Joining"}</span>
+            </button>
+            <p className="text-[10px] text-slate-500 dark:text-white/40 mt-1.5 text-center">
+              Demonstrates live multi-player roster admission & cryptographic passkey signing.
+            </p>
           </div>
         </div>
 

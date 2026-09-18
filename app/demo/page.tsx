@@ -10,9 +10,12 @@ import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
 import Image from "next/image";
 import { MeshBuddy } from "../../components/ui/mesh-buddy";
+import { FreshDemoModal } from "../../components/demo/fresh-demo-modal";
+import { useState } from "react";
 
 export default function DemoSelectionPage() {
   const router = useRouter();
+  const [showFreshModal, setShowFreshModal] = useState(false);
 
   const handleSelectSample = () => {
     setWorkspaceMode("sample");
@@ -24,12 +27,8 @@ export default function DemoSelectionPage() {
   };
 
   const handleSelectBlank = () => {
-    setWorkspaceMode("blank");
-    sounds.playSuccessChime();
-    toast.success("Switched to Clean Slate", {
-      description: "Pristine workspace ready to test creating a new tab from scratch."
-    });
-    router.push("/tab/new");
+    sounds.playClick();
+    setShowFreshModal(true);
   };
 
   return (
@@ -200,6 +199,11 @@ export default function DemoSelectionPage() {
           <span>Need to switch later? Use the 1-click mode toggle at the top of your Hub or in Settings anytime.</span>
         </motion.div>
       </main>
+
+      <FreshDemoModal 
+        isOpen={showFreshModal} 
+        onClose={() => setShowFreshModal(false)} 
+      />
 
       <MeshBuddy />
     </div>
