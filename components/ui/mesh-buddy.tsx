@@ -24,6 +24,7 @@ import {
   useUserProfile, 
   useWorkspaceMode, 
   useVirtualBalance,
+  useStoredTabs,
   AVATAR_COLORS
 } from "../../lib/user";
 import { formatCurrency } from "../../lib/utils";
@@ -45,6 +46,7 @@ export function MeshBuddy() {
   const { settings: buddySettings, updateSettings } = useBuddySettings();
   const { mode: workspaceMode, setMode: setWorkspaceMode } = useWorkspaceMode();
   const { balance: virtualBalance, topUp } = useVirtualBalance();
+  const { tabs: storedTabs } = useStoredTabs();
 
   const [isOpen, setIsOpen] = useState(false);
   const [isConfiguring, setIsConfiguring] = useState(false);
@@ -55,6 +57,20 @@ export function MeshBuddy() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
+
+  // Context awareness: detect current route, tab, and app mode
+  const pathSegments = pathname ? pathname.split("/").filter(Boolean) : [];
+  const currentTabId = (pathSegments[0] === "tab" && pathSegments[1] && pathSegments[1] !== "new")
+    ? pathSegments[1]
+    : null;
+  const isDemoTab = (currentTabId === "lisbon-24" || currentTabId === "house-groceries") && workspaceMode === "sample";
+  const isCustomTab = currentTabId !== null && !isDemoTab;
+
+  const activeTab = storedTabs.find((t) => t.id === currentTabId);
+  const tabDisplayName = activeTab?.name || (currentTabId ? currentTabId.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "Custom Group Tab");
+
+  const currentContextKey = `${workspaceMode}_${currentTabId || "none"}_${pathname}`;
+  const lastContextRef = useRef<string>("");
 
   // Sound synthesis helper
   const speakText = (text: string) => {
@@ -73,46 +89,101 @@ export function MeshBuddy() {
     window.speechSynthesis.speak(utterance);
   };
 
-  // Route-based dynamic greetings & tips
+  // Route-based dynamic greetings & tips (Accurately scoped to context)
   useEffect(() => {
     let tip = "";
-    if (pathname === "/home") {
+    if (pathname === "/demo") {
+      tip = "Judge Sandbox: Choose between the pre-loaded Lisbon '24 trip to evaluate netting, or start with a Clean Slate to test a fresh tab!";
+    } else if (pathname === "/home") {
       tip = workspaceMode === "blank" 
-        ? "Clean Slate Active! Tap + to create your first tab, or ask me to restore the Lisbon demo."
-        : "Hi! I'm your Tab Co-Pilot. Tap me to learn about Tangle Netting or claim sandbox test funds!";
-    } else if (pathname?.includes("/tab/") && pathname?.includes("/expense/new")) {
-      tip = "Tip: You can snap a receipt photo with your camera or dictate your expense with your mic!";
-    } else if (pathname?.includes("/tab/")) {
-      tip = "In this trip, Aisha paid for the villa. Tap Run Tangle Netting to cancel mutual debt loops!";
+        ? "Clean Slate Active (Main App): Tap + to create your first tab, or ask me to restore the Lisbon demo."
+        : "Sample Trip Mode: Tap Lisbon Weekend to test netting, or tap Change Mode to test a clean slate.";
+    } else if (pathname === "/tab/new") {
+      tip = "Give your new group tab a name and currency. You'll be able to invite friends via passkeys right after!";
+    } else if (pathname?.includes("/expense/new")) {
+      tip = isDemoTab
+        ? "Tip: Try Smart Scan or Voice OCR to add another expense to the Lisbon benchmark!"
+        : isCustomTab
+        ? `Tip: Adding an expense to "${tabDisplayName}". Snap a receipt or dictate with your mic!`
+        : "Tip: You can snap a receipt photo with your camera or dictate your expense with your mic!";
+    } else if (pathname?.includes("/members")) {
+      tip = isDemoTab
+        ? "Invite additional friends to the Lisbon trip with the QR code. They'll claim seats with biometric passkeys!"
+        : isCustomTab
+        ? `Invite members to "${tabDisplayName}". Anyone who scans can claim a seat via TouchID / FaceID!`
+        : "Invite group members with the shareable QR code or link. Members claim seats with biometric passkeys!";
+    } else if (isDemoTab) {
+      tip = "In the Lisbon benchmark, Aisha paid $600 for the villa. Tap Run Tangle Netting to see 12 debts collapse into 3 payments!";
+    } else if (isCustomTab) {
+      tip = `This is your custom group tab "${tabDisplayName}". Tap Add Expense to log shared costs, or invite members to join!`;
     } else if (pathname === "/settings") {
-      tip = "You can customize my name, voice, or test your hardware passkey here.";
+      tip = "You can customize my name, voice persona, or test your hardware passkey here.";
+    } else if (pathname === "/notifications") {
+      tip = "Here are your group payment and settlement notifications from your Monad smart account.";
     }
 
     if (tip) {
       setSpeechBubble(tip);
-      const timer = setTimeout(() => setSpeechBubble(null), 7000);
+      const timer = setTimeout(() => setSpeechBubble(null), 8000);
       return () => clearTimeout(timer);
     }
-  }, [pathname, workspaceMode]);
+  }, [pathname, workspaceMode, isDemoTab, isCustomTab, tabDisplayName]);
 
-  // Initial greeting when opening chat
+  // Initial greeting when opening chat (Adaptive to demo vs custom tab vs blank slate)
   useEffect(() => {
-    if (isOpen && messages.length === 0) {
-      const welcome: ChatMessage = {
-        id: "msg-welcome",
-        sender: "buddy",
-        text: `Hey ${profile.name || "there"}! I'm ${buddySettings.name}. How can I assist you with your group tab today?`,
-        actions: [
-          { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet },
-          { label: "❓ How does Netting work?", action: () => handleAskQuestion("How does netting work?") },
-          { label: "💸 How do I Cash Out to Bank?", action: () => handleAskQuestion("How do I cash out to bank?") },
-          { label: workspaceMode === "blank" ? "🏖️ Restore Lisbon Demo" : "🧹 Switch to Blank Slate", action: handleToggleWorkspace }
-        ]
-      };
-      setMessages([welcome]);
-      speakText(welcome.text);
+    if (isOpen) {
+      const contextChanged = lastContextRef.current !== currentContextKey;
+      if (messages.length === 0 || contextChanged) {
+        lastContextRef.current = currentContextKey;
+
+        let welcomeText = `Hey ${profile.name || "there"}! I'm ${buddySettings.name}. How can I assist you with your group tab today?`;
+        let welcomeActions: { label: string; action: () => void }[] = [];
+
+        if (isDemoTab) {
+          welcomeText = `Hey ${profile.name || "there"}! I'm ${buddySettings.name}. You're viewing the Lisbon '24 demo trip ($1,200 spent across 4 members). Ready to run Tangle Netting or test settlements?`;
+          welcomeActions = [
+            { label: "❓ How does Netting work?", action: () => handleAskQuestion("How does netting work?") },
+            { label: "📸 Smart Scan Receipt", action: () => router.push("/tab/lisbon-24/expense/new") },
+            { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet },
+            { label: "🧹 Switch to Clean Slate", action: handleToggleWorkspace }
+          ];
+        } else if (isCustomTab) {
+          welcomeText = `Hey ${profile.name || "there"}! I'm ${buddySettings.name}. You're on your custom group tab "${tabDisplayName}". You can log shared expenses, invite friends with passkeys, or run netting once costs accumulate.`;
+          welcomeActions = [
+            { label: "➕ Add Expense", action: () => router.push(`/tab/${currentTabId}/expense/new`) },
+            { label: "👥 Invite Members", action: () => router.push(`/tab/${currentTabId}/members`) },
+            { label: "❓ How does Netting work?", action: () => handleAskQuestion("How does netting work on custom tabs?") },
+            { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet }
+          ];
+        } else if (workspaceMode === "blank") {
+          welcomeText = `Hey ${profile.name || "there"}! I'm ${buddySettings.name}. You're in Clean Slate mode (Main App with a fresh workspace). Ready to create your first tab?`;
+          welcomeActions = [
+            { label: "➕ Create New Tab", action: () => router.push("/tab/new") },
+            { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet },
+            { label: "🏖️ Restore Lisbon Demo", action: handleToggleWorkspace },
+            { label: "🎮 Open Demo Sandbox", action: () => router.push("/demo") }
+          ];
+        } else {
+          welcomeText = `Hey ${profile.name || "there"}! I'm ${buddySettings.name}. You're in Sample Trip Mode. Tap Lisbon Weekend to test netting, or explore your settings.`;
+          welcomeActions = [
+            { label: "🏖️ Open Lisbon Demo", action: () => router.push("/tab/lisbon-24") },
+            { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet },
+            { label: "❓ How does Netting work?", action: () => handleAskQuestion("How does netting work?") },
+            { label: "🧹 Switch to Clean Slate", action: handleToggleWorkspace }
+          ];
+        }
+
+        const welcome: ChatMessage = {
+          id: `msg-welcome-${Date.now()}`,
+          sender: "buddy",
+          text: welcomeText,
+          actions: welcomeActions
+        };
+        setMessages([welcome]);
+        speakText(welcome.text);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, isDemoTab, isCustomTab, workspaceMode, profile.name, buddySettings.name, currentTabId, tabDisplayName, currentContextKey]);
 
   useEffect(() => {
     setCustomName(buddySettings.name);
@@ -144,14 +215,14 @@ export function MeshBuddy() {
     const nextMode = workspaceMode === "blank" ? "sample" : "blank";
     setWorkspaceMode(nextMode);
     sounds.playClick();
-    toast.info(nextMode === "blank" ? "Switched to Blank Slate" : "Restored Sample Trip");
+    toast.info(nextMode === "blank" ? "Switched to Clean Slate" : "Restored Lisbon Demo Trip");
 
     const reply: ChatMessage = {
       id: `mode-${Date.now()}`,
       sender: "buddy",
       text: nextMode === "blank"
-        ? "Switched to Blank Slate! All sample tabs are hidden so you can test creating groups and logging expenses from scratch."
-        : "Restored Sample Trip! Lisbon Weekend is back with full mock data and the netting graph."
+        ? "Switched to Clean Slate! All sample tabs are hidden. You are now in the Main App fresh workspace to test creating custom groups from scratch."
+        : "Restored Sample Trip! The Lisbon '24 benchmark is back with full mock data and the netting graph."
     };
     setMessages((prev) => [...prev, reply]);
     speakText(reply.text);
@@ -162,27 +233,104 @@ export function MeshBuddy() {
     let replyText = "";
     let actionItems: { label: string; action: () => void }[] | undefined = undefined;
 
-    if (q.includes("netting") || q.includes("tangle")) {
-      replyText = "Multilateral Netting simplifies group debts by finding circular payment loops (A owes B, B owes C, C owes A) and canceling them out. In the Lisbon trip, this cuts 12 international wire transfers down to just 3 payments, saving 75% in total money moved!";
+    if (
+      q.includes("mode") || 
+      q.includes("demo") || 
+      q.includes("mock") || 
+      q.includes("clean") || 
+      q.includes("slate") || 
+      q.includes("blank") || 
+      q.includes("main app") || 
+      q.includes("where am i") ||
+      q.includes("which mode")
+    ) {
+      if (isDemoTab) {
+        replyText = "You are currently viewing the Lisbon '24 Demo Trip (Sample Trip Mode). 4 international members and $1,200 in mock expenses are pre-loaded to evaluate Monad Tangle Netting. If you want to test the main app with a fresh ledger, you can switch to Clean Slate!";
+        actionItems = [
+          { label: "🧹 Switch to Clean Slate", action: handleToggleWorkspace },
+          { label: "🎮 Open Demo Selector", action: () => router.push("/demo") }
+        ];
+      } else if (isCustomTab) {
+        replyText = `You are currently in the Main App, viewing your custom group tab "${tabDisplayName}". This is an independent ledger for your group — mock data from the Lisbon demo is not mixed in here!`;
+        actionItems = [
+          { label: "➕ Add Expense", action: () => router.push(`/tab/${currentTabId}/expense/new`) },
+          { label: "👥 Manage Members", action: () => router.push(`/tab/${currentTabId}/members`) }
+        ];
+      } else if (workspaceMode === "blank") {
+        replyText = "You are currently in the Main App using Clean Slate Mode (Fresh Workspace). All sample mock tabs are cleared so you can test creating custom tabs and inviting members from scratch. You can restore the Lisbon demo anytime!";
+        actionItems = [
+          { label: "➕ Create New Tab", action: () => router.push("/tab/new") },
+          { label: "🏖️ Restore Lisbon Demo", action: handleToggleWorkspace }
+        ];
+      } else {
+        replyText = "You are currently in Sample Trip Mode. The Lisbon '24 benchmark is loaded so judges can evaluate netting and off-ramps with pre-populated data. You can switch to Clean Slate to test a fresh setup.";
+        actionItems = [
+          { label: "🏖️ Open Lisbon Demo", action: () => router.push("/tab/lisbon-24") },
+          { label: "🧹 Switch to Clean Slate", action: handleToggleWorkspace }
+        ];
+      }
+    } else if ((q.includes("aisha") || q.includes("lisbon") || q.includes("villa")) && isCustomTab) {
+      replyText = `Aisha and the villa booking are part of the Lisbon '24 Demo benchmark. You are currently viewing your own custom group tab "${tabDisplayName}", which has its own independent members and expenses!`;
       actionItems = [
-        { label: "Take me to Lisbon Tab", action: () => router.push("/tab/lisbon-24") }
+        { label: "➕ Add Expense to this Tab", action: () => router.push(`/tab/${currentTabId}/expense/new`) },
+        { label: "Explore Lisbon Demo Trip", action: () => router.push("/tab/lisbon-24") }
       ];
+    } else if (q.includes("netting") || q.includes("tangle")) {
+      if (isDemoTab) {
+        replyText = "Multilateral Netting simplifies group debts by finding circular payment loops (A owes B, B owes C, C owes A) and canceling them out. In this Lisbon trip, it cuts 12 crisscrossing international transfers down to 3 direct payments pointing to Aisha, clearing $900 (75%) without moving capital!";
+        actionItems = [
+          { label: "Stay on Lisbon Tab", action: () => router.push("/tab/lisbon-24") }
+        ];
+      } else if (isCustomTab) {
+        replyText = `Multilateral Netting mathematically simplifies your group debts. Once members of "${tabDisplayName}" log crisscrossing expenses, tapping 'Run Tangle Netting' calculates the minimum direct payments needed to settle the entire tab with zero-sum conservation!`;
+        actionItems = [
+          { label: "Add Expense to Tab", action: () => router.push(`/tab/${currentTabId}/expense/new`) }
+        ];
+      } else {
+        replyText = "Multilateral Netting cancels circular debt loops across group members. In the Lisbon benchmark, 12 international wire transfers collapse into just 3 direct payments, saving 75% in total capital movement!";
+        actionItems = [
+          { label: "Explore Lisbon Demo", action: () => router.push("/tab/lisbon-24") },
+          { label: "🎮 View Demo Selector", action: () => router.push("/demo") }
+        ];
+      }
     } else if (q.includes("cash out") || q.includes("withdraw") || q.includes("bank")) {
-      replyText = "When your friends settle up and you are owed money, your balance turns green (+). You can tap 'Cash Out to Bank' on your balance card to transfer your Agora AUSD directly to your debit card (Visa Direct) or bank account via Dynamic off-ramp!";
-    } else if (q.includes("receipt") || q.includes("camera") || q.includes("ocr")) {
-      replyText = "On the 'Add Expense' screen, tap Receipt OCR to snap a photo or upload a receipt. The smart scanner extracts the items and total into an editable staging card before you sign with your passkey.";
-      actionItems = [
-        { label: "Open Add Expense", action: () => router.push("/tab/lisbon-24/expense/new") }
-      ];
+      replyText = "When group members settle up and you are owed money, your balance turns green (+). You can tap 'Cash Out to Bank' on your balance card to transfer your Agora AUSD directly to your debit card (Visa Direct) or bank account via the Dynamic off-ramp drawer!";
+    } else if (q.includes("receipt") || q.includes("camera") || q.includes("ocr") || q.includes("scan")) {
+      replyText = "On the 'Add Expense' screen, tap 'Smart Scan' to snap a photo or upload a receipt. The smart scanner extracts the merchant, line items, and total into an editable staging proposal before you confirm!";
+      if (currentTabId) {
+        actionItems = [
+          { label: `Open Add Expense (${tabDisplayName})`, action: () => router.push(`/tab/${currentTabId}/expense/new`) }
+        ];
+      } else {
+        actionItems = [
+          { label: "Go to Hub", action: () => router.push("/home") }
+        ];
+      }
+    } else if (q.includes("member") || q.includes("invite") || q.includes("share")) {
+      if (currentTabId) {
+        replyText = `You can invite friends to join "${tabDisplayName}" by sharing the QR code or invitation link. Members claim their seat biometrically using TouchID, FaceID, or PIN via Mera passkeys on Monad!`;
+        actionItems = [
+          { label: "Open Member Invite Screen", action: () => router.push(`/tab/${currentTabId}/members`) }
+        ];
+      } else {
+        replyText = "Group members join tabs via shareable QR codes or links. They claim seats using hardware WebAuthn passkeys (TouchID / FaceID) on Monad without seed phrases or gas fees.";
+        actionItems = [
+          { label: "Go to Hub", action: () => router.push("/home") }
+        ];
+      }
     } else if (q.includes("gas") || q.includes("fee") || q.includes("pimlico")) {
-      replyText = "You never pay network gas fees in MeshTab! Routine actions like logging expenses are permanently sponsored by Pimlico Verifying Paymasters. Real settlements use an ERC-20 paymaster to deduct a sub-cent fee in AUSD.";
+      replyText = "You never pay network gas fees in MeshTab! Routine ledger operations (logging expenses, creating tabs, claiming seats) are permanently sponsored by Pimlico Verifying Paymasters. Settlements use an ERC-20 paymaster to deduct a sub-cent fee in AUSD.";
     } else if (q.includes("passkey") || q.includes("login") || q.includes("mera")) {
-      replyText = "MeshTab uses Mera Passkeys. Instead of seed phrases or extensions, your account is bound directly to your device's TouchID, FaceID, or PIN via hardware WebAuthn (P-256).";
+      replyText = "MeshTab uses Mera Passkeys. Instead of seed phrases or extension popups, your account is bound directly to your device's TouchID, FaceID, or PIN via hardware WebAuthn (P-256) on Monad.";
     } else {
       replyText = `I heard you ask: "${query}". MeshTab is designed to make group travel expenses zero-friction. You can log expenses with camera OCR, simplify mutual debts with Tangle Netting, and settle instantly in digital dollars.`;
       actionItems = [
         { label: "🚰 Top Up Faucet", action: handleClaimFaucet },
-        { label: "Explore Lisbon Demo", action: () => router.push("/tab/lisbon-24") }
+        isCustomTab
+          ? { label: `➕ Add Expense to ${tabDisplayName}`, action: () => router.push(`/tab/${currentTabId}/expense/new`) }
+          : workspaceMode === "blank" 
+          ? { label: "➕ Create Tab", action: () => router.push("/tab/new") }
+          : { label: "Explore Lisbon Demo", action: () => router.push("/tab/lisbon-24") }
       ];
     }
 
@@ -299,8 +447,14 @@ export function MeshBuddy() {
                         Co-Pilot
                       </span>
                     </h3>
-                    <p className="text-[11px] text-slate-400 dark:text-white/40">
-                      Sandbox Assistant • Instant Monad Guide
+                    <p className="text-[11px] text-slate-500 dark:text-white/50 truncate max-w-[180px]">
+                      {isDemoTab
+                        ? "Demo Benchmark • Lisbon '24"
+                        : isCustomTab
+                        ? `Main App • ${tabDisplayName}`
+                        : workspaceMode === "blank"
+                        ? "Main App • Clean Slate Workspace"
+                        : "Sample Trip Mode • Monad Guide"}
                     </p>
                   </div>
                 </div>
@@ -326,6 +480,38 @@ export function MeshBuddy() {
               {/* Drawer Content */}
               {!isConfiguring ? (
                 <>
+                  {/* Mode & Context Environment Banner */}
+                  <div className="px-4 py-2 border-b border-slate-200/70 dark:border-white/10 bg-slate-100/80 dark:bg-white/[0.03] flex items-center justify-between text-[11px]">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${
+                        isDemoTab 
+                          ? "bg-amber-400 animate-pulse" 
+                          : isCustomTab 
+                          ? "bg-emerald-400" 
+                          : workspaceMode === "blank" 
+                          ? "bg-blue-400" 
+                          : "bg-purple-400"
+                      }`} />
+                      <span className="truncate font-semibold text-slate-700 dark:text-slate-200">
+                        {isDemoTab
+                          ? "Demo Mode: Lisbon '24 Trip"
+                          : isCustomTab
+                          ? `Main App: ${tabDisplayName}`
+                          : workspaceMode === "blank"
+                          ? "Main App: Clean Slate Mode"
+                          : "Sample Trip Mode"}
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleToggleWorkspace}
+                      className="shrink-0 text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold hover:underline flex items-center gap-1 ml-2"
+                      title={workspaceMode === "blank" ? "Restore Lisbon Demo" : "Switch to Clean Slate"}
+                    >
+                      <RefreshCw className="w-2.5 h-2.5" />
+                      <span>{workspaceMode === "blank" ? "Restore Demo" : "Clean Slate"}</span>
+                    </button>
+                  </div>
+
                   {/* Messages Feed */}
                   <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
                     {messages.map((msg) => (
@@ -364,7 +550,7 @@ export function MeshBuddy() {
                     <div ref={chatBottomRef} />
                   </div>
 
-                  {/* Quick Preset Buttons */}
+                  {/* Contextual Quick Preset Buttons */}
                   <div className="px-4 py-2 flex gap-1.5 overflow-x-auto scrollbar-hide border-t border-slate-100 dark:border-white/5">
                     <button
                       onClick={handleClaimFaucet}
@@ -372,24 +558,91 @@ export function MeshBuddy() {
                     >
                       <Coins className="w-3 h-3" /> Faucet (+$500)
                     </button>
-                    <button
-                      onClick={() => handleAskQuestion("How does netting work?")}
-                      className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold"
-                    >
-                      Netting
-                    </button>
-                    <button
-                      onClick={() => handleAskQuestion("How do I cash out?")}
-                      className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold"
-                    >
-                      Cash Out
-                    </button>
-                    <button
-                      onClick={() => handleAskQuestion("How does receipt OCR work?")}
-                      className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold"
-                    >
-                      Receipt OCR
-                    </button>
+                    {isCustomTab ? (
+                      <>
+                        <button
+                          onClick={() => router.push(`/tab/${currentTabId}/expense/new`)}
+                          className="shrink-0 px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 text-[10px] font-semibold flex items-center gap-1"
+                        >
+                          ➕ Add Expense
+                        </button>
+                        <button
+                          onClick={() => router.push(`/tab/${currentTabId}/members`)}
+                          className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold flex items-center gap-1"
+                        >
+                          👥 Invite
+                        </button>
+                        <button
+                          onClick={() => handleAskQuestion("How does netting work on this tab?")}
+                          className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold"
+                        >
+                          Netting
+                        </button>
+                      </>
+                    ) : isDemoTab ? (
+                      <>
+                        <button
+                          onClick={() => handleAskQuestion("How does netting work?")}
+                          className="shrink-0 px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 text-[10px] font-semibold"
+                        >
+                          🌀 Netting (75% Saved)
+                        </button>
+                        <button
+                          onClick={() => router.push("/tab/lisbon-24/expense/new")}
+                          className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold"
+                        >
+                          📸 Smart Scan
+                        </button>
+                        <button
+                          onClick={() => handleAskQuestion("How do I cash out?")}
+                          className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold"
+                        >
+                          Cash Out
+                        </button>
+                      </>
+                    ) : workspaceMode === "blank" ? (
+                      <>
+                        <button
+                          onClick={() => router.push("/tab/new")}
+                          className="shrink-0 px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 text-[10px] font-semibold flex items-center gap-1"
+                        >
+                          ➕ New Tab
+                        </button>
+                        <button
+                          onClick={handleToggleWorkspace}
+                          className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold"
+                        >
+                          🏖️ Restore Demo
+                        </button>
+                        <button
+                          onClick={() => router.push("/demo")}
+                          className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold"
+                        >
+                          🎮 Sandbox
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => router.push("/tab/lisbon-24")}
+                          className="shrink-0 px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 text-[10px] font-semibold"
+                        >
+                          🏖️ Lisbon Demo
+                        </button>
+                        <button
+                          onClick={() => handleAskQuestion("How does netting work?")}
+                          className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold"
+                        >
+                          Netting
+                        </button>
+                        <button
+                          onClick={() => handleAskQuestion("How do I cash out?")}
+                          className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold"
+                        >
+                          Cash Out
+                        </button>
+                      </>
+                    )}
                   </div>
 
                   {/* Message Input Form */}
@@ -485,20 +738,20 @@ export function MeshBuddy() {
                     <div className="flex justify-between items-center">
                       <span className="font-bold">Workspace Mode</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-mono">
-                        {workspaceMode === "blank" ? "Blank Slate" : "Sample Trip"}
+                        {workspaceMode === "blank" ? "Clean Slate (Main App)" : "Sample Trip (Demo Mode)"}
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-500 dark:text-white/50">
                       {workspaceMode === "blank"
-                        ? "You are testing with clean data. Tap below to reload the Lisbon demo."
-                        : "You are currently viewing the Lisbon trip demo data."}
+                        ? "You are in the Main App with clean data. All sample tabs are hidden. Tap below to reload the Lisbon demo."
+                        : "You are currently viewing the Lisbon '24 trip benchmark with 4 pre-loaded members."}
                     </p>
                     <button
                       onClick={handleToggleWorkspace}
                       className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-black font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors"
                     >
                       <RefreshCw className="w-3.5 h-3.5" />
-                      {workspaceMode === "blank" ? "Restore Lisbon Demo" : "Switch to Blank Slate"}
+                      {workspaceMode === "blank" ? "Restore Lisbon Demo" : "Switch to Clean Slate"}
                     </button>
                   </div>
 
