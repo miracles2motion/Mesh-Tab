@@ -192,7 +192,7 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
     setTxState("success");
     sounds.playSuccessChime();
     toast.success("Expense Logged to Ledger", {
-      description: `$${amount} logged for "${desc.trim()}". Zero gas fees sponsored.`
+      description: `$${amount} logged for "${desc.trim()}". Zero network fees sponsored.`
     });
     await new Promise(r => setTimeout(r, 1000));
     

@@ -245,7 +245,7 @@ export function MeshBuddy() {
     const reply: ChatMessage = {
       id: `faucet-${Date.now()}`,
       sender: "buddy",
-      text: `Done! Credited +$500.00 in Virtual AUSD to your sandbox wallet. Current balance: ${formatCurrency(virtualBalance + 50000)}. You can use this to settle debts in the settlement drawer!`
+      text: `Done! Credited +$500.00 in Virtual AUSD to your sandbox account. Current balance: ${formatCurrency(virtualBalance + 50000)}. You can use this to settle debts in the settlement drawer!`
     };
     setMessages((prev) => [...prev, reply]);
     speakText(reply.text);

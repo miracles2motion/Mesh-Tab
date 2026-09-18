@@ -600,7 +600,7 @@ export default function SettingsPage() {
                         {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                       </Button>
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-white/40 mt-2 font-medium">All ledger transactions and multilateral netting have network gas fees fully sponsored via Pimlico Paymasters.</p>
+                    <p className="text-xs text-slate-500 dark:text-white/40 mt-2 font-medium">All ledger transactions and multilateral netting have network fees 100% sponsored via Pimlico Paymasters.</p>
                   </div>
 
                   {/* Security Architecture */}

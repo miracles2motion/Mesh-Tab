@@ -13,19 +13,42 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
   const profile = useUserProfile();
   const currentUserName = profile.name || "David";
 
-  // Mock data for the specific expense based on ID
+  // 1. Look up if this is a custom-created expense in localStorage
+  let foundCustomExpense: { desc: string; amount: number; payer: string; time: string } | null = null;
+  if (typeof window !== "undefined") {
+    try {
+      const keys = Object.keys(localStorage).filter(k => k.startsWith("meshTab_expenses_"));
+      for (const k of keys) {
+        const parsed = JSON.parse(localStorage.getItem(k) || "[]");
+        const match = parsed.find((item: any) => String(item.id) === String(expenseId));
+        if (match) {
+          foundCustomExpense = match;
+          break;
+        }
+      }
+    } catch {}
+  }
+
   const isMock1 = expenseId === "1";
-  
+  const isMock2 = expenseId === "2";
+  const isMock3 = expenseId === "3";
+
+  const desc = foundCustomExpense?.desc || (isMock1 ? "Villa booking" : isMock2 ? "Dinners & wine" : isMock3 ? "Excursions" : "Shared Group Expense");
+  const amount = foundCustomExpense?.amount || (isMock1 ? 60000 : isMock2 ? 26000 : isMock3 ? 22000 : 15000);
+  const payer = foundCustomExpense?.payer || (isMock1 ? "Aisha" : isMock2 ? "Kemi" : isMock3 ? "Ben" : currentUserName);
+  const time = foundCustomExpense?.time || (isMock1 ? "October 12, 2024 at 10:42 AM" : isMock2 ? "October 11, 2024 at 8:15 PM" : "October 10, 2024 at 2:30 PM");
+
+  const splitAmount = Math.round(amount / 4);
   const details = {
-    desc: isMock1 ? "Villa booking" : "Dinners & wine",
-    amount: isMock1 ? 60000 : 26000,
-    payer: isMock1 ? "Aisha" : "Kemi",
-    time: isMock1 ? "October 12, 2024 at 10:42 AM" : "October 11, 2024 at 8:15 PM",
+    desc,
+    amount,
+    payer,
+    time,
     splits: [
-      { name: "Aisha", amount: isMock1 ? 15000 : 6500 },
-      { name: "Kemi", amount: isMock1 ? 15000 : 6500 },
-      { name: "Ben", amount: isMock1 ? 15000 : 6500 },
-      { name: currentUserName, amount: isMock1 ? 15000 : 6500 }
+      { name: "Aisha", amount: splitAmount },
+      { name: "Kemi", amount: splitAmount },
+      { name: "Ben", amount: splitAmount },
+      { name: currentUserName, amount: splitAmount }
     ]
   };
 
