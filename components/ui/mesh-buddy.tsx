@@ -35,7 +35,7 @@ import { formatCurrency } from "../../lib/utils";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { fireFaucetConfetti } from "../../lib/confetti";
-import { BuddyAvatar } from "./buddy-avatar";
+import { BuddyAvatar, BuddyMood } from "./buddy-avatar";
 import {
   KB_CATEGORIES,
   KB_ARTICLES,
@@ -72,6 +72,8 @@ export function MeshBuddy() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
+  const [isRippling, setIsRippling] = useState(false);
+  const [buddyMood, setBuddyMood] = useState<BuddyMood>("happy");
 
   // Knowledge Base view state
   const [selectedCategory, setSelectedCategory] = useState<KBCategoryId | "all">("all");
@@ -120,20 +122,25 @@ export function MeshBuddy() {
     if (buddySettings.voice === "mute" || typeof window === "undefined" || !("speechSynthesis" in window)) {
       return;
     }
-    window.speechSynthesis.cancel();
-    const cleanText = text.replace(/[*_#`]/g, "").slice(0, 300);
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    if (buddySettings.voice === "deep-male") {
-      utterance.pitch = 0.7;
-      utterance.rate = 0.95;
-    } else if (buddySettings.voice === "warm-female") {
-      utterance.pitch = 1.2;
-      utterance.rate = 1.0;
+    try {
+      window.speechSynthesis.cancel();
+      const cleanText = text.replace(/[*_#`]/g, "").slice(0, 300);
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      if (buddySettings.voice === "deep-male") {
+        utterance.pitch = 0.7;
+        utterance.rate = 0.95;
+      } else if (buddySettings.voice === "warm-female") {
+        utterance.pitch = 1.2;
+        utterance.rate = 1.0;
+      }
+      setIsSpeaking(true);
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      console.warn("Speech synthesis unavailable or restricted:", e);
+      setIsSpeaking(false);
     }
-    setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-    window.speechSynthesis.speak(utterance);
   };
 
   // Route-based dynamic greetings & tips (Accurately scoped to context)
@@ -236,15 +243,40 @@ export function MeshBuddy() {
     setCustomName(buddySettings.name);
   }, [buddySettings.name]);
 
+  // Keyboard accessibility: Escape closes drawer
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen) {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen]);
+
+  // Mobile viewport: lock background scrolling when drawer is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isConfiguring]);
+  }, [messages, isConfiguring, isThinking]);
 
   // Actions
   function handleClaimFaucet() {
     topUp(50000);
     sounds.playCoinClink();
     fireFaucetConfetti();
+    setBuddyMood("excited");
+    setTimeout(() => setBuddyMood("happy"), 4000);
     toast.success("+$500.00 Test AUSD Added!", {
       description: "Credited to sandbox balance via MeshBuddy."
     });
@@ -345,7 +377,9 @@ export function MeshBuddy() {
         { label: "🌀 How Netting Works", action: () => handleAskQuestion("how does netting work") },
       ];
     } else if (/thank you|thanks|thx|awesome|good job|great job|love you|you're great|appreciate it/i.test(q)) {
-      replyText = `Aww, shucks! You're making my antenna glow! 🥰 Keeping group money drama-free is my true calling. What can we tackle next, ${userName}?`;
+      setBuddyMood("excited");
+      setTimeout(() => setBuddyMood("happy"), 3500);
+      replyText = `Aww, shucks! You're making my aura glow! 🥰 Keeping group money drama-free is my true calling. What can we tackle next, ${userName}?`;
       actionItems = [
         { label: "🚰 Top Up Faucet", action: handleClaimFaucet },
         { label: "📚 Open Knowledge Base", action: () => setDrawerTab("kb") },
@@ -569,17 +603,34 @@ export function MeshBuddy() {
         {/* The Living Avatar Button */}
         <button
           onClick={() => {
-            if (!isOpen) sounds.playPop();
+            if (!isOpen) {
+              sounds.playPop();
+              setIsRippling(true);
+              setTimeout(() => setIsRippling(false), 500);
+            }
             setIsOpen(!isOpen);
             setSpeechBubble(null);
           }}
-          className="group relative flex items-center justify-center cursor-pointer focus:outline-none transition-transform active:scale-95"
+          className="group relative flex items-center justify-center cursor-pointer focus:outline-none transition-transform active:scale-95 min-w-[48px] min-h-[48px]"
           title={`${buddySettings.name} (Tab Co-Pilot)`}
           aria-label="Open Tab Co-Pilot"
         >
+          {/* Subtle tactile tap ripple on summon */}
+          <AnimatePresence>
+            {isRippling && (
+              <motion.span
+                initial={{ scale: 0.9, opacity: 0.7 }}
+                animate={{ scale: 1.45, opacity: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.45, ease: "easeOut" }}
+                className="absolute inset-0 rounded-full border-2 border-indigo-500/60 dark:border-indigo-400/70 pointer-events-none"
+              />
+            )}
+          </AnimatePresence>
+
           <BuddyAvatar
             size="lg"
-            mood={speechBubble ? "wink" : isSpeaking ? "talking" : "happy"}
+            mood={isSpeaking ? "talking" : buddyMood !== "happy" ? buddyMood : speechBubble ? "wink" : "happy"}
             isSpeaking={isSpeaking}
           />
 
@@ -616,7 +667,7 @@ export function MeshBuddy() {
                 <div className="flex items-center gap-3">
                   <BuddyAvatar
                     size="sm"
-                    mood={isThinking ? "thinking" : isSpeaking ? "talking" : "happy"}
+                    mood={isThinking ? "thinking" : isSpeaking ? "talking" : buddyMood}
                     isSpeaking={isSpeaking}
                   />
                   <div>
@@ -641,15 +692,17 @@ export function MeshBuddy() {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => setIsConfiguring(!isConfiguring)}
-                    className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 transition-colors"
+                    className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 transition-colors"
                     title="Customize Buddy"
+                    aria-label="Customize Buddy Settings"
                   >
                     <Settings className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setIsOpen(false)}
-                    className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 transition-colors"
+                    className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 transition-colors"
                     title="Close"
+                    aria-label="Close Co-Pilot Drawer"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -731,15 +784,18 @@ export function MeshBuddy() {
                     {/* Messages Feed */}
                     <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
                       {messages.map((msg) => (
-                        <div
+                        <motion.div
                           key={msg.id}
+                          initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          transition={{ duration: 0.22, ease: "easeOut" }}
                           className={`flex ${
                             msg.sender === "user" ? "justify-end" : "justify-start items-start gap-2"
                           }`}
                         >
                           {msg.sender === "buddy" && (
                             <div className="shrink-0 mt-0.5">
-                              <BuddyAvatar size="xs" mood="happy" showAntenna={false} glow={false} />
+                              <BuddyAvatar size="xs" mood="happy" glow={false} />
                             </div>
                           )}
 
@@ -769,13 +825,13 @@ export function MeshBuddy() {
                               </div>
                             )}
                           </div>
-                        </div>
+                        </motion.div>
                       ))}
 
                       {/* Thinking / Typing Pulse */}
                       {isThinking && (
                         <div className="flex items-center gap-2 text-slate-400 dark:text-white/40 text-xs">
-                          <BuddyAvatar size="xs" mood="thinking" showAntenna={false} glow={false} />
+                          <BuddyAvatar size="xs" mood="thinking" glow={false} />
                           <span className="flex gap-1.5 items-center bg-slate-100 dark:bg-white/10 px-3.5 py-2.5 rounded-2xl">
                             <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" />
                             <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:0.15s]" />
@@ -889,20 +945,21 @@ export function MeshBuddy() {
                     </div>
 
                     {/* Message Input Form */}
-                    <form onSubmit={handleSend} className="p-3 border-t border-slate-200 dark:border-white/10 flex items-center gap-2 bg-slate-50 dark:bg-white/5 shrink-0">
+                    <form onSubmit={handleSend} className="p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-slate-200 dark:border-white/10 flex items-center gap-2 bg-slate-50 dark:bg-white/5 shrink-0">
                       <input
                         type="text"
                         value={inputQuestion}
                         onChange={(e) => setInputQuestion(e.target.value)}
                         placeholder={`Ask ${buddySettings.name}...`}
-                        className="flex-1 bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500"
+                        className="flex-1 bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 min-h-[40px]"
                       />
                       <button
                         type="submit"
                         disabled={!inputQuestion.trim()}
-                        className="w-8 h-8 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white flex items-center justify-center transition-colors shadow-sm cursor-pointer"
+                        className="w-10 h-10 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white flex items-center justify-center transition-colors shadow-sm cursor-pointer shrink-0"
+                        aria-label="Send question"
                       >
-                        <Send className="w-3.5 h-3.5" />
+                        <Send className="w-4 h-4" />
                       </button>
                     </form>
                   </>
