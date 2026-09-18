@@ -35,6 +35,7 @@ import { formatCurrency } from "../../lib/utils";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { fireFaucetConfetti } from "../../lib/confetti";
+import { BuddyAvatar } from "./buddy-avatar";
 import {
   KB_CATEGORIES,
   KB_ARTICLES,
@@ -69,6 +70,8 @@ export function MeshBuddy() {
   const [inputQuestion, setInputQuestion] = useState("");
   const [customName, setCustomName] = useState(buddySettings.name);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
 
   // Knowledge Base view state
   const [selectedCategory, setSelectedCategory] = useState<KBCategoryId | "all">("all");
@@ -118,7 +121,8 @@ export function MeshBuddy() {
       return;
     }
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
+    const cleanText = text.replace(/[*_#`]/g, "").slice(0, 300);
+    const utterance = new SpeechSynthesisUtterance(cleanText);
     if (buddySettings.voice === "deep-male") {
       utterance.pitch = 0.7;
       utterance.rate = 0.95;
@@ -126,6 +130,9 @@ export function MeshBuddy() {
       utterance.pitch = 1.2;
       utterance.rate = 1.0;
     }
+    setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
     window.speechSynthesis.speak(utterance);
   };
 
@@ -269,51 +276,109 @@ export function MeshBuddy() {
   }
 
   function handleAskQuestion(query: string) {
-    const q = query.toLowerCase();
+    const q = query.toLowerCase().trim();
+    const userName = profile.name || "friend";
     let replyText = "";
     let actionItems: { label: string; action: () => void }[] | undefined = undefined;
 
-    // 1. Search indexed Knowledge Base for authoritative answer
-    const kbMatches = searchKnowledgeBase(query, {
-      currentTabId,
-      isDemoTab,
-      isCustomTab,
-      workspaceMode,
-      tabDisplayName
-    });
+    // Immediately append user message and trigger thinking animation
+    const userMsg: ChatMessage = { id: `user-${Date.now()}`, sender: "user", text: query };
+    setMessages((prev) => [...prev, userMsg]);
+    setIsThinking(true);
 
-    if (kbMatches.length > 0 && kbMatches[0].score >= 22) {
-      const top = kbMatches[0];
-      replyText = top.article.detailedContent;
-      if (top.contextAdviceText) {
-        replyText += `\n\n💡 Current Context Advice: ${top.contextAdviceText}`;
+    // 1. Conversational & Social Greetings
+    if (
+      /^(hi|hello|hey|sup|what's up|howdy|yo|good morning|good afternoon|good evening|hiya|hello buddy|hey buddy|hi buddy)\b/i.test(q) ||
+      q === "hi" || q === "hello" || q === "hey" || q === "hello buddy" || q === "hey buddy"
+    ) {
+      if (isCustomTab) {
+        replyText = `Hey ${userName}! 👋 Great to see you! I'm ${buddySettings.name}, your co-pilot on "${tabDisplayName}".\n\nReady to log some expenses, invite your friends with biometric passkeys, or run graph netting once bills start rolling in? What's on your mind?`;
+        actionItems = [
+          { label: `➕ Add Expense to ${tabDisplayName}`, action: () => router.push(`/tab/${currentTabId}/expense/new`) },
+          { label: "👥 Invite Members via QR", action: () => router.push(`/tab/${currentTabId}/members`) },
+          { label: "🚰 Top Up Faucet (+$500)", action: handleClaimFaucet },
+        ];
+      } else if (isDemoTab) {
+        replyText = `Hey ${userName}! 👋 I'm ${buddySettings.name}, your financial wingman!\n\nWe're hanging out in the Lisbon '24 trip benchmark. 4 travelers, $1,200 in shared expenses, and 12 crisscrossing debts ready to collapse. How can I help you explore?`;
+        actionItems = [
+          { label: "🌀 Test Tangle Netting (75% Saved)", action: () => handleAskQuestion("How does netting work?") },
+          { label: "📸 Test Smart Scan Receipt", action: () => router.push("/tab/lisbon-24/expense/new") },
+          { label: "🚰 Claim Sandbox Faucet", action: handleClaimFaucet },
+        ];
+      } else if (workspaceMode === "blank") {
+        replyText = `Hey ${userName}! 👋 Welcome to your pristine Clean Slate workspace! I'm ${buddySettings.name}, running on Monad's 10k TPS parallel EVM.\n\nYou have a blank canvas right now. Would you like to create your first group tab, or should I show you around?`;
+        actionItems = [
+          { label: "➕ Create First Tab", action: () => router.push("/tab/new") },
+          { label: "🏖️ Restore Lisbon Demo", action: handleToggleWorkspace },
+          { label: "📚 Open Knowledge Base", action: () => setDrawerTab("kb") },
+        ];
+      } else {
+        replyText = `Hey ${userName}! 👋 Always a pleasure! I'm ${buddySettings.name}—your high-speed co-pilot on Monad.\n\nWhether you need to split dinner, test zero-fee settlements, or check how graph netting saves money, I've got your back. What would you like to do?`;
+        actionItems = [
+          { label: "🏖️ Open Lisbon Trip", action: () => router.push("/tab/lisbon-24") },
+          { label: "🌀 How does Netting work?", action: () => handleAskQuestion("How does netting work?") },
+          { label: "🚰 Faucet (+$500 AUSD)", action: handleClaimFaucet },
+        ];
       }
-
-      actionItems = top.article.actions.map((act) => {
-        if (act.type === "navigate") {
-          let dest = act.destination || "/home";
-          if (isCustomTab && dest.includes("/tab/lisbon-24/expense/new")) {
-            dest = `/tab/${currentTabId}/expense/new`;
-          } else if (isCustomTab && dest.includes("/tab/lisbon-24/members")) {
-            dest = `/tab/${currentTabId}/members`;
-          }
-          return { label: act.label, action: () => router.push(dest) };
-        } else if (act.type === "faucet") {
-          return { label: act.label, action: handleClaimFaucet };
-        } else if (act.type === "toggle-mode") {
-          return { label: act.label, action: handleToggleWorkspace };
-        }
-        return { label: act.label, action: () => router.push(act.destination || "/home") };
-      });
-
-      // Suggest next related topic if available
-      if (kbMatches.length > 1 && actionItems.length < 4) {
-        const nextTitle = kbMatches[1].article.title;
-        actionItems.push({
-          label: `📖 Related: ${nextTitle.length > 25 ? nextTitle.substring(0, 24) + "..." : nextTitle}`,
-          action: () => handleAskQuestion(nextTitle)
-        });
-      }
+    } else if (/who are you|what are you|what is buddy|introduce yourself|tell me about yourself|your name/i.test(q)) {
+      replyText = `I'm ${buddySettings.name}! 🤖✨ Think of me as that one hyper-organized friend in the group chat who actually makes sure everyone gets paid back—except I live inside Monad's parallel EVM!\n\nI handle the math, simplify crisscrossing debts, check receipts with OCR, and make sure nobody has to deal with awkward "you owe me $14.50" conversations. Plus, I don't sleep and I never spill drinks!`;
+      actionItems = [
+        { label: "🌀 How Netting Works", action: () => handleAskQuestion("How does netting work?") },
+        { label: "📚 Browse Knowledge Base", action: () => setDrawerTab("kb") },
+      ];
+    } else if (/how are you|how's it going|how are things|feeling|how you doing|what's good/i.test(q)) {
+      replyText = `Running at sub-400ms latency, zero network fees, and feeling electric! ⚡ The graph is balanced, the ledger is zero-sum, and nobody in the group is fighting over the bill.\n\nHow is your day going, ${userName}?`;
+      actionItems = [
+        { label: "🚰 Top Up Faucet (+$500)", action: handleClaimFaucet },
+        { label: "📚 Explore Topics", action: () => setDrawerTab("kb") },
+      ];
+    } else if (/joke|funny|laugh|tell me a joke/i.test(q)) {
+      const jokes = [
+        "Why did the shared restaurant bill go to therapy? Because it had unresolved circular debt loops! 🛋️ (Lucky for you, my Tangle algorithm resolved all its trauma in 300 milliseconds).",
+        "Why don't smart accounts ever get lost? Because they always follow the shortest path on the directed graph! 🧭",
+        "Why was the crypto traveler smiling on vacation? Because with MeshTab, they didn't have to explain what a 'gwei' was to their roommates! 🏖️",
+        "How do Monad developers order pizza? In parallel, so all 10,000 slices arrive in 0.3 seconds! 🍕"
+      ];
+      replyText = jokes[Math.floor(Math.random() * jokes.length)];
+      actionItems = [
+        { label: "😂 Tell Another Joke", action: () => handleAskQuestion("tell me a joke") },
+        { label: "🌀 How Netting Works", action: () => handleAskQuestion("how does netting work") },
+      ];
+    } else if (/thank you|thanks|thx|awesome|good job|great job|love you|you're great|appreciate it/i.test(q)) {
+      replyText = `Aww, shucks! You're making my antenna glow! 🥰 Keeping group money drama-free is my true calling. What can we tackle next, ${userName}?`;
+      actionItems = [
+        { label: "🚰 Top Up Faucet", action: handleClaimFaucet },
+        { label: "📚 Open Knowledge Base", action: () => setDrawerTab("kb") },
+      ];
+    } else if (/what can you do|help me|commands|features|powers|guide me/i.test(q)) {
+      replyText = `Here's what I can do for you and your crew:\n\n` +
+        `🌀 **Tangle Netting**: Turn 12 crisscrossing group debts into 3 direct payments (saving ~75% in capital movement).\n\n` +
+        `📸 **Smart Scan OCR**: Snap receipt photos or dictate expenses with your mic.\n\n` +
+        `🔑 **Passkey Simplicity**: Sign off with Touch ID or Face ID via Mera (zero seed phrases).\n\n` +
+        `🏦 **Instant Cash Out**: Withdraw settled AUSD directly to your debit card or bank.\n\n` +
+        `🚰 **Sandbox Faucet**: Claim +$500 play AUSD anytime to test settlements!`;
+      actionItems = [
+        { label: "📚 Open Knowledge Base (19 Guides)", action: () => setDrawerTab("kb") },
+        { label: "🚰 Top Up $500 AUSD", action: handleClaimFaucet },
+      ];
+    } else if (/why monad|what is monad|parallel evm|10000 tps|tps|blockchain/i.test(q)) {
+      replyText = `Monad is the secret sauce behind MeshTab! 🚀 Traditional blockchains process transactions one-by-one like a single cashier at a packed grocery store. Monad executes 10,000 TPS in parallel with 0.3s block times.\n\nThat means 20 people on a trip can log drinks, tap settlements, and scan receipts at the exact same instant without lag or fee spikes!`;
+      actionItems = [
+        { label: "🏆 Open Pitch Presentation", action: () => router.push("/home") },
+        { label: "🌀 Learn About Netting", action: () => handleAskQuestion("how does netting work") },
+      ];
+    } else if (/passkey|passkeys|mera|biometric|webauthn|touch id|face id/i.test(q)) {
+      replyText = `MeshTab uses Mera Passkeys backed by your device's Secure Enclave (P-256 WebAuthn). You sign group transactions with your thumbprint or Face ID just like Apple Pay—no browser extensions, no seed phrases written on napkins, and no crypto friction!`;
+      actionItems = [
+        { label: "🔑 Test Passkey in Settings", action: () => router.push("/settings") },
+        { label: "👥 Manage Group Members", action: () => router.push(currentTabId ? `/tab/${currentTabId}/members` : "/home") },
+      ];
+    } else if (/ausd|agora|currency|digital dollar|stablecoin/i.test(q)) {
+      replyText = `AUSD is the institutional digital dollar issued by Agora, backed 1:1 by ultra-safe cash and overnight US Treasury repos. That means $1 AUSD is always exactly $1.00 USD. Your group tab never fluctuates in price while you're eating dinner!`;
+      actionItems = [
+        { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet },
+        { label: "🏦 How to Cash Out", action: () => handleAskQuestion("how do i cash out?") },
+      ];
     } else if (
       q.includes("mode") || 
       q.includes("demo") || 
@@ -326,7 +391,7 @@ export function MeshBuddy() {
       q.includes("which mode")
     ) {
       if (isDemoTab) {
-        replyText = "You are currently viewing the Lisbon '24 Demo Trip (Sample Trip Mode). 4 international members and $1,200 in mock expenses are pre-loaded to evaluate Monad Tangle Netting. If you want to test the main app with a fresh ledger, you can switch to Clean Slate!";
+        replyText = `You are currently viewing the Lisbon '24 Demo Trip (Sample Trip Mode). 4 international members and $1,200 in mock expenses are pre-loaded to evaluate Monad Tangle Netting. If you want to test the main app with a fresh ledger, you can switch to Clean Slate!`;
         actionItems = [
           { label: "🧹 Switch to Clean Slate", action: handleToggleWorkspace },
           { label: "🎮 Open Demo Selector", action: () => router.push("/demo") }
@@ -376,17 +441,15 @@ export function MeshBuddy() {
       }
     } else if (q.includes("cash out") || q.includes("withdraw") || q.includes("bank")) {
       replyText = "When group members settle up and you are owed money, your balance turns green (+). You can tap 'Cash Out to Bank' on your balance card to transfer your Agora AUSD directly to your debit card (Visa Direct) or bank account via the Dynamic off-ramp drawer!";
+      actionItems = [
+        { label: "🏦 Open Bank Settings", action: () => router.push("/settings") },
+        { label: "Go to Hub", action: () => router.push("/home") },
+      ];
     } else if (q.includes("receipt") || q.includes("camera") || q.includes("ocr") || q.includes("scan")) {
       replyText = "On the 'Add Expense' screen, tap 'Smart Scan' to snap a photo or upload a receipt. The smart scanner extracts the merchant, line items, and total into an editable staging proposal before you confirm!";
-      if (currentTabId) {
-        actionItems = [
-          { label: `Open Add Expense (${tabDisplayName})`, action: () => router.push(`/tab/${currentTabId}/expense/new`) }
-        ];
-      } else {
-        actionItems = [
-          { label: "Go to Hub", action: () => router.push("/home") }
-        ];
-      }
+      actionItems = [
+        { label: currentTabId ? `Open Add Expense (${tabDisplayName})` : "Go to Add Expense", action: () => router.push(currentTabId ? `/tab/${currentTabId}/expense/new` : "/tab/lisbon-24/expense/new") }
+      ];
     } else if (q.includes("member") || q.includes("invite") || q.includes("share")) {
       if (currentTabId) {
         replyText = `You can invite friends to join "${tabDisplayName}" by sharing the QR code or invitation link. Members claim their seat biometrically using TouchID, FaceID, or PIN via Mera passkeys on Monad!`;
@@ -399,28 +462,68 @@ export function MeshBuddy() {
           { label: "Go to Hub", action: () => router.push("/home") }
         ];
       }
-    } else if (q.includes("gas") || q.includes("fee") || q.includes("pimlico")) {
+    } else if (q.includes("fee") || q.includes("pimlico") || q.includes("gas")) {
       replyText = "You never pay network gas fees in MeshTab! Routine ledger operations (logging expenses, creating tabs, claiming seats) are permanently sponsored by Pimlico Verifying Paymasters. Settlements use an ERC-20 paymaster to deduct a sub-cent fee in AUSD.";
-    } else if (q.includes("passkey") || q.includes("login") || q.includes("mera")) {
-      replyText = "MeshTab uses Mera Passkeys. Instead of seed phrases or extension popups, your account is bound directly to your device's TouchID, FaceID, or PIN via hardware WebAuthn (P-256) on Monad.";
-    } else {
-      replyText = `I heard you ask: "${query}". You can browse all 20+ architectural and product guides in the Knowledge Base tab, or ask me about netting, settlements, gas sponsorship, or receipt scanning!`;
       actionItems = [
-        { label: "📚 Open Knowledge Base", action: () => setDrawerTab("kb") },
+        { label: "📚 Read Paymaster Guide", action: () => setDrawerTab("kb") },
         { label: "🚰 Top Up Faucet", action: handleClaimFaucet },
-        isCustomTab
-          ? { label: `➕ Add Expense to ${tabDisplayName}`, action: () => router.push(`/tab/${currentTabId}/expense/new`) }
-          : workspaceMode === "blank" 
-          ? { label: "➕ Create Tab", action: () => router.push("/tab/new") }
-          : { label: "Explore Lisbon Demo", action: () => router.push("/tab/lisbon-24") }
       ];
+    } else {
+      // 2. Knowledge Base Search
+      const kbMatches = searchKnowledgeBase(query, {
+        currentTabId,
+        isDemoTab,
+        isCustomTab,
+        workspaceMode,
+        tabDisplayName
+      });
+
+      if (kbMatches.length > 0 && kbMatches[0].score >= 18) {
+        const top = kbMatches[0];
+        replyText = `That's a great question, ${userName}! Here's how that works:\n\n${top.article.detailedContent}`;
+        if (top.contextAdviceText) {
+          replyText += `\n\n💡 Current Context: ${top.contextAdviceText}`;
+        }
+
+        actionItems = top.article.actions.map((act) => {
+          if (act.type === "navigate") {
+            let dest = act.destination || "/home";
+            if (isCustomTab && dest.includes("/tab/lisbon-24/expense/new")) {
+              dest = `/tab/${currentTabId}/expense/new`;
+            } else if (isCustomTab && dest.includes("/tab/lisbon-24/members")) {
+              dest = `/tab/${currentTabId}/members`;
+            }
+            return { label: act.label, action: () => router.push(dest) };
+          } else if (act.type === "faucet") {
+            return { label: act.label, action: handleClaimFaucet };
+          } else if (act.type === "toggle-mode") {
+            return { label: act.label, action: handleToggleWorkspace };
+          }
+          return { label: act.label, action: () => router.push(act.destination || "/home") };
+        });
+      } else {
+        // Conversational Fallback with personality (Never cold "I heard you ask:")
+        replyText = `I love your curiosity, ${userName}! 💡 While my neural circuits are tuned for group expense sharing, Monad parallel execution, and passkey settlements, here are a few things we can do together right now:`;
+        actionItems = [
+          { label: "📚 Search Knowledge Base (19 Guides)", action: () => setDrawerTab("kb") },
+          { label: "🚰 Top Up +$500 Faucet", action: handleClaimFaucet },
+          { label: "🌀 How Netting Works", action: () => handleAskQuestion("how does netting work") },
+          isCustomTab
+            ? { label: `➕ Add Expense to ${tabDisplayName}`, action: () => router.push(`/tab/${currentTabId}/expense/new`) }
+            : workspaceMode === "blank" 
+            ? { label: "➕ Create Tab", action: () => router.push("/tab/new") }
+            : { label: "Explore Lisbon Demo", action: () => router.push("/tab/lisbon-24") }
+        ];
+      }
     }
 
-    const userMsg: ChatMessage = { id: `user-${Date.now()}`, sender: "user", text: query };
-    const botMsg: ChatMessage = { id: `bot-${Date.now()}`, sender: "buddy", text: replyText, actions: actionItems };
-
-    setMessages((prev) => [...prev, userMsg, botMsg]);
-    speakText(replyText);
+    // Deliver response with natural conversational timing and voice animation
+    setTimeout(() => {
+      setIsThinking(false);
+      const botMsg: ChatMessage = { id: `bot-${Date.now()}`, sender: "buddy", text: replyText, actions: actionItems };
+      setMessages((prev) => [...prev, botMsg]);
+      speakText(replyText);
+    }, 320);
   }
 
   const handleSend = (e: React.FormEvent) => {
@@ -470,26 +573,18 @@ export function MeshBuddy() {
             setIsOpen(!isOpen);
             setSpeechBubble(null);
           }}
-          className="group relative w-14 h-14 rounded-full flex items-center justify-center cursor-pointer focus:outline-none transition-transform active:scale-95"
+          className="group relative flex items-center justify-center cursor-pointer focus:outline-none transition-transform active:scale-95"
           title={`${buddySettings.name} (Tab Co-Pilot)`}
           aria-label="Open Tab Co-Pilot"
         >
-          {/* Ambient Glow Aura */}
-          <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-indigo-500 via-purple-500 to-emerald-400 opacity-70 blur-md group-hover:opacity-100 transition-opacity animate-pulse" />
-
-          {/* Orb Surface */}
-          <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-indigo-900 via-slate-900 to-black border border-white/30 flex flex-col items-center justify-center shadow-2xl overflow-hidden">
-            {/* Minimalist Luminous Eyes */}
-            <div className="flex gap-1.5 items-center mb-0.5">
-              <div className="w-1.5 h-1 bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.9)] animate-ping" />
-              <div className="w-1.5 h-1 bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.9)]" />
-            </div>
-            {/* Living Wave Line */}
-            <div className="w-5 h-0.5 bg-gradient-to-r from-emerald-400 via-indigo-300 to-purple-400 rounded-full shadow-[0_0_6px_rgba(99,102,241,0.8)]" />
-          </div>
+          <BuddyAvatar
+            size="lg"
+            mood={speechBubble ? "wink" : isSpeaking ? "talking" : "happy"}
+            isSpeaking={isSpeaking}
+          />
 
           {/* Voice status indicator */}
-          <div className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-slate-900 border border-white/20 flex items-center justify-center text-[8px] text-white">
+          <div className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-slate-900 border border-white/20 flex items-center justify-center text-[8px] text-white z-20">
             {buddySettings.voice === "mute" ? <VolumeX className="w-2.5 h-2.5 text-slate-400" /> : <Volume2 className="w-2.5 h-2.5 text-emerald-400" />}
           </div>
         </button>
@@ -519,9 +614,11 @@ export function MeshBuddy() {
               {/* Drawer Header */}
               <div className="p-4 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-white/5">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-sm">
-                    <Bot className="w-4 h-4" />
-                  </div>
+                  <BuddyAvatar
+                    size="sm"
+                    mood={isThinking ? "thinking" : isSpeaking ? "talking" : "happy"}
+                    isSpeaking={isSpeaking}
+                  />
                   <div>
                     <h3 className="font-bold text-sm leading-tight flex items-center gap-1.5">
                       <span>{buddySettings.name}</span>
@@ -636,36 +733,57 @@ export function MeshBuddy() {
                       {messages.map((msg) => (
                         <div
                           key={msg.id}
-                          className={`flex flex-col ${
-                            msg.sender === "user" ? "items-end" : "items-start"
+                          className={`flex ${
+                            msg.sender === "user" ? "justify-end" : "justify-start items-start gap-2"
                           }`}
                         >
-                          <div
-                            className={`max-w-[85%] p-3.5 rounded-2xl leading-relaxed whitespace-pre-line ${
-                              msg.sender === "user"
-                                ? "bg-indigo-600 text-white rounded-br-xs shadow-sm"
-                                : "bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-white rounded-bl-xs shadow-sm border border-slate-200/50 dark:border-white/5"
-                            }`}
-                          >
-                            <p>{msg.text}</p>
-                          </div>
-
-                          {/* Action Chips */}
-                          {msg.actions && msg.actions.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 mt-2 max-w-[90%]">
-                              {msg.actions.map((act, i) => (
-                                <button
-                                  key={i}
-                                  onClick={act.action}
-                                  className="px-2.5 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-500/15 hover:bg-indigo-100 dark:hover:bg-indigo-500/25 border border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 font-semibold text-[11px] transition-transform active:scale-95 text-left"
-                                >
-                                  {act.label}
-                                </button>
-                              ))}
+                          {msg.sender === "buddy" && (
+                            <div className="shrink-0 mt-0.5">
+                              <BuddyAvatar size="xs" mood="happy" showAntenna={false} glow={false} />
                             </div>
                           )}
+
+                          <div className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"} max-w-[85%]`}>
+                            <div
+                              className={`p-3.5 rounded-2xl leading-relaxed whitespace-pre-line ${
+                                msg.sender === "user"
+                                  ? "bg-indigo-600 text-white rounded-br-xs shadow-sm"
+                                  : "bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-white rounded-bl-xs shadow-sm border border-slate-200/50 dark:border-white/5"
+                              }`}
+                            >
+                              <p>{msg.text}</p>
+                            </div>
+
+                            {/* Action Chips */}
+                            {msg.actions && msg.actions.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 mt-2">
+                                {msg.actions.map((act, i) => (
+                                  <button
+                                    key={i}
+                                    onClick={act.action}
+                                    className="px-2.5 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-500/15 hover:bg-indigo-100 dark:hover:bg-indigo-500/25 border border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 font-semibold text-[11px] transition-transform active:scale-95 text-left cursor-pointer"
+                                  >
+                                    {act.label}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       ))}
+
+                      {/* Thinking / Typing Pulse */}
+                      {isThinking && (
+                        <div className="flex items-center gap-2 text-slate-400 dark:text-white/40 text-xs">
+                          <BuddyAvatar size="xs" mood="thinking" showAntenna={false} glow={false} />
+                          <span className="flex gap-1.5 items-center bg-slate-100 dark:bg-white/10 px-3.5 py-2.5 rounded-2xl">
+                            <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" />
+                            <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:0.15s]" />
+                            <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:0.3s]" />
+                          </span>
+                        </div>
+                      )}
+
                       <div ref={chatBottomRef} />
                     </div>
 
