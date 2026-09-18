@@ -33,7 +33,7 @@ export function Hero() {
         <Link href="/login" className="btn-primary flex items-center justify-center gap-2 text-lg px-8 py-4">
           {hero.primaryCta} <ChevronRight className="w-5 h-5" />
         </Link>
-        <Link href="/tab/lisbon-24" className="btn-secondary flex items-center justify-center gap-2 text-lg px-8 py-4">
+        <Link href="/demo" className="btn-secondary flex items-center justify-center gap-2 text-lg px-8 py-4">
           {hero.secondaryCta}
         </Link>
       </div>
