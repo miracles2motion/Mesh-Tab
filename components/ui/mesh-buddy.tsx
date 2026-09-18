@@ -56,9 +56,6 @@ export function MeshBuddy() {
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
-  // If buddy is disabled by user, don't render
-  if (!buddySettings.enabled) return null;
-
   // Sound synthesis helper
   const speakText = (text: string) => {
     if (buddySettings.voice === "mute" || typeof window === "undefined" || !("speechSynthesis" in window)) {
@@ -203,6 +200,8 @@ export function MeshBuddy() {
     setInputQuestion("");
     handleAskQuestion(q);
   };
+
+  if (!buddySettings.enabled) return null;
 
   return (
     <>
@@ -461,7 +460,7 @@ export function MeshBuddy() {
                           key={v.id}
                           type="button"
                           onClick={() => {
-                            updateSettings({ voice: v.id as any });
+                            updateSettings({ voice: v.id as "mute" | "deep-male" | "warm-female" });
                             if (v.id !== "mute") {
                               setTimeout(() => speakText("Voice activated! Ready to guide you."), 200);
                             }

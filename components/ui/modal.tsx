@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
@@ -16,9 +16,16 @@ export function Modal({ children, onClose, className }: ModalProps) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
+  const handleClose = useCallback(() => {
+    if (onClose) {
+      onClose();
+    } else {
+      router.back();
+    }
+  }, [onClose, router]);
+
   useEffect(() => {
     setMounted(true);
-    // Focus trap logic could go here
     document.body.style.overflow = "hidden";
     
     const handleEscape = (e: KeyboardEvent) => {
@@ -30,15 +37,7 @@ export function Modal({ children, onClose, className }: ModalProps) {
       document.body.style.overflow = "auto";
       window.removeEventListener("keydown", handleEscape);
     };
-  }, []);
-
-  const handleClose = () => {
-    if (onClose) {
-      onClose();
-    } else {
-      router.back();
-    }
-  };
+  }, [handleClose]);
 
   if (!mounted) return null;
 
