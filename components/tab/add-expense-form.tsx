@@ -21,7 +21,9 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
   const profile = useUserProfile();
   const activeUser = currentUser || profile.name || "David";
 
-  const rawList = members.length > 0 ? members : ["Aisha", "Kemi", "Ben", activeUser];
+  const rawList = members.length > 0 
+    ? members 
+    : (tabId === "lisbon-24" ? ["Aisha", "Kemi", "Ben", activeUser] : [activeUser]);
   const normalizedMembers = Array.from(new Set(
     rawList.map(m => (m === "Sarah" && activeUser !== "Sarah") ? activeUser : m)
   ));
@@ -324,7 +326,7 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
                       </div>
                       <span>Paid by {paidBy === activeUser ? "You" : paidBy}</span>
                     </div>
-                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">Equal split (4 ways)</span>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">Equal split ({splitBetween.length} ways)</span>
                   </div>
 
                   <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-[11px] flex items-start gap-2 leading-relaxed">
@@ -415,7 +417,7 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
               
               {showPaidByDropdown && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#121212] border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden z-20 shadow-2xl">
-                  {members.map(member => (
+                  {normalizedMembers.map(member => (
                     <div 
                       key={member}
                       onClick={() => { setPaidBy(member); setShowPaidByDropdown(false); }}
@@ -461,7 +463,7 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
              </div>
              
              <div className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-2 space-y-1">
-               {members.map(member => {
+               {normalizedMembers.map(member => {
                  const isSelected = splitBetween.includes(member);
                  return (
                    <div 

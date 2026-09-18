@@ -201,6 +201,112 @@ export function useStoredTabs() {
   return { tabs, saveTab: saveNewTab };
 }
 
+// Tab Member Persistence
+export interface TabMember {
+  name: string;
+  balance: number; // in cents
+  type: "creditor" | "debtor" | "settled";
+  role?: "admin" | "member";
+}
+
+export const DEFAULT_LISBON_MEMBERS: TabMember[] = [
+  { name: "Aisha", balance: 30000, type: "creditor", role: "admin" },
+  { name: "Kemi", balance: -4000, type: "debtor", role: "member" },
+  { name: "Ben", balance: -8000, type: "debtor", role: "member" },
+];
+
+export function getStoredTabMembers(tabId: string, currentUserName?: string): TabMember[] {
+  const activeUser = currentUserName || getStoredUser().name;
+  
+  if (typeof window === "undefined") {
+    if (tabId === "lisbon-24") {
+      return [
+        ...DEFAULT_LISBON_MEMBERS,
+        { name: activeUser, balance: -18000, type: "debtor", role: "member" }
+      ];
+    }
+    return [{ name: activeUser, balance: 0, type: "settled", role: "admin" }];
+  }
+
+  try {
+    const raw = localStorage.getItem(`meshTab_members_${tabId}`);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (e) {}
+
+  if (tabId === "lisbon-24") {
+    const defaultList: TabMember[] = [
+      ...DEFAULT_LISBON_MEMBERS,
+      { name: activeUser, balance: -18000, type: "debtor", role: "member" }
+    ];
+    localStorage.setItem(`meshTab_members_${tabId}`, JSON.stringify(defaultList));
+    return defaultList;
+  }
+
+  if (tabId === "house-groceries") {
+    const defaultList: TabMember[] = [
+      { name: "Alex", balance: -4500, type: "debtor", role: "admin" },
+      { name: activeUser, balance: 4500, type: "creditor", role: "member" }
+    ];
+    localStorage.setItem(`meshTab_members_${tabId}`, JSON.stringify(defaultList));
+    return defaultList;
+  }
+
+  // Brand new clean slate / custom tab
+  const initialMembers: TabMember[] = [
+    { name: activeUser, balance: 0, type: "settled", role: "admin" }
+  ];
+  localStorage.setItem(`meshTab_members_${tabId}`, JSON.stringify(initialMembers));
+  return initialMembers;
+}
+
+export function saveStoredTabMembers(tabId: string, members: TabMember[]) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(`meshTab_members_${tabId}`, JSON.stringify(members));
+
+  // Sync member count in stored tabs
+  const tabs = getStoredTabs();
+  const updatedTabs = tabs.map(t => {
+    if (t.id === tabId) {
+      return { ...t, memberCount: members.length };
+    }
+    return t;
+  });
+  localStorage.setItem("meshTab_tabs", JSON.stringify(updatedTabs));
+
+  window.dispatchEvent(new Event("meshTab-members-update"));
+  window.dispatchEvent(new Event("meshTab-tabs-update"));
+}
+
+export function useStoredTabMembers(tabId: string, currentUserName?: string) {
+  const [members, setMembers] = useState<TabMember[]>(() => getStoredTabMembers(tabId, currentUserName));
+
+  useEffect(() => {
+    const sync = () => {
+      setMembers(getStoredTabMembers(tabId, currentUserName));
+    };
+
+    sync();
+
+    window.addEventListener("meshTab-members-update", sync);
+    window.addEventListener("storage", sync);
+
+    return () => {
+      window.removeEventListener("meshTab-members-update", sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, [tabId, currentUserName]);
+
+  return { 
+    members, 
+    setMembers: (newMembers: TabMember[]) => saveStoredTabMembers(tabId, newMembers) 
+  };
+}
+
 // Expense & Settlement Persistence
 export interface StoredExpense {
   id: string;
@@ -235,6 +341,50 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense) {
   const current = getStoredExpenses(tabId);
   const updated = [expense, ...current];
   localStorage.setItem(`meshTab_expenses_${tabId}`, JSON.stringify(updated));
+
+  // Dynamically recalculate tab member balances if custom tab
+  if (tabId !== "lisbon-24") {
+    try {
+      const members = getStoredTabMembers(tabId);
+      if (members.length > 0) {
+        const splitCount = members.length;
+        const splitAmount = Math.round(expense.amount / splitCount);
+
+        const updatedMembers = members.map(m => {
+          let delta = -splitAmount;
+          if (m.name.toLowerCase() === expense.payer.toLowerCase()) {
+            delta += expense.amount;
+          }
+          const nextBal = m.balance + delta;
+          const nextType: "creditor" | "debtor" | "settled" =
+            nextBal === 0 ? "settled" : nextBal > 0 ? "creditor" : "debtor";
+          return {
+            ...m,
+            balance: nextBal,
+            type: nextType
+          };
+        });
+        localStorage.setItem(`meshTab_members_${tabId}`, JSON.stringify(updatedMembers));
+        window.dispatchEvent(new Event("meshTab-members-update"));
+
+        // Update user balance in tab summary
+        const profile = getStoredUser();
+        const userMember = updatedMembers.find(m => m.name.toLowerCase() === profile.name.toLowerCase());
+        if (userMember) {
+          const tabs = getStoredTabs();
+          const nextTabs = tabs.map(t => {
+            if (t.id === tabId) {
+              return { ...t, balance: userMember.balance, lastActivity: "Just now" };
+            }
+            return t;
+          });
+          localStorage.setItem("meshTab_tabs", JSON.stringify(nextTabs));
+          window.dispatchEvent(new Event("meshTab-tabs-update"));
+        }
+      }
+    } catch (e) {}
+  }
+
   window.dispatchEvent(new Event("meshTab-expenses-update"));
 }
 
@@ -277,7 +427,20 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
   localStorage.setItem("meshTab_tabs", JSON.stringify(updatedTabs));
   window.dispatchEvent(new Event("meshTab-tabs-update"));
 
-  // 2. Add settlement entry to tab expenses
+  // 2. Update member balances for this tab
+  try {
+    const members = getStoredTabMembers(tabId, currentUserName);
+    const updatedMembers = members.map(m => {
+      if (m.name.toLowerCase() === currentUserName.toLowerCase()) {
+        return { ...m, balance: 0, type: "settled" as const };
+      }
+      return m;
+    });
+    localStorage.setItem(`meshTab_members_${tabId}`, JSON.stringify(updatedMembers));
+    window.dispatchEvent(new Event("meshTab-members-update"));
+  } catch (e) {}
+
+  // 3. Add settlement entry to tab expenses
   saveStoredExpense(tabId, {
     id: `settle-${Date.now()}`,
     payer: currentUserName,

@@ -4,15 +4,17 @@ import { AddExpenseForm } from "@/components/tab/add-expense-form";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
-import { useUserProfile } from "@/lib/user";
+import { useUserProfile, useStoredTabMembers } from "@/lib/user";
 
 export default function AddExpenseFallbackPage() {
   const router = useRouter();
   const params = useParams();
   const profile = useUserProfile();
   const currentUserName = profile.name || "David";
+  const tabId = typeof params?.id === "string" ? params.id : "lisbon-24";
 
-  const memberNames = ["Aisha", "Kemi", "Ben", currentUserName];
+  const { members: tabMembers } = useStoredTabMembers(tabId, currentUserName);
+  const memberNames = tabMembers.map(m => m.name);
   
   if (!params?.id) return null;
 

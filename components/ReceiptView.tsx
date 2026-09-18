@@ -4,7 +4,17 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, QrCode, Share, ExternalLink, Check } from "lucide-react";
 
-export function ReceiptView({ isOpen, onClose, amount }: { isOpen: boolean, onClose: () => void, amount: number }) {
+export function ReceiptView({ 
+  isOpen, 
+  onClose, 
+  amount,
+  recipient
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  amount: number;
+  recipient?: string;
+}) {
   const [copied, setCopied] = useState(false);
   const formatCurrency = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
@@ -37,7 +47,11 @@ export function ReceiptView({ isOpen, onClose, amount }: { isOpen: boolean, onCl
             </div>
 
             <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Settled</h2>
-            <p className="text-slate-500 dark:text-white/60 mb-8 text-center text-sm">Your debt to Aisha has been netted and paid successfully.</p>
+            <p className="text-slate-500 dark:text-white/60 mb-8 text-center text-sm">
+              {recipient 
+                ? `Your debt to ${recipient} has been netted and paid successfully.` 
+                : "Your balance has been netted and settled successfully on Monad."}
+            </p>
 
             <div className="w-full space-y-4 mb-8">
               <div className="flex justify-between items-center py-3 border-b border-slate-100 dark:border-white/10">

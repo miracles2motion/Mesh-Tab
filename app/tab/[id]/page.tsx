@@ -15,14 +15,7 @@ import { Modal } from "../../../components/ui/modal";
 import { toast } from "sonner";
 import { sounds } from "../../../lib/sounds";
 
-import { useUserProfile, useDeveloperMode, useStoredTabs, useStoredExpenses } from "../../../lib/user";
-
-// Mock Base Data
-const baseMembers = [
-  { name: "Aisha", balance: 30000, type: "creditor" as const },
-  { name: "Kemi", balance: -4000, type: "debtor" as const },
-  { name: "Ben", balance: -8000, type: "debtor" as const },
-];
+import { useUserProfile, useDeveloperMode, useStoredTabs, useStoredExpenses, useStoredTabMembers } from "../../../lib/user";
 
 function DashboardContent() {
   const params = useParams();
@@ -34,6 +27,7 @@ function DashboardContent() {
   const { expenses } = useStoredExpenses(rawTabId);
 
   const currentUser = profile.name || "David";
+  const { members: activeMembers } = useStoredTabMembers(rawTabId, currentUser);
 
   const currentTab = storedTabs.find(t => t.id === rawTabId) || {
     id: rawTabId,
@@ -44,23 +38,23 @@ function DashboardContent() {
       : rawTabId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
     balance: rawTabId === "lisbon-24" ? -18000 : 0,
     role: "Creator" as const,
-    memberCount: 4,
+    memberCount: activeMembers.length,
     lastActivity: "Just now"
   };
 
-  const userBalance = currentTab.balance;
+  // Find user's actual balance from active members or tab summary
+  const userMember = activeMembers.find(m => m.name.toLowerCase() === currentUser.toLowerCase());
+  const userBalance = userMember ? userMember.balance : currentTab.balance;
   const userType = userBalance === 0 ? ("settled" as const) : userBalance < 0 ? ("debtor" as const) : ("creditor" as const);
-
-  const mockMembers = [
-    ...baseMembers,
-    { name: currentUser, balance: userBalance, type: userType }
-  ];
 
   const currentUserData = {
     name: currentUser,
     balance: userBalance,
     type: userType
   };
+
+  // Calculate gross volume dynamically from expenses (in cents)
+  const grossVolume = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
 
   const [isSettlementOpen, setIsSettlementOpen] = useState(false);
   const [isCashOutOpen, setIsCashOutOpen] = useState(false);
@@ -105,13 +99,13 @@ function DashboardContent() {
     rows.push(["TAB_NAME", `"${currentTab.name.replace(/"/g, '""')}"`]);
     rows.push(["TAB_ID", currentTab.id]);
     rows.push(["EXPORTED_AT", new Date().toLocaleString()]);
-    rows.push(["MEMBER_COUNT", mockMembers.length]);
+    rows.push(["MEMBER_COUNT", activeMembers.length]);
     rows.push([]);
 
     // Member Balances Section
     rows.push(["--- MEMBER BALANCES ---"]);
     rows.push(["Member Name", "Net Balance (AUSD)", "Status / Direction"]);
-    mockMembers.forEach(m => {
+    activeMembers.forEach(m => {
       rows.push([
         m.name,
         (m.balance / 100).toFixed(2),
@@ -269,7 +263,7 @@ function DashboardContent() {
 
         {/* Right Column (Roster & Feed) */}
         <div className="lg:col-span-8 space-y-10">
-          <RosterCarousel members={mockMembers} grossVolume={108000} />
+          <RosterCarousel members={activeMembers} grossVolume={grossVolume} />
           <FeedList expenses={expenses} />
         </div>
       </div>
@@ -310,7 +304,7 @@ function DashboardContent() {
 
       {isNettingModalOpen && (
         <Modal onClose={() => setIsNettingModalOpen(false)} className="max-w-xl bg-transparent border-0 shadow-none">
-          <NettingCanvas />
+          <NettingCanvas tabId={rawTabId} members={activeMembers} grossVolume={grossVolume} expenseCount={expenses.length} />
         </Modal>
       )}
     </div>

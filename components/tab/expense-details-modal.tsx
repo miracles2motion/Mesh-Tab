@@ -15,6 +15,7 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
 
   // 1. Look up if this is a custom-created expense in localStorage
   let foundCustomExpense: { desc: string; amount: number; payer: string; time: string } | null = null;
+  let tabId = "lisbon-24";
   if (typeof window !== "undefined") {
     try {
       const keys = Object.keys(localStorage).filter(k => k.startsWith("meshTab_expenses_"));
@@ -23,6 +24,7 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
         const match = parsed.find((item: any) => String(item.id) === String(expenseId));
         if (match) {
           foundCustomExpense = match;
+          tabId = k.replace("meshTab_expenses_", "");
           break;
         }
       }
@@ -38,18 +40,41 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
   const payer = foundCustomExpense?.payer || (isMock1 ? "Aisha" : isMock2 ? "Kemi" : isMock3 ? "Ben" : currentUserName);
   const time = foundCustomExpense?.time || (isMock1 ? "October 12, 2024 at 10:42 AM" : isMock2 ? "October 11, 2024 at 8:15 PM" : "October 10, 2024 at 2:30 PM");
 
-  const splitAmount = Math.round(amount / 4);
+  const isLisbon = tabId === "lisbon-24" || isMock1 || isMock2 || isMock3;
+  let dynamicSplits: { name: string; amount: number }[] = [];
+
+  if (isLisbon) {
+    const splitAmount = Math.round(amount / 4);
+    dynamicSplits = [
+      { name: "Aisha", amount: splitAmount },
+      { name: "Kemi", amount: splitAmount },
+      { name: "Ben", amount: splitAmount },
+      { name: currentUserName, amount: splitAmount }
+    ];
+  } else {
+    let memberNames: string[] = [];
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem(`meshTab_members_${tabId}`);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          memberNames = parsed.map((m: any) => m.name);
+        }
+      } catch {}
+    }
+    if (memberNames.length === 0) {
+      memberNames = Array.from(new Set([payer, currentUserName]));
+    }
+    const splitAmount = Math.round(amount / memberNames.length);
+    dynamicSplits = memberNames.map(name => ({ name, amount: splitAmount }));
+  }
+
   const details = {
     desc,
     amount,
     payer,
     time,
-    splits: [
-      { name: "Aisha", amount: splitAmount },
-      { name: "Kemi", amount: splitAmount },
-      { name: "Ben", amount: splitAmount },
-      { name: currentUserName, amount: splitAmount }
-    ]
+    splits: dynamicSplits
   };
 
   return (

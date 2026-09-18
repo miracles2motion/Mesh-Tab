@@ -73,6 +73,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
           onClose(); 
         }} 
         amount={debtAmount} 
+        recipient={tabId === "lisbon-24" ? "Aisha" : undefined}
       />
     );
   }

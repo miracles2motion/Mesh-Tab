@@ -5,7 +5,17 @@ import { Fingerprint, Wallet, ChevronDown, CheckCircle2, Apple } from "lucide-re
 import { useState } from "react";
 import { ReceiptView } from "./ReceiptView";
 
-export function SettlementDrawer({ isOpen, onClose, amount = 18000 }: { isOpen: boolean, onClose: () => void, amount?: number }) {
+export function SettlementDrawer({ 
+  isOpen, 
+  onClose, 
+  amount = 18000,
+  recipient
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  amount?: number;
+  recipient?: string;
+}) {
   const [method, setMethod] = useState<"ausd" | "apple">("apple");
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -21,7 +31,7 @@ export function SettlementDrawer({ isOpen, onClose, amount = 18000 }: { isOpen: 
   };
 
   if (isSuccess) {
-    return <ReceiptView isOpen={true} onClose={() => { setIsSuccess(false); onClose(); }} amount={amount} />;
+    return <ReceiptView isOpen={true} onClose={() => { setIsSuccess(false); onClose(); }} amount={amount} recipient={recipient} />;
   }
 
   return (
@@ -46,7 +56,7 @@ export function SettlementDrawer({ isOpen, onClose, amount = 18000 }: { isOpen: 
               <p className="text-white/60 mb-2">Residual Obligation</p>
               <h2 className="text-5xl font-bold text-white tracking-tight">{formatCurrency(amount)}</h2>
               <p className="text-emerald-400 text-sm mt-3 font-medium bg-emerald-500/10 inline-block px-3 py-1 rounded-full">
-                Pays Aisha directly
+                {recipient ? `Pays ${recipient} directly` : "Settles net balance directly on Monad"}
               </p>
             </div>
 

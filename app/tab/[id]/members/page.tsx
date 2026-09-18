@@ -4,19 +4,14 @@ import { ManageMembers } from "@/components/tab/manage-members";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { useParams } from "next/navigation";
-import { useUserProfile } from "@/lib/user";
+import { useUserProfile, useStoredTabMembers } from "@/lib/user";
 
 export default function MembersFallbackPage() {
   const params = useParams();
   const profile = useUserProfile();
   const currentUserName = profile.name || "David";
-
-  const membersList = [
-    { name: "Aisha", balance: 30000, type: "creditor" as const },
-    { name: "Kemi", balance: -4000, type: "debtor" as const },
-    { name: "Ben", balance: -8000, type: "debtor" as const },
-    { name: currentUserName, balance: -18000, type: "debtor" as const }
-  ];
+  const tabId = typeof params?.id === "string" ? params.id : "lisbon-24";
+  const { members: membersList } = useStoredTabMembers(tabId, currentUserName);
 
   if (!params?.id) return null;
 

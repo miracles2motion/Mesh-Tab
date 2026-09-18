@@ -14,7 +14,7 @@ interface MemberItem {
   role?: "admin" | "member";
 }
 
-import { useUserProfile } from "../../lib/user";
+import { useUserProfile, saveStoredTabMembers } from "../../lib/user";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 
@@ -31,30 +31,21 @@ export function ManageMembers({
   const activeUser = currentUser || profile.name;
   const [copied, setCopied] = useState(false);
   
-  // Default creator is Aisha
-  const creatorName = "Aisha";
-  const isCurrentUserAdmin = activeUser === creatorName;
+  // Dynamic Creator identification
+  const creatorMember = members.find(m => m.role === "admin");
+  const creatorName = tabId === "lisbon-24" ? "Aisha" : (creatorMember ? creatorMember.name : activeUser);
+  const isCurrentUserAdmin = activeUser.toLowerCase() === creatorName.toLowerCase();
 
-  // Initialize with members enriched with roles and include a settled member if not present
+  // Initialize with members enriched with roles matching actual tab data
   const [memberList, setMemberList] = useState<MemberItem[]>(() => {
-    const enriched = members.map(m => {
+    return members.map(m => {
       const resolvedName = (m.name === "Sarah" && activeUser !== "Sarah") ? activeUser : m.name;
       return {
         ...m,
         name: resolvedName,
-        role: resolvedName === creatorName ? ("admin" as const) : ("member" as const)
+        role: (resolvedName.toLowerCase() === creatorName.toLowerCase() || m.role === "admin") ? ("admin" as const) : ("member" as const)
       };
     });
-    // If no settled member exists, add Leo for demonstration of settled removal
-    if (!enriched.some(m => m.balance === 0)) {
-      enriched.push({
-        name: "Leo",
-        balance: 0,
-        type: "settled" as const,
-        role: "member" as const
-      });
-    }
-    return enriched;
   });
 
   const [notification, setNotification] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null);
@@ -96,7 +87,11 @@ export function ManageMembers({
       role: "member"
     };
 
-    setMemberList(prev => [...prev, newMember]);
+    setMemberList(prev => {
+      const updated = [...prev, newMember];
+      saveStoredTabMembers(tabId, updated);
+      return updated;
+    });
     setIsSimulating(false);
     sounds.playSuccessChime();
 
@@ -147,7 +142,11 @@ export function ManageMembers({
   const confirmRemoval = () => {
     if (!pendingRemovalMember) return;
     const removedName = pendingRemovalMember.name;
-    setMemberList(prev => prev.filter(m => m.name !== removedName));
+    setMemberList(prev => {
+      const updated = prev.filter(m => m.name !== removedName);
+      saveStoredTabMembers(tabId, updated);
+      return updated;
+    });
     setPendingRemovalMember(null);
     sounds.playSuccessChime();
     toast.success("Member Removed", {

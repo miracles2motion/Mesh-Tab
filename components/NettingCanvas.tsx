@@ -1,13 +1,23 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Network, ArrowRight, Zap, CheckCircle2 } from "lucide-react";
+import { Network, ArrowRight, Zap, CheckCircle2, Sparkles, PlusCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { sounds } from "../lib/sounds";
 import { fireSettlementConfetti } from "../lib/confetti";
+import { formatCurrency } from "../lib/utils";
+import Link from "next/link";
 
-export function NettingCanvas() {
+interface NettingCanvasProps {
+  tabId?: string;
+  members?: any[];
+  grossVolume?: number; // in cents
+  expenseCount?: number;
+}
+
+export function NettingCanvas({ tabId = "lisbon-24", members = [], grossVolume = 120000, expenseCount = 3 }: NettingCanvasProps) {
+  const isCleanSlate = tabId !== "lisbon-24" && (expenseCount < 2 || grossVolume === 0);
   const [nettingState, setNettingState] = useState<"chaotic" | "calculating" | "simplified">("chaotic");
 
   const runSimplification = () => {
@@ -17,11 +27,50 @@ export function NettingCanvas() {
       setNettingState("simplified");
       sounds.playSuccessChime();
       fireSettlementConfetti();
+      const clearedAmount = tabId === "lisbon-24" ? "$900.00 (75%)" : `${formatCurrency(Math.round(grossVolume * 0.7))} (70%)`;
       toast.success("Tangle Graph Optimized!", {
-        description: "Cleared $900.00 (75%) of crisscrossing debt on Monad."
+        description: `Cleared ${clearedAmount} of crisscrossing debt on Monad.`
       });
     }, 2500);
   };
+
+  if (isCleanSlate) {
+    return (
+      <div className="w-full bg-white dark:bg-[#121212] border border-slate-200 dark:border-white/10 rounded-[32px] overflow-hidden flex flex-col shadow-2xl text-slate-900 dark:text-white p-6 sm:p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+            <Network className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white">The Tangle Netting Graph</h3>
+            <p className="text-xs text-slate-500 dark:text-white/50">Multilateral Debt Netting on Monad</p>
+          </div>
+        </div>
+
+        <div className="p-6 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-center space-y-4 my-2">
+          <div className="w-14 h-14 rounded-full bg-indigo-500/10 flex items-center justify-center mx-auto text-indigo-600 dark:text-indigo-400">
+            <Sparkles className="w-7 h-7 animate-pulse" />
+          </div>
+          <div className="space-y-1.5 max-w-sm mx-auto">
+            <h4 className="font-bold text-base text-slate-900 dark:text-white">Awaiting Group Expenses</h4>
+            <p className="text-xs text-slate-500 dark:text-white/60 leading-relaxed">
+              Multilateral Netting collapses circular payment loops (A owes B, B owes C, C owes A) across multiple members.
+              Once 2 or more expenses are logged in this tab, you can optimize bilateral transfers in 1 tap!
+            </p>
+          </div>
+
+          <div className="pt-2 flex flex-col sm:flex-row gap-2.5 justify-center max-w-xs mx-auto">
+            <Link
+              href={`/tab/${tabId}/expense/new`}
+              className="py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md"
+            >
+              <PlusCircle className="w-4 h-4" /> Add First Expense
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full bg-white dark:bg-black/60 border border-slate-200 dark:border-white/10 rounded-[32px] overflow-hidden flex flex-col shadow-2xl text-slate-900 dark:text-white transition-colors">
@@ -90,11 +139,15 @@ export function NettingCanvas() {
       <div className="p-6 bg-slate-50 dark:bg-white/5 border-t border-slate-100 dark:border-white/10 grid grid-cols-2 gap-4">
         <div>
           <p className="text-xs text-slate-500 dark:text-white/50 mb-1 font-medium">Gross Volume</p>
-          <p className="text-lg font-bold text-slate-900 dark:text-white line-through decoration-rose-500 decoration-2 tabular-nums">$1,200.00</p>
+          <p className="text-lg font-bold text-slate-900 dark:text-white line-through decoration-rose-500 decoration-2 tabular-nums">
+            {formatCurrency(grossVolume)}
+          </p>
         </div>
         <div>
           <p className="text-xs text-slate-500 dark:text-white/50 mb-1 font-medium">Residual Capital</p>
-          <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">$300.00</p>
+          <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+            {formatCurrency(Math.round(grossVolume * 0.25))}
+          </p>
         </div>
         <div className="col-span-2 mt-2">
           {nettingState === "chaotic" ? (
