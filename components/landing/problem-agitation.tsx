@@ -5,7 +5,7 @@ export function ProblemAgitation() {
   const { problemAgitation } = LANDING_CONTENT;
 
   return (
-    <section className="py-24 bg-white dark:bg-[#0a0a0a]">
+    <section className="py-24 bg-[#f5f5f7] dark:bg-[#0a0a0a]">
       <div className="max-w-7xl mx-auto px-6">
         <div className="grid md:grid-cols-2 gap-16 items-center">
           
@@ -23,7 +23,7 @@ export function ProblemAgitation() {
 
           <div className="space-y-6">
             {problemAgitation.painPoints.map((point) => (
-              <div key={point.title} className="p-6 rounded-2xl bg-gray-50 dark:bg-[#111] border border-gray-100 dark:border-white/5">
+              <div key={point.title} className="p-6 rounded-2xl bg-white dark:bg-[#111] border border-gray-200/70 dark:border-white/5 shadow-sm">
                 <h3 className="text-lg font-bold mb-2 text-gray-900 dark:text-white">{point.title}</h3>
                 <p className="text-gray-600 dark:text-gray-400">{point.desc}</p>
               </div>

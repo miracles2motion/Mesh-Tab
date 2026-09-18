@@ -26,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${outfit.variable} ${geistMono.variable} h-full dark scroll-smooth`} suppressHydrationWarning>
-      <body className="min-h-full flex flex-col antialiased selection:bg-indigo-500/30 bg-slate-50 dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300">
+      <body className="min-h-full flex flex-col antialiased selection:bg-indigo-500/30 bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300">
         <script
           dangerouslySetInnerHTML={{
             __html: `

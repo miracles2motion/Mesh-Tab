@@ -11,14 +11,16 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  /* Clean, professional light mode default for marketing */
-  --background: #ffffff;
+  /* Apple System Neutral light mode canvas (#f5f5f7) */
+  --background: #f5f5f7;
   --foreground: #0a0a0a;
+  --surface: #ffffff;
 }
 
 .dark {
   --background: #0a0a0a;
   --foreground: #ffffff;
+  --surface: #18181b;
 }
 
 /* Global smooth transitions for Theme Switching */

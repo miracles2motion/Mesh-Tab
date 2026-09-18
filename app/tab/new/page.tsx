@@ -38,7 +38,7 @@ export default function CreateTab() {
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-[#0a0a0a] text-slate-900 dark:text-white relative overflow-hidden min-h-[calc(100vh-64px)] transition-colors duration-300">
+    <div className="flex-1 flex flex-col items-center justify-center p-6 bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white relative overflow-hidden min-h-[calc(100vh-64px)] transition-colors duration-300">
       {/* Background Mesh */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-500/10 dark:bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none" />
       
@@ -69,7 +69,7 @@ export default function CreateTab() {
                   placeholder="e.g., Lisbon Weekend"
                   value={tabName}
                   onChange={e => setTabName(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-lg font-medium"
+                  className="w-full bg-[#f5f5f7] dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-lg font-medium"
                 />
               </div>
 

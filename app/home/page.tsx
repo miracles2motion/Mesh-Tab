@@ -92,7 +92,7 @@ export default function GlobalHub() {
         success: "Joined successfully!"
       }}
     />
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300 pb-28 md:pb-16">
+    <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300 pb-28 md:pb-16">
       {/* Header */}
       <header className="px-6 md:px-12 pt-10 pb-6 flex items-center justify-between max-w-5xl mx-auto w-full">
         <div>
@@ -275,7 +275,7 @@ export default function GlobalHub() {
               <Link 
                 href={`/tab/${tab.id}`}
                 key={tab.id} 
-                className="bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-3xl p-6 transition-all hover:scale-[1.02] shadow-sm hover:shadow-md cursor-pointer group flex flex-col h-[220px]"
+                className="bg-white dark:bg-white/5 hover:bg-[#f5f5f7] dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10 rounded-3xl p-6 transition-all hover:scale-[1.02] shadow-sm hover:shadow-md cursor-pointer group flex flex-col h-[220px]"
               >
                 <div className="flex justify-between items-start mb-auto">
                   <div>
@@ -390,7 +390,7 @@ export default function GlobalHub() {
                   value={joinCode}
                   onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                   placeholder="e.g. A3F9K2" 
-                  className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-center tracking-widest text-2xl font-mono uppercase text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                  className="w-full bg-[#f5f5f7] dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-center tracking-widest text-2xl font-mono uppercase text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
                 />
               </div>
               <button 

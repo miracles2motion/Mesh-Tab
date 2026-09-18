@@ -258,7 +258,7 @@ function DashboardContent() {
 
 export default function TabDashboard() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a]" />}>
+    <Suspense fallback={<div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a]" />}>
       <DashboardContent />
     </Suspense>
   );

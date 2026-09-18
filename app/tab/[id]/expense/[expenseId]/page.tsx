@@ -16,7 +16,7 @@ export default function ExpenseDetailsFallbackPage({
   const routeParams = useParams();
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] flex flex-col items-center p-6 md:p-12 pt-24 text-slate-900 dark:text-white">
+    <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] flex flex-col items-center p-6 md:p-12 pt-24 text-slate-900 dark:text-white">
       <Link href={`/tab/${routeParams.id || resolvedParams.id}`} className="flex items-center gap-2 text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white transition-colors mb-8 self-start max-w-lg mx-auto w-full font-medium">
         <ArrowLeft className="w-5 h-5" /> Back to Dashboard
       </Link>

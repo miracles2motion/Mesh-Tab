@@ -138,7 +138,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300">
+    <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300">
       <header className="px-6 md:px-12 pt-10 pb-6 border-b border-slate-200 dark:border-white/10 max-w-4xl mx-auto w-full flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link 

@@ -27,7 +27,7 @@ export default function LandingPage() {
   const { finalCta } = LANDING_CONTENT;
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0a0a0a] text-gray-900 dark:text-white selection:bg-indigo-500/30 font-sans">
+    <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-gray-900 dark:text-white selection:bg-indigo-500/30 font-sans">
       <StructuredData />
 
       {/* Navigation */}

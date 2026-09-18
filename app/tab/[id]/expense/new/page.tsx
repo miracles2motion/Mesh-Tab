@@ -17,7 +17,7 @@ export default function AddExpenseFallbackPage() {
   if (!params?.id) return null;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-black/40 flex flex-col p-6 items-center justify-center relative text-slate-900 dark:text-white">
+    <div className="min-h-screen bg-[#f5f5f7] dark:bg-black/40 flex flex-col p-6 items-center justify-center relative text-slate-900 dark:text-white">
       <Link href={`/tab/${params.id}`} className="absolute top-8 left-8 text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white flex items-center gap-2 transition-colors font-medium">
         <ArrowLeft className="w-5 h-5" /> Back to Dashboard
       </Link>
