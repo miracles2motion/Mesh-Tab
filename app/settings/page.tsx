@@ -568,7 +568,7 @@ export default function SettingsPage() {
                       <span className="text-2xl">✨</span>
                       {workspaceMode === "blank" && <Check className="w-4 h-4 text-purple-600 dark:text-purple-400" />}
                     </div>
-                    <div className="font-bold text-slate-900 dark:text-white text-sm">Blank Slate Mode</div>
+                    <div className="font-bold text-slate-900 dark:text-white text-sm">Clean Slate Mode</div>
                     <p className="text-xs text-slate-500 dark:text-white/50 mt-1 leading-relaxed">
                       Clears pre-loaded tabs so judges can test creating fresh custom tabs, adding expenses, and inviting members.
                     </p>

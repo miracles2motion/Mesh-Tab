@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowLeft, Bell, Receipt, Activity, RefreshCw } from "lucide-react";
 import { ThemeToggle } from "../../components/theme-toggle";
+import { MeshBuddy } from "../../components/ui/mesh-buddy";
 
 export default function NotificationsPage() {
   const notifications = [
@@ -70,6 +73,8 @@ export default function NotificationsPage() {
           </div>
         ))}
       </main>
+
+      <MeshBuddy />
     </div>
   );
 }

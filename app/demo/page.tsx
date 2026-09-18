@@ -9,6 +9,7 @@ import { setWorkspaceMode } from "../../lib/user";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
 import Image from "next/image";
+import { MeshBuddy } from "../../components/ui/mesh-buddy";
 
 export default function DemoSelectionPage() {
   const router = useRouter();
@@ -199,6 +200,8 @@ export default function DemoSelectionPage() {
           <span>Need to switch later? Use the 1-click mode toggle at the top of your Hub or in Settings anytime.</span>
         </motion.div>
       </main>
+
+      <MeshBuddy />
     </div>
   );
 }
