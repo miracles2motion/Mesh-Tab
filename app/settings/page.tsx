@@ -40,6 +40,7 @@ import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { fireFaucetConfetti } from "../../lib/confetti";
 import { AnimatedCounter } from "../../components/ui/animated-counter";
+import { speak, stopSpeech, VoicePersona } from "../../lib/voice";
 
 export default function SettingsPage() {
   const profile = useUserProfile();
@@ -146,18 +147,25 @@ export default function SettingsPage() {
     toast.info("Name Reset", { description: `Co-Pilot named "${nextName}".` });
   };
 
-  const handleTestVoice = (voiceType: "deep-male" | "warm-female") => {
+  const handleTestVoice = (voiceType: VoicePersona) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    window.speechSynthesis.cancel();
+    if (voiceType === "mute") {
+      stopSpeech();
+      setIsPlayingAudio(false);
+      return;
+    }
     setIsPlayingAudio(true);
-    const utterance = new SpeechSynthesisUtterance(
-      `Hello! I'm your MeshBuddy co-pilot. I'm active and ready to guide your settlements.`
+    speak(
+      voiceType === "deep-male"
+        ? "Deep Male voice activated. Ready to guide your settlements."
+        : "Warm Female voice activated. Ready to guide your settlements.",
+      voiceType,
+      {
+        onStart: () => setIsPlayingAudio(true),
+        onEnd: () => setIsPlayingAudio(false),
+        onError: () => setIsPlayingAudio(false)
+      }
     );
-    utterance.rate = voiceType === "deep-male" ? 0.9 : 1.05;
-    utterance.pitch = voiceType === "deep-male" ? 0.8 : 1.2;
-    utterance.onend = () => setIsPlayingAudio(false);
-    utterance.onerror = () => setIsPlayingAudio(false);
-    window.speechSynthesis.speak(utterance);
   };
 
   const handleClaimFaucet = () => {
@@ -481,7 +489,11 @@ export default function SettingsPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <button
                         type="button"
-                        onClick={() => updateBuddySettings({ voice: "mute" })}
+                        onClick={() => {
+                          updateBuddySettings({ voice: "mute" });
+                          handleTestVoice("mute");
+                          toast.info("Co-Pilot Voice Muted", { description: "Silent text-only assistance enabled." });
+                        }}
                         className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col gap-1.5 ${
                           buddySettings.voice === "mute"
                             ? "bg-indigo-50/80 dark:bg-indigo-500/10 border-indigo-500 text-indigo-700 dark:text-indigo-300 font-semibold"
@@ -501,6 +513,7 @@ export default function SettingsPage() {
                         onClick={() => {
                           updateBuddySettings({ voice: "deep-male" });
                           handleTestVoice("deep-male");
+                          toast.success("Switched to Deep Tech Male", { description: "Speaking in calm, authoritative advisor tone." });
                         }}
                         className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col gap-1.5 ${
                           buddySettings.voice === "deep-male"
@@ -524,6 +537,7 @@ export default function SettingsPage() {
                         onClick={() => {
                           updateBuddySettings({ voice: "warm-female" });
                           handleTestVoice("warm-female");
+                          toast.success("Switched to Warm Concierge", { description: "Speaking in friendly, conversational guidance." });
                         }}
                         className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col gap-1.5 ${
                           buddySettings.voice === "warm-female"

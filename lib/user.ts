@@ -681,10 +681,17 @@ export function getBuddySettings(): BuddySettings {
     const raw = localStorage.getItem("meshTab_buddySettings");
     if (raw) {
       const parsed = JSON.parse(raw);
+      let safeVoice: "mute" | "deep-male" | "warm-female" = "mute";
+      if (parsed.voice === "deep-male" || parsed.voice === "male" || parsed.voice === "deep-tech-male") {
+        safeVoice = "deep-male";
+      } else if (parsed.voice === "warm-female" || parsed.voice === "female" || parsed.voice === "warm-concierge") {
+        safeVoice = "warm-female";
+      }
+
       return {
         enabled: parsed.enabled ?? true,
         name: parsed.name || defaultName,
-        voice: parsed.voice || "mute",
+        voice: safeVoice,
         color: parsed.color || AVATAR_COLORS[0]
       };
     }

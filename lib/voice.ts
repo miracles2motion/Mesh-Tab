@@ -8,42 +8,84 @@ export type VoicePersona = "mute" | "deep-male" | "warm-female";
 // Preferred natural/neural voices in order of fidelity
 const FEMALE_PREFERRED = [
   "Microsoft Jenny Online (Natural)",
-  "Microsoft Jenny",
   "Microsoft Aria Online (Natural)",
+  "Microsoft Ava Online (Natural)",
+  "Microsoft Emma Online (Natural)",
+  "Microsoft Michelle Online (Natural)",
+  "Microsoft Libby Online (Natural)",
+  "Microsoft Sonia Online (Natural)",
+  "Microsoft Clara Online (Natural)",
+  "Microsoft Jenny",
   "Microsoft Aria",
   "Google US English",
   "Google UK English Female",
   "Samantha",
-  "Karen",
   "Victoria",
-  "Sonia",
-  "Sara",
-  "Zira"
+  "Karen",
+  "Microsoft Zira Desktop",
+  "Microsoft Zira",
+  "Sonia"
 ];
 
 const MALE_PREFERRED = [
   "Microsoft Guy Online (Natural)",
-  "Microsoft Guy",
   "Microsoft Christopher Online (Natural)",
+  "Microsoft Eric Online (Natural)",
+  "Microsoft Ryan Online (Natural)",
+  "Microsoft Steffan Online (Natural)",
+  "Microsoft Thomas Online (Natural)",
+  "Microsoft Guy",
   "Microsoft Christopher",
   "Google UK English Male",
+  "Microsoft David Desktop",
+  "Microsoft David",
+  "Microsoft Mark Desktop",
+  "Microsoft Mark",
+  "Microsoft George Desktop",
+  "Microsoft George",
   "Daniel",
+  "Oliver",
+  "Alex",
   "Brian",
-  "David",
-  "George",
-  "Arthur"
+  "Arthur",
+  "Fred"
 ];
+
+const MALE_REGEX = /(^|[\s\-(_"'`])(male|man|boy|guy|christopher|eric|roger|steffan|ryan|thomas|david|mark|george|richard|daniel|oliver|alex|brian|arthur|fred|tom|rishi|lee|james|william|matthew|john|michael|paul|andrew|charles|edward)($|[\s\-)_"'`,])/i;
+
+const FEMALE_REGEX = /(^|[\s\-(_"'`])(female|woman|girl|jenny|aria|ava|emma|ana|michelle|libby|sonia|clara|neerja|rosa|natasha|zira|hazel|susan|samantha|victoria|karen|moira|fiona|tessa|serena|kate|sara|sarah|stephanie|amanda|elizabeth|catherine|heather|linda|mary|patricia|jennifer|nancy)($|[\s\-)_"'`,])/i;
+
+export function isVoiceMale(v: SpeechSynthesisVoice): boolean {
+  const name = v.name.toLowerCase();
+  if (name.includes("google uk english male")) return true;
+  if (name.includes("google us english") || name.includes("google uk english female")) return false;
+  if (FEMALE_REGEX.test(name)) return false;
+  return MALE_REGEX.test(name);
+}
+
+export function isVoiceFemale(v: SpeechSynthesisVoice): boolean {
+  const name = v.name.toLowerCase();
+  if (name.includes("google us english") || name.includes("google uk english female")) return true;
+  if (name.includes("google uk english male")) return false;
+  if (MALE_REGEX.test(name)) return false;
+  return FEMALE_REGEX.test(name);
+}
+
+export function isNaturalVoice(v: SpeechSynthesisVoice): boolean {
+  const name = v.name.toLowerCase();
+  return name.includes("natural") || name.includes("neural") || name.includes("online");
+}
 
 let cachedVoices: SpeechSynthesisVoice[] = [];
 
-function loadVoices(): SpeechSynthesisVoice[] {
+export function loadVoices(): SpeechSynthesisVoice[] {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return [];
-  if (cachedVoices.length > 0) return cachedVoices;
   const list = window.speechSynthesis.getVoices();
   if (list && list.length > 0) {
     cachedVoices = list;
+    return list;
   }
-  return list || [];
+  return cachedVoices;
 }
 
 // Auto-populate voices when available in Chromium / WebKit
@@ -57,45 +99,82 @@ export function getBestVoice(persona: "deep-male" | "warm-female"): SpeechSynthe
   const voices = loadVoices();
   if (!voices || voices.length === 0) return null;
 
-  const preferredList = persona === "warm-female" ? FEMALE_PREFERRED : MALE_PREFERRED;
-
-  // 1. Try to find an exact preferred natural/neural voice match
-  for (const preferred of preferredList) {
-    const match = voices.find(
-      (v) =>
-        v.lang.startsWith("en") &&
-        v.name.toLowerCase().includes(preferred.toLowerCase())
-    );
-    if (match) return match;
-  }
-
-  // 2. Try to find any natural / neural English voice matching gender cues
-  const naturalMatch = voices.find((v) => {
-    if (!v.lang.startsWith("en")) return false;
-    const n = v.name.toLowerCase();
-    const isNatural = n.includes("natural") || n.includes("neural") || n.includes("online");
-    if (!isNatural) return false;
-    if (persona === "warm-female") {
-      return !n.includes("male") && !n.includes("guy") && !n.includes("david");
-    } else {
-      return !n.includes("female") && !n.includes("jenny") && !n.includes("aria") && !n.includes("zira");
+  if (persona === "deep-male") {
+    // 1. Exact or near match on top preferred natural male voices
+    for (const pref of MALE_PREFERRED) {
+      const match = voices.find(
+        (v) =>
+          v.lang.startsWith("en") &&
+          isVoiceMale(v) &&
+          v.name.toLowerCase().includes(pref.toLowerCase())
+      );
+      if (match) return match;
     }
-  });
-  if (naturalMatch) return naturalMatch;
 
-  // 3. Fallback to any English voice matching gender name
-  const genderFallback = voices.find((v) => {
-    if (!v.lang.startsWith("en")) return false;
-    const n = v.name.toLowerCase();
-    return persona === "warm-female"
-      ? (n.includes("female") || n.includes("woman") || n.includes("girl"))
-      : (n.includes("male") || n.includes("man") || n.includes("guy"));
-  });
-  if (genderFallback) return genderFallback;
+    // 2. Any English natural/neural voice that is strictly male
+    const naturalMale = voices.find(
+      (v) => v.lang.startsWith("en") && isVoiceMale(v) && isNaturalVoice(v)
+    );
+    if (naturalMale) return naturalMale;
 
-  // 4. Default to first available English voice or system voice
-  const defaultEnglish = voices.find((v) => v.lang.startsWith("en"));
-  return defaultEnglish || voices[0] || null;
+    // 3. Any English voice that is verified male (e.g. Microsoft David, Microsoft Mark, Daniel)
+    const anyEnglishMale = voices.find(
+      (v) => v.lang.startsWith("en") && isVoiceMale(v)
+    );
+    if (anyEnglishMale) return anyEnglishMale;
+
+    // 4. Any voice in any language verified male
+    const anyMale = voices.find((v) => isVoiceMale(v));
+    if (anyMale) return anyMale;
+
+    // 5. If NO male voice could be positively identified, find an English voice that is NOT female
+    const nonFemale = voices.find(
+      (v) => v.lang.startsWith("en") && !isVoiceFemale(v)
+    );
+    if (nonFemale) return nonFemale;
+
+    // 6. Extreme fallback (only when no male or neutral voice exists on the entire device)
+    const defaultEn = voices.find((v) => v.lang.startsWith("en"));
+    return defaultEn || voices[0] || null;
+  } else {
+    // warm-female
+    // 1. Exact or near match on top preferred natural female voices
+    for (const pref of FEMALE_PREFERRED) {
+      const match = voices.find(
+        (v) =>
+          v.lang.startsWith("en") &&
+          isVoiceFemale(v) &&
+          v.name.toLowerCase().includes(pref.toLowerCase())
+      );
+      if (match) return match;
+    }
+
+    // 2. Any English natural/neural voice that is strictly female
+    const naturalFemale = voices.find(
+      (v) => v.lang.startsWith("en") && isVoiceFemale(v) && isNaturalVoice(v)
+    );
+    if (naturalFemale) return naturalFemale;
+
+    // 3. Any English voice that is verified female
+    const anyEnglishFemale = voices.find(
+      (v) => v.lang.startsWith("en") && isVoiceFemale(v)
+    );
+    if (anyEnglishFemale) return anyEnglishFemale;
+
+    // 4. Any voice verified female
+    const anyFemale = voices.find((v) => isVoiceFemale(v));
+    if (anyFemale) return anyFemale;
+
+    // 5. English voice that is NOT male
+    const nonMale = voices.find(
+      (v) => v.lang.startsWith("en") && !isVoiceMale(v)
+    );
+    if (nonMale) return nonMale;
+
+    // 6. Fallback
+    const defaultEn = voices.find((v) => v.lang.startsWith("en"));
+    return defaultEn || voices[0] || null;
+  }
 }
 
 export function stopSpeech() {
