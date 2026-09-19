@@ -179,7 +179,7 @@ export default function GlobalHub() {
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
               <span className="text-slate-600 dark:text-white/70 font-semibold text-xs uppercase tracking-wider">Total Net Balance</span>
-              <div className={`text-4xl md:text-5xl font-bold mt-1 tracking-tight ${netBalance < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+              <div className={`text-3xl sm:text-4xl md:text-5xl font-bold mt-1 tracking-tight break-words min-w-0 ${netBalance < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>
                 {netBalance < 0 ? "-" : "+"}<AnimatedCounter value={Math.abs(netBalance) / 100} prefix="$" decimals={2} />
               </div>
               <p className="text-slate-500 dark:text-white/50 text-xs mt-2 font-medium">Across {mockTabs.length} active shared groups</p>
@@ -247,7 +247,7 @@ export default function GlobalHub() {
                     Agora AUSD • Instant Transfer
                   </span>
                 </div>
-                <div className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tabular-nums tracking-tight mt-0.5">
+                <div className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white tabular-nums tracking-tight mt-0.5 break-words min-w-0">
                   <AnimatedCounter value={settledBalance / 100} prefix="$" decimals={2} />
                 </div>
                 <p className="text-xs text-slate-500 dark:text-white/60 mt-1">
