@@ -201,7 +201,7 @@ export function MeshBuddy() {
     } else if (pathname === "/settings") {
       tip = "You can customize my name, voice persona, or test your hardware passkey here.";
     } else if (pathname === "/notifications") {
-      tip = "Here are your group payment and settlement notifications from your Monad smart account.";
+      tip = "Here are your live payment and settlement updates across all your group tabs.";
     }
 
     if (tip) {
@@ -603,6 +603,18 @@ export function MeshBuddy() {
         actionItems = [
           { label: "Go to Hub", action: () => router.push("/home") },
           { label: "🚰 Claim Faucet (+$500)", action: handleClaimFaucet },
+        ];
+      } else if (pathname === "/notifications") {
+        spokenPunchline = "Here are your live group notifications.";
+        replyText =
+          `You are on your **Notifications** activity feed.\n\n` +
+          `• 🔔 **Live Activity**: Real-time alerts when friends log expenses, settle debts, or complete netting.\n` +
+          `• ⚡ **Direct Access**: Tap any notification card to jump straight to the relevant group tab.\n` +
+          `• 🧹 **Stay Organized**: Filter by unread, expenses, or settlements, or clear all anytime.`;
+
+        actionItems = [
+          { label: "🏠 Return to Hub", action: () => router.push("/home") },
+          { label: "⚙️ Manage Settings", action: () => router.push(pathname ? `/settings?from=${encodeURIComponent(pathname)}` : "/settings") },
         ];
       } else if (pathname === "/error") {
         spokenPunchline = "You are on the recovery screen. Your tabs are safe.";
