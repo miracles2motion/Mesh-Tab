@@ -600,13 +600,13 @@ export default function SettingsPage() {
                         {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                       </Button>
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-white/40 mt-2 font-medium">All ledger transactions and multilateral netting have network fees 100% sponsored via Pimlico Paymasters.</p>
+                    <p className="text-xs text-slate-500 dark:text-white/40 mt-2 font-medium">All ledger transactions and multilateral netting have zero fees and are 100% sponsored by the platform.</p>
                   </div>
 
                   {/* Security Architecture */}
                   <div className="pt-6 border-t border-slate-200 dark:border-white/10">
                     <h3 className="text-sm font-bold text-slate-800 dark:text-white/80 mb-2">Biometric Enclave Security</h3>
-                    <p className="text-xs text-slate-500 dark:text-white/40 mb-3 leading-relaxed">Your account is secured by your device&apos;s hardware Secure Enclave (WebAuthn P-256). Private keys never leave physical hardware.</p>
+                    <p className="text-xs text-slate-500 dark:text-white/40 mb-3 leading-relaxed">Your account is secured by your device&apos;s biometric Secure Enclave. Credentials never leave physical hardware.</p>
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold border border-emerald-500/20">
                       Hardware Secured
                     </div>

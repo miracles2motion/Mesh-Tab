@@ -53,18 +53,18 @@ export const LANDING_CONTENT = {
       icon: "Network",
     },
     {
-      title: "Mera Passkeys",
-      description: "Bind your smart account instantly using FaceID or TouchID. Zero browser extensions or seed phrases required for your friends to join.",
+      title: "Touch ID & Face ID",
+      description: "Secure your account in 1 tap with your device's built-in biometrics. No passwords, seed phrases, or extra apps required.",
       icon: "Fingerprint",
     },
     {
-      title: "Stablecoin Settlement",
-      description: "Bypass international wire fees entirely. Debts are settled atomically on Monad using Agora AUSD, funded instantly via Apple Pay.",
+      title: "Digital Dollar Settlement",
+      description: "Bypass international bank wire fees entirely. Debts are settled instantly using 1:1 Digital Dollars, funded effortlessly via Apple Pay.",
       icon: "Wallet",
     },
     {
-      title: "Gasless Abstraction",
-      description: "You never pay gas fees to log an expense. Our Verifying Paymaster sponsors all ledger operations permanently.",
+      title: "Zero Transfer Fees",
+      description: "You never pay transfer fees to log an expense or split a tab. All routine ledger operations are 100% free and sponsored.",
       icon: "Zap",
     }
   ],
@@ -80,21 +80,21 @@ export const LANDING_CONTENT = {
       { feature: "Settlement Speed", us: "Instant", them: "3-5 Business Days" },
       { feature: "Fee Events / Cost", us: "Reduced to 1–2 (Netted)", them: "Up to 12 Transfers (Crisscrossing)" },
       { feature: "Crisscrossing Payments", us: "Eliminated (Netting)", them: "Required" },
-      { feature: "Web3 Onboarding", us: "Passkeys (FaceID)", them: "N/A" }
+      { feature: "Sign-in Speed", us: "Touch ID / Face ID", them: "Password / Manual" }
     ]
   },
   faq: [
     {
-      question: "Do my friends need crypto wallets to join?",
-      answer: "No. MeshTab uses Mera Passkeys, which instantly generate a smart account bound to their FaceID or TouchID. They never see a seed phrase or install a browser extension."
+      question: "Do my friends need crypto apps or special accounts to join?",
+      answer: "No. Friends join in seconds using Face ID or Touch ID on their phone. No passwords, no wallet extensions, and no complex account setups required."
     },
     {
-      question: "Who pays for the network gas fees?",
-      answer: "Ledger writes (logExpense) are permanently gasless via our Verifying Paymaster, while final settlements deduct a sub-cent fee directly from the AUSD transferred."
+      question: "Are there any fees for adding expenses or splitting tabs?",
+      answer: "None. Logging expenses and calculating debt netting are permanently free. All ledger updates are sponsored by the platform with zero transaction fees."
     },
     {
-      question: "How do I fund my account?",
-      answer: "When it's time to settle, you can instantly purchase Agora AUSD directly within the app using Apple Pay, Google Pay, or a standard debit card via Dynamic."
+      question: "How do I fund and cash out my balance?",
+      answer: "When it's time to settle, you can fund your balance instantly using Apple Pay, Google Pay, or a debit card. You can cash out to your bank account or Visa card in seconds."
     }
   ],
   finalCta: {

@@ -312,8 +312,8 @@ export function ManageMembers({
 
       {/* Blocked Removal Modal (Active Debt Protection) */}
       {blockedRemovalMember && (
-        <div className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#121212] border border-rose-200 dark:border-rose-500/30 rounded-3xl p-6 md:p-8 max-w-sm w-full space-y-5 shadow-2xl text-slate-900 dark:text-white">
+        <div className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-[#121212] border border-rose-200 dark:border-rose-500/30 rounded-3xl p-6 md:p-8 max-w-sm w-full space-y-5 shadow-2xl text-slate-900 dark:text-white my-auto max-h-[92vh] overflow-y-auto">
             <div className="w-14 h-14 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mx-auto text-rose-500">
               <ShieldAlert className="w-7 h-7" />
             </div>
@@ -345,8 +345,8 @@ export function ManageMembers({
 
       {/* Confirm Removal Modal (Historical Data Preserved) */}
       {pendingRemovalMember && (
-        <div className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#121212] border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 max-w-sm w-full space-y-5 shadow-2xl text-slate-900 dark:text-white">
+        <div className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-[#121212] border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 max-w-sm w-full space-y-5 shadow-2xl text-slate-900 dark:text-white my-auto max-h-[92vh] overflow-y-auto">
             <div className="w-14 h-14 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mx-auto text-amber-500">
               <AlertCircle className="w-7 h-7" />
             </div>

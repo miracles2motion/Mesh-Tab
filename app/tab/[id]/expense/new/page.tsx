@@ -26,6 +26,7 @@ export default function AddExpenseFallbackPage() {
       
       <div className="w-full max-w-lg bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden">
         <AddExpenseForm 
+          tabId={tabId}
           members={memberNames} 
           currentUser={currentUserName}
           onSuccess={() => router.push(`/tab/${params.id}`)} 

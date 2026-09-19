@@ -29,6 +29,11 @@ import {
   useWorkspaceMode, 
   useVirtualBalance,
   useStoredTabs,
+  getStoredTabMembers,
+  getStoredExpenses,
+  getStoredTabs,
+  TabMember,
+  StoredExpense,
   AVATAR_COLORS
 } from "../../lib/user";
 import { formatCurrency } from "../../lib/utils";
@@ -51,6 +56,41 @@ interface ChatMessage {
   sender: "buddy" | "user";
   text: string;
   actions?: { label: string; action: () => void }[];
+}
+
+interface LiveTabStats {
+  tabName: string;
+  totalSpent: number;
+  expenses: StoredExpense[];
+  members: TabMember[];
+  creditors: TabMember[];
+  debtors: TabMember[];
+  settled: TabMember[];
+  userMember?: TabMember;
+  totalOutstandingDebt: number;
+}
+
+function getLiveTabStats(tabId: string, userName: string, fallbackName?: string): LiveTabStats {
+  const members = getStoredTabMembers(tabId, userName);
+  const expenses = getStoredExpenses(tabId);
+  const totalSpent = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const creditors = members.filter((m) => m.balance > 0);
+  const debtors = members.filter((m) => m.balance < 0);
+  const settled = members.filter((m) => m.balance === 0);
+  const userMember = members.find((m) => m.name.toLowerCase() === userName.toLowerCase());
+  const totalOutstandingDebt = Math.abs(debtors.reduce((sum, d) => sum + d.balance, 0));
+
+  return {
+    tabName: fallbackName || tabId,
+    totalSpent,
+    expenses,
+    members,
+    creditors,
+    debtors,
+    settled,
+    userMember,
+    totalOutstandingDebt,
+  };
 }
 
 export function MeshBuddy() {
@@ -318,34 +358,272 @@ export function MeshBuddy() {
     setMessages((prev) => [...prev, userMsg]);
     setIsThinking(true);
 
-    // 1. Conversational & Social Greetings
+    // 1. Core Intent: "Tell me about this app" / What is MeshTab?
     if (
+      /(tell me about (this|the) app|what is (this|the) app|what is meshtab|what is mesh tab|explain (this|the) app|explain meshtab|explain mesh tab|how does (this|the) app work|what does (this|the) app do|about (this|the) app|pitch me (this|the) app|app overview|what are we doing here|what is the purpose of (this|the) app|why meshtab|tell me about meshtab)/i.test(q)
+    ) {
+      replyText =
+        `**MeshTab** is a modern group expense tracker and instant debt-clearing app designed for group trips, housemates, and shared events! 🚀\n\n` +
+        `Here is what makes MeshTab so simple and fast:\n\n` +
+        `1. 🌀 **Smart Debt Netting (Fewer Payments)**:\n` +
+        `In normal group apps, 10 friends make 15 separate payments back and forth. MeshTab automatically cancels out circular debts (A owes B, B owes C, C owes A) and collapses dozens of crisscrossing IOUs into the fewest direct payments possible—often clearing 75%+ of total payments with zero unnecessary money transfers!\n\n` +
+        `2. ⚡ **Instant, Simultaneous Updates**:\n` +
+        `Everyone in the group can snap receipts, split dinners, and confirm payments at the exact same instant without lag, waiting, or delays.\n\n` +
+        `3. 🔑 **Touch ID & Face ID Sign-In**:\n` +
+        `No passwords to remember. You join tabs and approve payments with your thumbprint or Face ID—just like Apple Pay. There are zero network transfer fees.\n\n` +
+        `4. 💵 **Digital Dollars (AUSD)**:\n` +
+        `All tabs use 1:1 digital dollars ($1 AUSD = $1.00 USD) that never lose value. When friends pay you back, you can cash out directly to your debit card or bank account in seconds.`;
+
+      actionItems = [
+        currentTabId
+          ? { label: `📊 Recap "${tabDisplayName}"`, action: () => handleAskQuestion("give me a recap of this tab") }
+          : { label: "🏖️ Open Lisbon Demo Trip", action: () => router.push("/tab/lisbon-24") },
+        { label: "🌀 How Netting Works", action: () => handleAskQuestion("how does netting work") },
+        { label: "➕ Create New Tab", action: () => router.push("/tab/new") },
+        { label: "📚 Open Knowledge Base", action: () => setDrawerTab("kb") },
+      ];
+    } else if (
+      // 2. Core Intent: "Give me a recap of what's going on here" / Live Screen & Tab Recap
+      /(give me a recap|recap of what'?s going on|what'?s going on here|what is going on here|what is happening here|where am i|recap|status update|summary of (this|the) tab|tab recap|tab summary|screen recap|screen summary|overview of what'?s happening|give me a summary|what is this screen|what are we looking at)/i.test(q)
+    ) {
+      if (currentTabId) {
+        const stats = getLiveTabStats(currentTabId, userName, tabDisplayName);
+        const userBal = stats.userMember?.balance ?? 0;
+        const creditorsList = stats.creditors.map((c) => `${c.name} (+${formatCurrency(c.balance)})`).join(", ");
+        const debtorsList = stats.debtors.map((d) => `${d.name} (${formatCurrency(d.balance)})`).join(", ");
+
+        replyText =
+          `Here is the live recap for **"${tabDisplayName}"**:\n\n` +
+          `📊 **Ledger Overview**:\n` +
+          `• Total Volume: **${formatCurrency(stats.totalSpent)}** logged across **${stats.expenses.length}** expense${stats.expenses.length === 1 ? "" : "s"}.\n` +
+          `• Members (${stats.members.length}): ${stats.members.map((m) => m.name).join(", ")}.\n\n` +
+          `💰 **Debt & Balance Breakdown**:\n` +
+          `• **Owed Money** (${stats.creditors.length}): ${creditorsList || "None"}\n` +
+          `• **In Debt** (${stats.debtors.length}): ${debtorsList || "All members are fully settled!"}\n` +
+          `• **Your Position**: ${
+            userBal < 0
+              ? `🔴 You owe **${formatCurrency(Math.abs(userBal))}** to the tab.`
+              : userBal > 0
+              ? `🟢 You are owed **+${formatCurrency(userBal)}**.`
+              : "⚪ You are fully settled ($0.00)."
+          }\n\n` +
+          `🌀 **Netting State**:\n` +
+          (isDemoTab
+            ? `Smart Netting has simplified 12 international transfers down to 3 direct payments pointing to Aisha, clearing $900.00 (75% of transfers saved without moving capital)!`
+            : stats.expenses.length >= 2
+            ? `Smart debt netting is active and ready to collapse circular loops whenever members settle.`
+            : `Only ${stats.expenses.length} expense logged so far. Add more shared expenses to form circular debt cycles.`);
+
+        actionItems = [
+          { label: "🔴 Who is in Debt?", action: () => handleAskQuestion("who is currently in debt and has not settled") },
+          { label: "➕ Add Expense", action: () => router.push(`/tab/${currentTabId}/expense/new`) },
+          { label: "👥 Invite Members", action: () => router.push(`/tab/${currentTabId}/members`) },
+          { label: "🚰 Top Up Faucet (+$500)", action: handleClaimFaucet },
+        ];
+      } else if (pathname === "/home") {
+        const tabs = getStoredTabs();
+        const totalTabs = tabs.length;
+        const totalNetBalance = tabs.reduce((sum, t) => sum + (t.balance || 0), 0);
+
+        replyText =
+          `Here is a recap of your **Main Hub**:\n\n` +
+          `🏢 **Workspace Mode**: ${workspaceMode === "blank" ? "Clean Slate (Main App)" : "Sample Trip (Demo Mode)"}\n` +
+          `📁 **Active Tabs (${totalTabs})**:\n` +
+          (totalTabs > 0
+            ? tabs.map((t) => `• **${t.name}**: ${t.balance < 0 ? `You owe ${formatCurrency(Math.abs(t.balance))}` : t.balance > 0 ? `You are owed +${formatCurrency(t.balance)}` : "Settled ($0.00)"} (${t.memberCount} members)`).join("\n") + "\n\n"
+            : "• You currently have 0 active tabs.\n\n") +
+          `💵 **Net Position Across All Tabs**: ${
+            totalNetBalance < 0
+              ? `🔴 Net Debt: ${formatCurrency(Math.abs(totalNetBalance))}`
+              : totalNetBalance > 0
+              ? `🟢 Net Owed to You: +${formatCurrency(totalNetBalance)}`
+              : "⚪ Even ($0.00)"
+          }\n` +
+          `💳 **Account Balance**: ${formatCurrency(virtualBalance)}`;
+
+        actionItems = [
+          totalTabs > 0 ? { label: `🏖️ Open ${tabs[0].name}`, action: () => router.push(`/tab/${tabs[0].id}`) } : { label: "➕ Create New Tab", action: () => router.push("/tab/new") },
+          { label: "🚰 Claim Faucet (+$500)", action: handleClaimFaucet },
+          { label: workspaceMode === "blank" ? "🏖️ Restore Lisbon Demo" : "🧹 Switch to Clean Slate", action: handleToggleWorkspace },
+        ];
+      } else if (pathname === "/demo") {
+        replyText =
+          `You are currently in the **Evaluation Sandbox**.\n\n` +
+          `Here you can choose between two environments:\n` +
+          `1. **Sample Trip (Lisbon '24)**: Pre-loaded with 4 friends, $1,200 in shared villa & dinner expenses, and an active netting graph demonstrating a 75% reduction in payment transfers.\n` +
+          `2. **Clean Slate Mode**: Resets the workspace to a fresh blank slate with 0 tabs, allowing you to test tab creation, member invitations, and live receipt scans from scratch.`;
+
+        actionItems = [
+          { label: "🏖️ Open Lisbon Demo", action: () => router.push("/tab/lisbon-24") },
+          { label: "➕ Create New Tab", action: () => router.push("/tab/new") },
+          { label: "🧹 Switch to Clean Slate", action: handleToggleWorkspace },
+        ];
+      } else if (pathname?.includes("/expense/new")) {
+        replyText =
+          `You are on the **Add Expense** screen for ${isCustomTab ? `"${tabDisplayName}"` : "the group tab"}.\n\n` +
+          `You can log shared costs using three simple methods:\n` +
+          `• 📸 **Smart Scan**: Take a photo or upload a receipt to automatically extract merchant, total, and line items.\n` +
+          `• 🎙️ **Voice Dictate**: Tap the microphone icon to dictate expense details naturally.\n` +
+          `• ⌨️ **Manual Entry**: Type the amount, description, and select who paid and how to split.`;
+
+        actionItems = [
+          { label: "Back to Tab", action: () => router.push(currentTabId ? `/tab/${currentTabId}` : "/tab/lisbon-24") },
+        ];
+      } else if (pathname?.includes("/members")) {
+        const stats = currentTabId ? getLiveTabStats(currentTabId, userName, tabDisplayName) : null;
+        replyText =
+          `You are on the **Group Members & Invitations** screen.\n\n` +
+          `• Current Roster (${stats ? stats.members.length : 4}): ${stats ? stats.members.map((m) => m.name).join(", ") : "Aisha, Kemi, Ben, " + userName}\n` +
+          `• Friends join instantly by scanning the QR code or tapping your invite link.\n` +
+          `• They sign in with Face ID or Touch ID in seconds—no passwords or app downloads needed!`;
+
+        actionItems = [
+          { label: "Back to Tab", action: () => router.push(currentTabId ? `/tab/${currentTabId}` : "/tab/lisbon-24") },
+        ];
+      } else if (pathname === "/settings") {
+        replyText =
+          `You are on your **Settings & Account** screen.\n\n` +
+          `Here you can:\n` +
+          `• 🏦 Link your debit card or bank account for instant cash-outs.\n` +
+          `• 🔑 Manage your Touch ID / Face ID sign-in security and display settings.\n` +
+          `• 🤖 Customize my Co-Pilot voice persona, name, and audio settings.\n` +
+          `• 🎮 Switch workspace modes between Clean Slate and Sample Trip.`;
+
+        actionItems = [
+          { label: "Go to Hub", action: () => router.push("/home") },
+          { label: "🚰 Claim Faucet (+$500)", action: handleClaimFaucet },
+        ];
+      } else if (pathname === "/error") {
+        replyText =
+          `You are on the **Safe Recovery Screen**.\n\n` +
+          `An unexpected screen error was intercepted, but all your group tabs and account balances are safely preserved in your browser. You can reload the route or return to the hub safely.`;
+
+        actionItems = [
+          { label: "🏠 Return to Hub", action: () => router.push("/home") },
+          { label: "🎮 Open Demo Sandbox", action: () => router.push("/demo") },
+        ];
+      } else {
+        replyText =
+          `You are currently viewing MeshTab at **${pathname || "/home"}**.\n\n` +
+          `I am monitoring your local ledger. You can ask me for a tab recap, who owes money, how debt netting works, or how to cash out to your bank!`;
+
+        actionItems = [
+          { label: "💡 Tell Me About This App", action: () => handleAskQuestion("tell me about this app") },
+          { label: "📚 Open Knowledge Base", action: () => setDrawerTab("kb") },
+          { label: "🚰 Top Up Faucet", action: handleClaimFaucet },
+        ];
+      }
+    } else if (
+      // 3. Core Intent: "Who is currently in debt and has not settled" / Debt & Unsettled Balances
+      /(who (is|are)( currently)? in debt|who owes( money)?|who has not settled|who hasn'?t settled|who owes who|who is in debt|unsettled( debt| balance| member| people)|who needs to pay|debt breakdown|who is owed( money)?|who are the creditors|who are the debtors|list (of )?debts|show (me )?debts|show (me )?balances|unsettled debts|has everyone settled|did everyone pay)/i.test(q)
+    ) {
+      if (currentTabId) {
+        const stats = getLiveTabStats(currentTabId, userName, tabDisplayName);
+
+        replyText =
+          `Here is the exact debt & settlement breakdown for **"${tabDisplayName}"**:\n\n` +
+          `🔴 **Currently in Debt (Has Not Settled — ${stats.debtors.length})**:\n` +
+          (stats.debtors.length > 0
+            ? stats.debtors.map((d) => `• **${d.name}**: owes **${formatCurrency(Math.abs(d.balance))}**`).join("\n") + "\n\n"
+            : "• No one is currently in debt! All members are settled.\n\n") +
+          `🟢 **Owed Money (Creditors — ${stats.creditors.length})**:\n` +
+          (stats.creditors.length > 0
+            ? stats.creditors.map((c) => `• **${c.name}**: is owed **+${formatCurrency(c.balance)}**`).join("\n") + "\n\n"
+            : "• No outstanding balances to collect.\n\n") +
+          (stats.settled.length > 0
+            ? `⚪ **Fully Settled ($0.00 — ${stats.settled.length})**:\n${stats.settled.map((s) => `• ${s.name}`).join(", ")}\n\n`
+            : "") +
+          `📌 **Total Outstanding Debt**: **${formatCurrency(stats.totalOutstandingDebt)}**\n\n` +
+          `💡 **How to Settle**:\n` +
+          `Any debtor can tap the green **"Settle Debts"** or **"Pay Share"** button on the tab page to transfer their share in Digital Dollars (AUSD). If testing, you can tap **Claim +$500 Faucet** below to fund your account!`;
+
+        actionItems = [
+          { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet },
+          { label: "🌀 How Netting Minimizes This", action: () => handleAskQuestion("how does netting work") },
+          { label: "➕ Add Another Expense", action: () => router.push(`/tab/${currentTabId}/expense/new`) },
+        ];
+      } else {
+        const tabs = getStoredTabs();
+        const tabsWithDebt = tabs.filter((t) => t.balance < 0);
+        const tabsWithCredit = tabs.filter((t) => t.balance > 0);
+        const tabsSettled = tabs.filter((t) => t.balance === 0);
+
+        replyText =
+          `Here is your debt & balance status across all active tabs:\n\n` +
+          (tabs.length === 0
+            ? `You are currently in Clean Slate mode with 0 tabs. No debts exist right now!\n\n`
+            : `📁 **Tabs Where You Owe Money (${tabsWithDebt.length})**:\n` +
+              (tabsWithDebt.length > 0
+                ? tabsWithDebt.map((t) => `• **${t.name}**: you owe **${formatCurrency(Math.abs(t.balance))}**`).join("\n") + "\n\n"
+                : "• None! You have no outstanding debts on any tab.\n\n") +
+              `🟢 **Tabs Where You Are Owed Money (${tabsWithCredit.length})**:\n` +
+              (tabsWithCredit.length > 0
+                ? tabsWithCredit.map((t) => `• **${t.name}**: you are owed **+${formatCurrency(t.balance)}**`).join("\n") + "\n\n"
+                : "• None.\n\n") +
+              (tabsSettled.length > 0
+                ? `⚪ **Settled Tabs**: ${tabsSettled.map((t) => t.name).join(", ")}\n\n`
+                : "")) +
+          `💡 Tap any tab below to inspect individual member balances and debts!`;
+
+        actionItems = tabs.map((t) => ({
+          label: `Open ${t.name}`,
+          action: () => router.push(`/tab/${t.id}`),
+        }));
+        if (actionItems.length === 0) {
+          actionItems = [
+            { label: "➕ Create a Tab", action: () => router.push("/tab/new") },
+            { label: "🏖️ Restore Lisbon Demo", action: handleToggleWorkspace },
+          ];
+        }
+      }
+    } else if (
+      // 4. Core Intent: "What expenses were logged?" / Expense History Breakdown
+      /(what expenses( were| have been)? logged|expense (history|breakdown|list)|recent (expenses|purchases)|who paid for what|show (me )?expenses|list expenses|what did we buy|what was bought|cost breakdown)/i.test(q)
+    ) {
+      const activeTabKey = currentTabId || "lisbon-24";
+      const expenses = getStoredExpenses(activeTabKey);
+      const total = expenses.reduce((s, e) => s + (e.amount || 0), 0);
+
+      replyText =
+        `Here are the recorded expenses for **"${tabDisplayName}"**:\n\n` +
+        (expenses.length > 0
+          ? expenses.map((e) => `• **${e.desc}**: **${formatCurrency(e.amount)}** (Paid by ${e.payer}, ${e.time})`).join("\n") + "\n\n"
+          : "• No expenses logged yet on this tab.\n\n") +
+        `💰 **Total Tab Volume**: **${formatCurrency(total)}** across **${expenses.length}** item${expenses.length === 1 ? "" : "s"}.\n\n` +
+        `Every expense is split equally among tab members unless custom splits are selected.`;
+
+      actionItems = [
+        { label: "➕ Add New Expense", action: () => router.push(`/tab/${activeTabKey}/expense/new`) },
+        { label: "🔴 Who is in Debt?", action: () => handleAskQuestion("who is currently in debt and has not settled") },
+        { label: "🌀 How Netting Works", action: () => handleAskQuestion("how does netting work") },
+      ];
+    } else if (
       /^(hi|hello|hey|sup|what's up|howdy|yo|good morning|good afternoon|good evening|hiya|hello buddy|hey buddy|hi buddy)\b/i.test(q) ||
       q === "hi" || q === "hello" || q === "hey" || q === "hello buddy" || q === "hey buddy"
     ) {
       if (isCustomTab) {
-        replyText = `Hey ${userName}! 👋 Great to see you! I'm ${buddySettings.name}, your co-pilot on "${tabDisplayName}".\n\nReady to log some expenses, invite your friends with biometric passkeys, or run graph netting once bills start rolling in? What's on your mind?`;
+        replyText = `Hey ${userName}! 👋 Great to see you! I'm ${buddySettings.name}, your co-pilot on "${tabDisplayName}".\n\nReady to log some expenses, invite your friends with 1-click links, or run debt netting once bills roll in? What's on your mind?`;
         actionItems = [
           { label: `➕ Add Expense to ${tabDisplayName}`, action: () => router.push(`/tab/${currentTabId}/expense/new`) },
           { label: "👥 Invite Members via QR", action: () => router.push(`/tab/${currentTabId}/members`) },
           { label: "🚰 Top Up Faucet (+$500)", action: handleClaimFaucet },
         ];
       } else if (isDemoTab) {
-        replyText = `Hey ${userName}! 👋 I'm ${buddySettings.name}, your financial wingman!\n\nWe're hanging out in the Lisbon '24 trip benchmark. 4 travelers, $1,200 in shared expenses, and 12 crisscrossing debts ready to collapse. How can I help you explore?`;
+        replyText = `Hey ${userName}! 👋 I'm ${buddySettings.name}, your financial wingman!\n\nWe're hanging out in the Lisbon '24 trip benchmark. 4 travelers, $1,200 in shared expenses, and 12 crisscrossing debts ready to collapse into 3 payments. How can I help you explore?`;
         actionItems = [
-          { label: "🌀 Test Tangle Netting (75% Saved)", action: () => handleAskQuestion("How does netting work?") },
+          { label: "🌀 Test Smart Netting (75% Saved)", action: () => handleAskQuestion("How does netting work?") },
           { label: "📸 Test Smart Scan Receipt", action: () => router.push("/tab/lisbon-24/expense/new") },
           { label: "🚰 Claim Sandbox Faucet", action: handleClaimFaucet },
         ];
       } else if (workspaceMode === "blank") {
-        replyText = `Hey ${userName}! 👋 Welcome to your pristine Clean Slate workspace! I'm ${buddySettings.name}, running on Monad's 10k TPS parallel EVM.\n\nYou have a blank canvas right now. Would you like to create your first group tab, or should I show you around?`;
+        replyText = `Hey ${userName}! 👋 Welcome to your clean workspace! I'm ${buddySettings.name}, your co-pilot for group expenses.\n\nYou have a blank canvas right now. Would you like to create your first group tab, or should I show you around?`;
         actionItems = [
           { label: "➕ Create First Tab", action: () => router.push("/tab/new") },
           { label: "🏖️ Restore Lisbon Demo", action: handleToggleWorkspace },
           { label: "📚 Open Knowledge Base", action: () => setDrawerTab("kb") },
         ];
       } else {
-        replyText = `Hey ${userName}! 👋 Always a pleasure! I'm ${buddySettings.name}—your high-speed co-pilot on Monad.\n\nWhether you need to split dinner, test zero-fee settlements, or check how graph netting saves money, I've got your back. What would you like to do?`;
+        replyText = `Hey ${userName}! 👋 Always a pleasure! I'm ${buddySettings.name}—your co-pilot for group trips and split bills.\n\nWhether you need to split dinner, test instant settlements, or check how debt netting saves money, I've got your back. What would you like to do?`;
         actionItems = [
           { label: "🏖️ Open Lisbon Trip", action: () => router.push("/tab/lisbon-24") },
           { label: "🌀 How does Netting work?", action: () => handleAskQuestion("How does netting work?") },
@@ -353,23 +631,23 @@ export function MeshBuddy() {
         ];
       }
     } else if (/who are you|what are you|what is buddy|introduce yourself|tell me about yourself|your name/i.test(q)) {
-      replyText = `I'm ${buddySettings.name}! 🤖✨ Think of me as that one hyper-organized friend in the group chat who actually makes sure everyone gets paid back—except I live inside Monad's parallel EVM!\n\nI handle the math, simplify crisscrossing debts, check receipts with OCR, and make sure nobody has to deal with awkward "you owe me $14.50" conversations. Plus, I don't sleep and I never spill drinks!`;
+      replyText = `I'm ${buddySettings.name}! 🤖✨ Think of me as that one hyper-organized friend in the group chat who actually makes sure everyone gets paid back!\n\nI handle the math, simplify crisscrossing debts, check receipts with OCR, and make sure nobody has to deal with awkward "you owe me $14.50" conversations. Plus, I don't sleep and I never spill drinks!`;
       actionItems = [
         { label: "🌀 How Netting Works", action: () => handleAskQuestion("How does netting work?") },
         { label: "📚 Browse Knowledge Base", action: () => setDrawerTab("kb") },
       ];
     } else if (/how are you|how's it going|how are things|feeling|how you doing|what's good/i.test(q)) {
-      replyText = `Running at sub-400ms latency, zero network fees, and feeling electric! ⚡ The graph is balanced, the ledger is zero-sum, and nobody in the group is fighting over the bill.\n\nHow is your day going, ${userName}?`;
+      replyText = `Running with sub-second speed, zero transfer fees, and feeling electric! ⚡ The ledger is balanced, and nobody in the group is fighting over the bill.\n\nHow is your day going, ${userName}?`;
       actionItems = [
         { label: "🚰 Top Up Faucet (+$500)", action: handleClaimFaucet },
         { label: "📚 Explore Topics", action: () => setDrawerTab("kb") },
       ];
     } else if (/joke|funny|laugh|tell me a joke/i.test(q)) {
       const jokes = [
-        "Why did the shared restaurant bill go to therapy? Because it had unresolved circular debt loops! 🛋️ (Lucky for you, my Tangle algorithm resolved all its trauma in 300 milliseconds).",
-        "Why don't smart accounts ever get lost? Because they always follow the shortest path on the directed graph! 🧭",
-        "Why was the crypto traveler smiling on vacation? Because with MeshTab, they didn't have to explain what a 'gwei' was to their roommates! 🏖️",
-        "How do Monad developers order pizza? In parallel, so all 10,000 slices arrive in 0.3 seconds! 🍕"
+        "Why did the restaurant bill go to therapy? Because it had unresolved circular debt loops! 🛋️ (Lucky for you, my netting math resolved it in 300 milliseconds).",
+        "What's a group traveler's favorite magic trick? Turning 12 messy bank transfers into 3 simple taps!",
+        "Why was everyone smiling at the end of the vacation? Because with MeshTab, no one spent their flight home doing spreadsheet math! 🏖️",
+        "How do foodies split 10 pizzas? In one tap, so everyone eats while it's still hot! 🍕"
       ];
       replyText = jokes[Math.floor(Math.random() * jokes.length)];
       actionItems = [
@@ -386,29 +664,29 @@ export function MeshBuddy() {
       ];
     } else if (/what can you do|help me|commands|features|powers|guide me/i.test(q)) {
       replyText = `Here's what I can do for you and your crew:\n\n` +
-        `🌀 **Tangle Netting**: Turn 12 crisscrossing group debts into 3 direct payments (saving ~75% in capital movement).\n\n` +
+        `🌀 **Smart Debt Netting**: Turn 12 crisscrossing group debts into 3 direct payments (saving ~75% in transfer volume).\n\n` +
         `📸 **Smart Scan OCR**: Snap receipt photos or dictate expenses with your mic.\n\n` +
-        `🔑 **Passkey Simplicity**: Sign off with Touch ID or Face ID via Mera (zero seed phrases).\n\n` +
-        `🏦 **Instant Cash Out**: Withdraw settled AUSD directly to your debit card or bank.\n\n` +
-        `🚰 **Sandbox Faucet**: Claim +$500 play AUSD anytime to test settlements!`;
+        `🔑 **Face ID / Touch ID**: Confirm payments with your fingerprint or face (zero passwords needed).\n\n` +
+        `🏦 **Instant Cash Out**: Withdraw settled funds directly to your debit card or bank.\n\n` +
+        `🚰 **Sandbox Faucet**: Claim +$500 test funds anytime to test settlements!`;
       actionItems = [
-        { label: "📚 Open Knowledge Base (19 Guides)", action: () => setDrawerTab("kb") },
+        { label: "📚 Open Knowledge Base (20 Guides)", action: () => setDrawerTab("kb") },
         { label: "🚰 Top Up $500 AUSD", action: handleClaimFaucet },
       ];
     } else if (/why monad|what is monad|parallel evm|10000 tps|tps|blockchain/i.test(q)) {
-      replyText = `Monad is the secret sauce behind MeshTab! 🚀 Traditional blockchains process transactions one-by-one like a single cashier at a packed grocery store. Monad executes 10,000 TPS in parallel with 0.3s block times.\n\nThat means 20 people on a trip can log drinks, tap settlements, and scan receipts at the exact same instant without lag or fee spikes!`;
+      replyText = `MeshTab runs on an ultra-fast modern transaction network! 🚀 Traditional payment apps process things one-by-one and can lag or lock up during busy weekends. Our payment engine processes thousands of transactions per second with instant 0.3-second confirmations.\n\nThat means 20 people on a group trip can log drinks, split dinners, and confirm payments at the exact same instant without waiting or transfer delays!`;
       actionItems = [
         { label: "🏆 Open Pitch Presentation", action: () => router.push("/home") },
         { label: "🌀 Learn About Netting", action: () => handleAskQuestion("how does netting work") },
       ];
     } else if (/passkey|passkeys|mera|biometric|webauthn|touch id|face id/i.test(q)) {
-      replyText = `MeshTab uses Mera Passkeys backed by your device's Secure Enclave (P-256 WebAuthn). You sign group transactions with your thumbprint or Face ID just like Apple Pay—no browser extensions, no seed phrases written on napkins, and no crypto friction!`;
+      replyText = `MeshTab uses Touch ID and Face ID passkeys built right into your phone or laptop. You approve group expenses with your fingerprint or face just like Apple Pay—no passwords to forget, no 2FA text codes, and no account setup hassle!`;
       actionItems = [
         { label: "🔑 Test Passkey in Settings", action: () => router.push("/settings") },
         { label: "👥 Manage Group Members", action: () => router.push(currentTabId ? `/tab/${currentTabId}/members` : "/home") },
       ];
     } else if (/ausd|agora|currency|digital dollar|stablecoin/i.test(q)) {
-      replyText = `AUSD is the institutional digital dollar issued by Agora, backed 1:1 by ultra-safe cash and overnight US Treasury repos. That means $1 AUSD is always exactly $1.00 USD. Your group tab never fluctuates in price while you're eating dinner!`;
+      replyText = `AUSD is a digital dollar that is always worth exactly $1.00 USD, backed 1:1 by cash reserves. Your group tab balances stay steady and reliable—$50 owed is always $50. When friends settle up, you can transfer your balance straight to your debit card or bank in seconds!`;
       actionItems = [
         { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet },
         { label: "🏦 How to Cash Out", action: () => handleAskQuestion("how do i cash out?") },
@@ -421,11 +699,10 @@ export function MeshBuddy() {
       q.includes("slate") || 
       q.includes("blank") || 
       q.includes("main app") || 
-      q.includes("where am i") ||
       q.includes("which mode")
     ) {
       if (isDemoTab) {
-        replyText = `You are currently viewing the Lisbon '24 Demo Trip (Sample Trip Mode). 4 international members and $1,200 in mock expenses are pre-loaded to evaluate Monad Tangle Netting. If you want to test the main app with a fresh ledger, you can switch to Clean Slate!`;
+        replyText = `You are currently viewing the Lisbon '24 Demo Trip (Sample Trip Mode). 4 international members and $1,200 in mock expenses are pre-loaded to evaluate Tangle Netting. If you want to test the main app with a fresh ledger, you can switch to Clean Slate!`;
         actionItems = [
           { label: "🧹 Switch to Clean Slate", action: handleToggleWorkspace },
           { label: "🎮 Open Demo Selector", action: () => router.push("/demo") }
@@ -457,53 +734,53 @@ export function MeshBuddy() {
       ];
     } else if (q.includes("netting") || q.includes("tangle")) {
       if (isDemoTab) {
-        replyText = "Multilateral Netting simplifies group debts by finding circular payment loops (A owes B, B owes C, C owes A) and canceling them out. In this Lisbon trip, it cuts 12 crisscrossing international transfers down to 3 direct payments pointing to Aisha, clearing $900 (75%) without moving capital!";
+        replyText = "Smart Netting simplifies group debts by finding circular payment loops (A owes B, B owes C, C owes A) and canceling them out. In this Lisbon trip, it cuts 12 crisscrossing international transfers down to 3 direct payments pointing to Aisha, clearing $900 (75% of transfer volume) without moving unnecessary money!";
         actionItems = [
           { label: "Stay on Lisbon Tab", action: () => router.push("/tab/lisbon-24") }
         ];
       } else if (isCustomTab) {
-        replyText = `Multilateral Netting mathematically simplifies your group debts. Once members of "${tabDisplayName}" log crisscrossing expenses, tapping 'Run Tangle Netting' calculates the minimum direct payments needed to settle the entire tab with zero-sum conservation!`;
+        replyText = `Smart Netting mathematically simplifies your group debts. Once members of "${tabDisplayName}" log crisscrossing expenses, tapping 'Run Tangle Netting' calculates the minimum direct payments needed to settle the entire tab with zero-sum fairness!`;
         actionItems = [
           { label: "Add Expense to Tab", action: () => router.push(`/tab/${currentTabId}/expense/new`) }
         ];
       } else {
-        replyText = "Multilateral Netting cancels circular debt loops across group members. In the Lisbon benchmark, 12 international wire transfers collapse into just 3 direct payments, saving 75% in total capital movement!";
+        replyText = "Smart Netting cancels circular debt loops across group members. In the Lisbon benchmark, 12 international transfers collapse into just 3 direct payments, saving 75% in total money transfers!";
         actionItems = [
           { label: "Explore Lisbon Demo", action: () => router.push("/tab/lisbon-24") },
           { label: "🎮 View Demo Selector", action: () => router.push("/demo") }
         ];
       }
-    } else if (q.includes("cash out") || q.includes("withdraw") || q.includes("bank")) {
-      replyText = "When group members settle up and you are owed money, your balance turns green (+). You can tap 'Cash Out to Bank' on your balance card to transfer your Agora AUSD directly to your debit card (Visa Direct) or bank account via the Dynamic off-ramp drawer!";
+    } else if (q.includes("cash out") || q.includes("withdraw") || q.includes("bank") || q.includes("off-ramp") || q.includes("offramp")) {
+      replyText = "When friends settle up and you are owed money, your balance turns green (+). You can tap 'Cash Out to Bank' on your balance card to transfer your Digital Dollars directly to your debit card (Visa Direct) or bank account in seconds!";
       actionItems = [
         { label: "🏦 Open Bank Settings", action: () => router.push("/settings") },
         { label: "Go to Hub", action: () => router.push("/home") },
       ];
     } else if (q.includes("receipt") || q.includes("camera") || q.includes("ocr") || q.includes("scan")) {
-      replyText = "On the 'Add Expense' screen, tap 'Smart Scan' to snap a photo or upload a receipt. The smart scanner extracts the merchant, line items, and total into an editable staging proposal before you confirm!";
+      replyText = "On the 'Add Expense' screen, tap 'Smart Scan' to snap a photo or upload a receipt. The smart scanner automatically extracts the merchant, line items, and total into an editable preview before you confirm!";
       actionItems = [
         { label: currentTabId ? `Open Add Expense (${tabDisplayName})` : "Go to Add Expense", action: () => router.push(currentTabId ? `/tab/${currentTabId}/expense/new` : "/tab/lisbon-24/expense/new") }
       ];
     } else if (q.includes("member") || q.includes("invite") || q.includes("share")) {
       if (currentTabId) {
-        replyText = `You can invite friends to join "${tabDisplayName}" by sharing the QR code or invitation link. Members claim their seat biometrically using TouchID, FaceID, or PIN via Mera passkeys on Monad!`;
+        replyText = `You can invite friends to join "${tabDisplayName}" by sharing the QR code or invitation link. Members join with Face ID or Touch ID in seconds without downloading an app or setting a password!`;
         actionItems = [
           { label: "Open Member Invite Screen", action: () => router.push(`/tab/${currentTabId}/members`) }
         ];
       } else {
-        replyText = "Group members join tabs via shareable QR codes or links. They claim seats using hardware WebAuthn passkeys (TouchID / FaceID) on Monad without seed phrases or gas fees.";
+        replyText = "Group members join tabs through simple QR codes or links. They sign in with Face ID or Touch ID in seconds without complicated passwords or forms.";
         actionItems = [
           { label: "Go to Hub", action: () => router.push("/home") }
         ];
       }
     } else if (q.includes("fee") || q.includes("pimlico") || q.includes("gas")) {
-      replyText = "You never pay network gas fees in MeshTab! Routine ledger operations (logging expenses, creating tabs, claiming seats) are permanently sponsored by Pimlico Verifying Paymasters. Settlements use an ERC-20 paymaster to deduct a sub-cent fee in AUSD.";
+      replyText = "You never pay transaction fees in MeshTab! Routine group actions—logging expenses, creating tabs, and claiming seats—are 100% free and sponsored by the platform. You never have to pay transfer fees to split a bill with friends.";
       actionItems = [
-        { label: "📚 Read Paymaster Guide", action: () => setDrawerTab("kb") },
+        { label: "📚 Read Guides", action: () => setDrawerTab("kb") },
         { label: "🚰 Top Up Faucet", action: handleClaimFaucet },
       ];
     } else {
-      // 2. Knowledge Base Search
+      // 5. Knowledge Base Search
       const kbMatches = searchKnowledgeBase(query, {
         currentTabId,
         isDemoTab,
@@ -536,17 +813,36 @@ export function MeshBuddy() {
           return { label: act.label, action: () => router.push(act.destination || "/home") };
         });
       } else {
-        // Conversational Fallback with personality (Never cold "I heard you ask:")
-        replyText = `I love your curiosity, ${userName}! 💡 While my neural circuits are tuned for group expense sharing, Monad parallel execution, and passkey settlements, here are a few things we can do together right now:`;
+        // 6. Disciplined, grounded fallback: Admit limit honestly and guide user directly
+        const screenLabel = currentTabId
+          ? `the "${tabDisplayName}" group tab`
+          : pathname === "/home"
+          ? "the Main Hub"
+          : pathname === "/demo"
+          ? "the Sandbox selector"
+          : pathname === "/settings"
+          ? "Settings & Passkeys"
+          : pathname?.includes("/expense/new")
+          ? "Add Expense screen"
+          : pathname?.includes("/members")
+          ? "Group Members screen"
+          : "MeshTab";
+
+        replyText =
+          `I want to make sure I only give you accurate, verified information, ${userName}! 💡\n\n` +
+          `I don't have a direct answer for "${query.slice(0, 60)}" in our local ledger or technical guides. As your MeshTab financial co-pilot, I specialize strictly in your group tabs, live expense splits, debt netting, and settlements.\n\n` +
+          `You are currently on **${screenLabel}**. Here are specific, verified actions we can run together right now:`;
+
         actionItems = [
-          { label: "📚 Search Knowledge Base (19 Guides)", action: () => setDrawerTab("kb") },
-          { label: "🚰 Top Up +$500 Faucet", action: handleClaimFaucet },
+          currentTabId
+            ? { label: `📊 Recap "${tabDisplayName}"`, action: () => handleAskQuestion("give me a recap of this tab") }
+            : { label: "📊 Recap Current Screen", action: () => handleAskQuestion("give me a recap of what is going on here") },
+          currentTabId
+            ? { label: "🔴 Who is in Debt?", action: () => handleAskQuestion("who is currently in debt and has not settled") }
+            : { label: "💡 Tell Me About This App", action: () => handleAskQuestion("tell me about this app") },
           { label: "🌀 How Netting Works", action: () => handleAskQuestion("how does netting work") },
-          isCustomTab
-            ? { label: `➕ Add Expense to ${tabDisplayName}`, action: () => router.push(`/tab/${currentTabId}/expense/new`) }
-            : workspaceMode === "blank" 
-            ? { label: "➕ Create Tab", action: () => router.push("/tab/new") }
-            : { label: "Explore Lisbon Demo", action: () => router.push("/tab/lisbon-24") }
+          { label: "📚 Open Knowledge Base (20 Guides)", action: () => setDrawerTab("kb") },
+          { label: "🚰 Top Up Faucet (+$500)", action: handleClaimFaucet },
         ];
       }
     }
@@ -846,55 +1142,73 @@ export function MeshBuddy() {
                     {/* Contextual Quick Preset Buttons */}
                     <div className="px-4 py-2 flex gap-1.5 overflow-x-auto scrollbar-hide border-t border-slate-100 dark:border-white/5 shrink-0">
                       <button
+                        onClick={() => handleAskQuestion("give me a recap of what is going on here")}
+                        className="shrink-0 px-2.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/15 hover:bg-indigo-100 dark:hover:bg-indigo-500/25 border border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
+                      >
+                        📊 Recap
+                      </button>
+                      <button
+                        onClick={() => handleAskQuestion("who is currently in debt and has not settled")}
+                        className="shrink-0 px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-500/15 hover:bg-rose-100 dark:hover:bg-rose-500/25 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-300 text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
+                      >
+                        🔴 Who Owes?
+                      </button>
+                      <button
+                        onClick={() => handleAskQuestion("tell me about this app")}
+                        className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
+                      >
+                        💡 About App
+                      </button>
+                      <button
                         onClick={handleClaimFaucet}
-                        className="shrink-0 px-2.5 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold flex items-center gap-1"
+                        className="shrink-0 px-2.5 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
                       >
                         <Coins className="w-3 h-3" /> Faucet (+$500)
                       </button>
                       <button
                         onClick={() => setDrawerTab("kb")}
-                        className="shrink-0 px-2.5 py-1 rounded-full bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 text-[10px] font-semibold flex items-center gap-1"
+                        className="shrink-0 px-2.5 py-1 rounded-full bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
                       >
-                        <BookOpen className="w-3 h-3" /> Browse Topics ({KB_ARTICLES.length})
+                        <BookOpen className="w-3 h-3" /> Guides ({KB_ARTICLES.length})
                       </button>
                       {isCustomTab ? (
                         <>
                           <button
                             onClick={() => router.push(`/tab/${currentTabId}/expense/new`)}
-                            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold flex items-center gap-1"
+                            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
                           >
                             ➕ Add Expense
                           </button>
                           <button
                             onClick={() => router.push(`/tab/${currentTabId}/members`)}
-                            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold flex items-center gap-1"
+                            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
                           >
                             👥 Invite
                           </button>
                           <button
-                            onClick={() => handleAskQuestion("How does netting work on this tab?")}
-                            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold"
+                            onClick={() => handleAskQuestion("how does netting work on this tab?")}
+                            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold cursor-pointer"
                           >
-                            Netting
+                            🌀 Netting
                           </button>
                         </>
                       ) : isDemoTab ? (
                         <>
                           <button
-                            onClick={() => handleAskQuestion("How does netting work?")}
-                            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold"
+                            onClick={() => handleAskQuestion("how does netting work?")}
+                            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold cursor-pointer"
                           >
                             🌀 Netting (75% Saved)
                           </button>
                           <button
                             onClick={() => router.push("/tab/lisbon-24/expense/new")}
-                            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold"
+                            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold cursor-pointer"
                           >
                             📸 Smart Scan
                           </button>
                           <button
-                            onClick={() => handleAskQuestion("How do I cash out?")}
-                            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold"
+                            onClick={() => handleAskQuestion("how do i cash out?")}
+                            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold cursor-pointer"
                           >
                             Cash Out
                           </button>
@@ -903,19 +1217,19 @@ export function MeshBuddy() {
                         <>
                           <button
                             onClick={() => router.push("/tab/new")}
-                            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold flex items-center gap-1"
+                            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
                           >
                             ➕ New Tab
                           </button>
                           <button
                             onClick={handleToggleWorkspace}
-                            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold"
+                            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold cursor-pointer"
                           >
                             🏖️ Restore Demo
                           </button>
                           <button
                             onClick={() => router.push("/demo")}
-                            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold"
+                            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold cursor-pointer"
                           >
                             🎮 Sandbox
                           </button>
@@ -924,19 +1238,19 @@ export function MeshBuddy() {
                         <>
                           <button
                             onClick={() => router.push("/tab/lisbon-24")}
-                            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold"
+                            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold cursor-pointer"
                           >
                             🏖️ Lisbon Demo
                           </button>
                           <button
-                            onClick={() => handleAskQuestion("How does netting work?")}
-                            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold"
+                            onClick={() => handleAskQuestion("how does netting work?")}
+                            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold cursor-pointer"
                           >
-                            Netting
+                            🌀 Netting
                           </button>
                           <button
-                            onClick={() => handleAskQuestion("How do I cash out?")}
-                            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold"
+                            onClick={() => handleAskQuestion("how do i cash out?")}
+                            className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold cursor-pointer"
                           >
                             Cash Out
                           </button>

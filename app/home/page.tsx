@@ -390,8 +390,8 @@ export default function GlobalHub() {
 
       {/* Join Modal */}
       {showJoinModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#121212] border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 max-w-md w-full space-y-6 shadow-2xl text-slate-900 dark:text-white">
+        <div className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-[#121212] border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 max-w-md w-full space-y-6 shadow-2xl text-slate-900 dark:text-white my-auto max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-bold">Join Group via Code</h3>
               <button 

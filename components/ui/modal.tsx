@@ -43,7 +43,7 @@ export function Modal({ children, onClose, className }: ModalProps) {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center sm:p-6">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -59,7 +59,7 @@ export function Modal({ children, onClose, className }: ModalProps) {
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
           className={cn(
             "relative w-full max-w-lg bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden text-slate-900 dark:text-white",
-            "sm:rounded-3xl sm:h-auto h-full flex flex-col",
+            "sm:rounded-3xl max-h-[92vh] sm:max-h-[88vh] h-full sm:h-auto my-auto flex flex-col",
             className
           )}
         >

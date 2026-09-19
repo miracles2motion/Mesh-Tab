@@ -7,6 +7,8 @@ import { Button } from "../ui/button";
 import { formatCurrency } from "../../lib/utils";
 import Image from "next/image";
 
+import { DEFAULT_USER_NAME } from "../../lib/user";
+
 interface CashOutDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -18,7 +20,7 @@ export function CashOutDrawer({
   isOpen,
   onClose,
   availableAmount,
-  currentUserName = "Aisha"
+  currentUserName = DEFAULT_USER_NAME
 }: CashOutDrawerProps) {
   const [method, setMethod] = useState<"card" | "bank">("card");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -160,11 +162,11 @@ export function CashOutDrawer({
             </Button>
 
             {/* Dynamic Partner Badge */}
-            <div className="mt-6 flex items-center justify-center gap-3 text-slate-400 dark:text-white/30 text-xs">
+            <div className="mt-6 flex items-center justify-center gap-3 text-slate-400 dark:text-white/40 text-xs">
               <span>Off-ramp powered by</span>
-              <div className="flex gap-2 opacity-70 dark:opacity-50">
-                <Image src="/logos/dynamic.svg" alt="Dynamic" width={60} height={18} />
-                <Image src="/logos/agora.svg" alt="Agora" width={40} height={18} />
+              <div className="flex items-center gap-2 opacity-80 hover:opacity-100 transition-opacity">
+                <Image src="/logos/dynamic.svg" alt="Dynamic" width={60} height={18} className="dark:brightness-150" />
+                <Image src="/logos/agora.svg" alt="Agora" width={40} height={18} className="dark:brightness-150" />
               </div>
             </div>
           </>

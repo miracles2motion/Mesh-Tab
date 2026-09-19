@@ -44,9 +44,9 @@ export const KB_CATEGORIES: KBCategory[] = [
   },
   {
     id: "monad-web3",
-    label: "Monad & Web3",
+    label: "Instant Payments & Security",
     icon: "⚡",
-    description: "Hardware passkeys, zero gas paymasters, and 10,000 TPS ledger."
+    description: "Sub-second sync, zero transfer fees, and biometric protection."
   },
   {
     id: "settlement",
@@ -76,7 +76,7 @@ export const KB_CATEGORIES: KBCategory[] = [
     id: "security",
     label: "Security & Passkeys",
     icon: "🔒",
-    description: "Mera WebAuthn passkeys, hardware enclave, and privacy."
+    description: "Touch ID & Face ID passkeys, device encryption, and privacy."
   }
 ];
 
@@ -104,7 +104,7 @@ export const KB_ARTICLES: KBArticle[] = [
     title: "The Lisbon '24 Netting Benchmark Explained",
     keywords: ["lisbon", "benchmark", "75%", "reduction", "aisha", "villa", "12", "3 payments"],
     summary: "The benchmark demonstrates 4 international travelers who spent $1,200 across 12 crisscrossing debts. Netting reduces this to 3 direct payments.",
-    detailedContent: "In the pre-loaded Lisbon trip:\n1. Total Expenses: $1,200 spent across 4 friends (Aisha, Kemi, Ben, and You).\n2. Gross Debt Matrix: 12 separate peer-to-peer transfers totaling $1,200.\n3. Netting Algorithm: Collapses all mutual counter-claims.\n4. Result: Only 3 direct payments totaling $300 are required (all paid to Aisha who covered the $600 villa). $900 in international payment volume is cleared instantly with 0 gas.",
+    detailedContent: "In the pre-loaded Lisbon trip:\n1. Total Expenses: $1,200 spent across 4 friends (Aisha, Kemi, Ben, and You).\n2. Gross Debt Matrix: 12 separate peer-to-peer transfers totaling $1,200.\n3. Netting Algorithm: Collapses all mutual counter-claims.\n4. Result: Only 3 direct payments totaling $300 are required (all paid to Aisha who covered the $600 villa). $900 in international payment volume is cleared instantly with zero transfer fees.",
     contextAdvice: {
       demo: "You are currently viewing this exact benchmark! Check the Netting graph and tap 'Run Tangle Netting'.",
       customTab: "This benchmark is separate from your custom tab. You can view it anytime from the Demo Selector.",
@@ -127,36 +127,36 @@ export const KB_ARTICLES: KBArticle[] = [
     ]
   },
 
-  // --- Monad & Web3 Abstraction ---
+  // --- Instant Payments & Biometrics ---
   {
     id: "web3-monad-speed",
     categoryId: "monad-web3",
-    title: "Why is MeshTab built on Monad?",
-    keywords: ["monad", "speed", "10000", "tps", "parallel", "subsecond", "testnet", "10143"],
-    summary: "Monad provides 10,000 TPS parallel execution and sub-second finality, making group ledger operations as fast as a traditional web database.",
-    detailedContent: "Unlike legacy chains where settlement takes 15–60 seconds and fees spike during congestion, Monad's parallelized EVM executes state updates in under 400ms. Ledger consensus, netting calculations, and receipt approvals happen with zero loading lag for travelers.",
+    title: "How does MeshTab achieve instant, sub-second settlement?",
+    keywords: ["speed", "instant", "subsecond", "real-time", "fast", "settlement", "network", "performance"],
+    summary: "MeshTab runs on a high-throughput transaction engine with sub-second finality, keeping group ledgers as instantaneous as Apple Pay.",
+    detailedContent: "Traditional bank transfers and older payment networks take hours or days, with volatile fees. MeshTab processes transactions in under 400 milliseconds. Netting calculations, receipt approvals, and debt settlements reflect immediately for all members without spinning wheels or lag.",
     actions: [
-      { label: "Developer Settings", type: "navigate", destination: "/settings" }
+      { label: "Account Settings", type: "navigate", destination: "/settings" }
     ]
   },
   {
     id: "web3-zero-gas-paymaster",
     categoryId: "monad-web3",
-    title: "Why do users never pay network gas fees?",
-    keywords: ["gas", "fee", "pimlico", "paymaster", "sponsorship", "free", "erc4337", "verifying"],
-    summary: "MeshTab uses Pimlico Verifying Paymasters to sponsor 100% of routine ledger gas fees. Users never need to hold native MON tokens.",
-    detailedContent: "When you create a tab, invite members, or log an expense, your browser signs a UserOperation. The backend forwards it to a Pimlico Verifying Paymaster on Monad Testnet (Chain ID 10143), which validates the signature and pays the gas on-chain. Settlements deduct a sub-cent fee directly in digital dollars (AUSD) via an ERC-20 paymaster.",
+    title: "Why are there zero transfer fees on MeshTab?",
+    keywords: ["fees", "free", "zero fees", "transfer fee", "cost", "sponsored", "cheap", "no fees", "gas"],
+    summary: "All routine ledger updates and tab activities are 100% sponsored by the platform. You never pay unexpected network or transaction fees.",
+    detailedContent: "When you create a tab, invite friends, or log an expense, MeshTab sponsors all transaction costs in the background. Unlike traditional banks that tack on wire fees, foreign exchange charges, or card processing markups, keeping tabs on MeshTab is completely free. When settling, transfers are processed directly in Digital Dollars without surprise charges.",
     actions: [
-      { label: "Sandbox Faucet", type: "faucet" }
+      { label: "Sandbox Balance", type: "faucet" }
     ]
   },
   {
     id: "web3-mera-passkeys",
     categoryId: "monad-web3",
-    title: "What are Mera Hardware Passkeys?",
-    keywords: ["passkey", "mera", "webauthn", "touchid", "faceid", "p256", "biometric", "seed phrase"],
-    summary: "Hardware-bound authentication that replaces 12-word seed phrases with native biometric login via Apple TouchID, FaceID, or Windows Hello.",
-    detailedContent: "Mera leverages WebAuthn (P-256 elliptic curve signatures) supported natively by device Secure Enclaves. When you create an account, your private key is generated and secured inside your phone or laptop hardware. It cannot be exported, phished, or lost. Monad verifies these WebAuthn signatures on-chain natively.",
+    title: "How does Touch ID & Face ID sign-in work?",
+    keywords: ["touchid", "faceid", "passkey", "biometric", "login", "fingerprint", "security", "sign in", "no password"],
+    summary: "Log in securely in under a second using your device's built-in fingerprint or facial recognition — no passwords or recovery codes required.",
+    detailedContent: "MeshTab uses modern passkey technology built directly into your iPhone, Android, Mac, or PC. When you sign in or confirm a payment, your device's secure hardware chip validates your biometric scan (Face ID, Touch ID, or Windows Hello) locally. Your credentials can never be phished, stolen, or forgotten, giving you bank-level security with 1-tap ease.",
     actions: [
       { label: "Account Settings", type: "navigate", destination: "/settings" }
     ]
@@ -164,12 +164,12 @@ export const KB_ARTICLES: KBArticle[] = [
   {
     id: "web3-agora-ausd",
     categoryId: "monad-web3",
-    title: "What is the Agora AUSD Digital Dollar?",
-    keywords: ["ausd", "agora", "stablecoin", "currency", "dollar", "1:1", "reserve"],
-    summary: "A fully reserved, institutional-grade 1:1 US Dollar stablecoin used as the default settlement asset in MeshTab.",
-    detailedContent: "Agora AUSD provides price stability so friends settling vacation debts don't experience volatile crypto swings. A $50 restaurant share is settled for exactly 50 AUSD, which can be cashed out directly to a bank account or debit card for $50 USD.",
+    title: "What is the AUSD Digital Dollar?",
+    keywords: ["ausd", "digital dollar", "currency", "dollar", "1:1", "usd", "cash", "bank"],
+    summary: "A 1:1 US Dollar-backed digital currency used for instant debt settlements, redeemable directly to your bank account.",
+    detailedContent: "Digital Dollars (AUSD) maintain a strict 1:1 value with the US Dollar so you never have to worry about price fluctuations. When a friend sends you $50 AUSD for dinner, you receive the exact equivalent of $50 USD, which can be cashed out immediately to your Visa debit card or checking account.",
     actions: [
-      { label: "Claim +$500 Test AUSD", type: "faucet" }
+      { label: "Claim +$500 Test Balance", type: "faucet" }
     ]
   },
 
@@ -191,7 +191,7 @@ export const KB_ARTICLES: KBArticle[] = [
     title: "How does 1-Click Batch Settlement work?",
     keywords: ["settle", "batch", "pay", "resolve", "settlement drawer", "drawer", "one click"],
     summary: "Debtors can clear all their net obligations to multiple friends in a single biometric confirmation.",
-    detailedContent: "Instead of sending 4 separate Venmo or Revolut payments to 4 different people, MeshTab's settlement drawer batches your total net deficit into a single atomic transaction. You confirm with TouchID/FaceID once, and the smart contract distributes the exact credits to your creditors.",
+    detailedContent: "Instead of sending 4 separate payments across different apps to 4 different people, MeshTab's settlement drawer batches your total net deficit into a single 1-tap transfer. You confirm with Touch ID or Face ID once, and the system automatically distributes the exact credits to everyone you owe.",
     actions: [
       { label: "Open Hub", type: "navigate", destination: "/home" }
     ]
@@ -199,12 +199,12 @@ export const KB_ARTICLES: KBArticle[] = [
   {
     id: "settlement-sandbox-faucet",
     categoryId: "settlement",
-    title: "How does the Sandbox Faucet work?",
+    title: "How does the Sandbox Balance Top-Up work?",
     keywords: ["faucet", "virtual balance", "top up", "test money", "500", "free money"],
-    summary: "Instantly adds +$500.00 in Virtual Test AUSD to your balance so you can test settling debts without real capital.",
-    detailedContent: "During hackathon demonstrations, judges can tap 'Claim +$500 Test AUSD' at any time in MeshBuddy or the settlement drawer. This credits virtual test funds to your local sandbox state, allowing you to settle debts, trigger confetti, and verify balance updates.",
+    summary: "Instantly adds +$500.00 in Virtual Test Balance so you can test settling debts without real capital.",
+    detailedContent: "During demonstrations and testing, you can tap 'Claim +$500 Test Balance' at any time in MeshBuddy or the settlement drawer. This credits virtual test funds to your local account balance, allowing you to settle debts, trigger celebration animations, and verify live balance updates.",
     actions: [
-      { label: "🚰 Claim +$500 Test AUSD", type: "faucet" }
+      { label: "🚰 Claim +$500 Test Balance", type: "faucet" }
     ]
   },
 
@@ -255,7 +255,7 @@ export const KB_ARTICLES: KBArticle[] = [
     title: "How do I create a new group tab?",
     keywords: ["create tab", "new tab", "group", "currency", "usd", "eur", "gbp", "jpy"],
     summary: "Tap the '+' button from the Hub, give your trip or group a name, pick your base currency, and start adding expenses.",
-    detailedContent: "Creating a tab initializes a dedicated cryptographic ledger instance. You can select between USD ($), EUR (€), GBP (£), or JPY (¥). Once created, you can immediately invite friends via a shareable link or QR code.",
+    detailedContent: "Creating a tab initializes a dedicated private group ledger. You can select between USD ($), EUR (€), GBP (£), or JPY (¥). Once created, you can immediately invite friends via a shareable link or QR code.",
     actions: [
       { label: "Create New Tab", type: "navigate", destination: "/tab/new" }
     ]
@@ -265,8 +265,8 @@ export const KB_ARTICLES: KBArticle[] = [
     categoryId: "groups",
     title: "How do friends join a group tab?",
     keywords: ["invite", "members", "qr", "link", "claim seat", "join", "share"],
-    summary: "Friends scan your tab QR code or open your invite link, and claim their seat with biometric TouchID/FaceID in 3 seconds.",
-    detailedContent: "Unlike traditional dApps that require downloading a browser extension or creating an exchange account, friends simply scan your QR code. Their browser creates a Mera hardware passkey in 1 tap, binds it to the tab, and grants them access to view expenses and settle up.",
+    summary: "Friends scan your tab QR code or open your invite link, and claim their seat with biometric Touch ID / Face ID in 3 seconds.",
+    detailedContent: "Friends simply scan your QR code or click your invite link. Their device prompts a 1-tap Touch ID or Face ID confirmation to join the tab instantly — no app downloads, no wallet extensions, and no complex account forms required.",
     actions: [
       { label: "View Members Page", type: "navigate", destination: "/tab/lisbon-24/members" }
     ]
@@ -304,8 +304,8 @@ export const KB_ARTICLES: KBArticle[] = [
     categoryId: "security",
     title: "Where is my data stored and is it private?",
     keywords: ["privacy", "security", "data", "storage", "localStorage", "encryption", "safeguard"],
-    summary: "Ledger data is cryptographically signed and stored locally on your device with zero tracking or third-party ads.",
-    detailedContent: "MeshTab operates with privacy-by-design. Sensitive personal data, receipt images, and financial accounts are never sold or sent to ad brokers. Smart account signatures are validated on Monad Testnet through cryptographic zero-knowledge and hash verification.",
+    summary: "Ledger data is cryptographically protected and stored securely with zero tracking or third-party ads.",
+    detailedContent: "MeshTab operates with privacy-by-design. Sensitive personal data, receipt images, and financial accounts are never sold or sent to ad brokers. All balances and settlement receipts are verified against tamper-proof ledgers, ensuring complete auditability without exposing your identity or bank credentials.",
     actions: [
       { label: "Settings & Privacy", type: "navigate", destination: "/settings" }
     ]
@@ -313,10 +313,10 @@ export const KB_ARTICLES: KBArticle[] = [
   {
     id: "security-no-seed-phrase",
     categoryId: "security",
-    title: "Why is there no 12-word seed phrase?",
-    keywords: ["seed phrase", "mnemonic", "lost key", "recovery", "security", "p256"],
-    summary: "Seed phrases cause 90% of user drop-off in crypto. MeshTab uses WebAuthn P-256 passkeys stored directly inside your device's hardware enclave.",
-    detailedContent: "With Mera passkeys, your authentication works like Apple Pay or modern banking apps. Your device hardware (Secure Enclave on iPhone/Mac, TPM on Windows, Titan M on Android) signs transactions locally using biometric TouchID, FaceID, or PIN.",
+    title: "Why don't I need passwords or recovery phrases?",
+    keywords: ["password", "recovery phrase", "passkey", "seed phrase", "login", "biometrics", "security", "apple pay"],
+    summary: "MeshTab eliminates clunky passwords and fragile recovery codes. Your account is secured by your device's hardware chip and biometric sensors.",
+    detailedContent: "Traditional passwords get forgotten, breached, and phished. MeshTab works just like Apple Pay or modern banking apps: your device's secure hardware chip validates your identity instantly via Face ID, Touch ID, or your device PIN. Fast, seamless, and completely un-phishable.",
     actions: [
       { label: "Account Settings", type: "navigate", destination: "/settings" }
     ]

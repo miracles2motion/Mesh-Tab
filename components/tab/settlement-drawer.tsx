@@ -8,7 +8,7 @@ import { formatCurrency } from "../../lib/utils";
 import Image from "next/image";
 import { ReceiptView } from "../ReceiptView";
 
-import { useUserProfile, settleTab, useVirtualBalance } from "../../lib/user";
+import { useUserProfile, settleTab, useVirtualBalance, useStoredTabMembers } from "../../lib/user";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { fireSettlementConfetti, fireFaucetConfetti } from "../../lib/confetti";
@@ -25,6 +25,10 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
   const profile = useUserProfile();
   const { balance: virtualBalance, deduct, topUp } = useVirtualBalance();
   const activeUser = currentUserName || profile.name || "David";
+  const { members: tabMembers } = useStoredTabMembers(tabId, activeUser);
+
+  // Dynamically identify who paid for the expenses (creditor with positive balance)
+  const primaryCreditor = tabMembers.find(m => m.balance > 0)?.name || (tabId === "lisbon-24" ? "Aisha" : undefined);
 
   const [paymentMethod, setPaymentMethod] = useState<"ausd" | "apple-pay">("ausd");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -72,8 +76,8 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
           setIsSuccess(false); 
           onClose(); 
         }} 
-        amount={debtAmount} 
-        recipient={tabId === "lisbon-24" ? "Aisha" : undefined}
+        amount={debtAmount > 0 ? debtAmount : (tabId === "lisbon-24" ? 18000 : 0)} 
+        recipient={primaryCreditor}
       />
     );
   }
@@ -86,7 +90,11 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
         </div>
         
         <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Settle Your Debt</h2>
-        <p className="text-slate-500 dark:text-white/60 text-sm mb-6">You are paying off your netted residual balance on Monad via Agora AUSD.</p>
+        <p className="text-slate-500 dark:text-white/60 text-sm mb-6">
+          {primaryCreditor 
+            ? `Paying off your netted residual balance directly to ${primaryCreditor} via Agora AUSD.`
+            : "Paying off your netted residual balance via Agora AUSD on Monad."}
+        </p>
 
         {/* Total Due Card */}
         <div className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 mb-6 shadow-sm">
@@ -226,12 +234,13 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
         </Button>
         
         {/* Partner Branding */}
-        <div className="mt-6 flex items-center justify-center gap-3 text-slate-400 dark:text-white/30 text-xs font-medium">
+        <div className="mt-6 flex items-center justify-center gap-3 text-slate-400 dark:text-white/40 text-xs font-medium">
            <span>Powered by</span>
-           <div className="flex gap-2 opacity-70 dark:opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all">
-             <Image src="/logos/dynamic.svg" alt="Dynamic" width={56} height={18} />
-             <Image src="/logos/monad.svg" alt="Monad" width={56} height={18} />
-             <Image src="/logos/agora.svg" alt="Agora" width={36} height={18} />
+           <div className="flex items-center gap-3 opacity-80 hover:opacity-100 transition-all">
+             <Image src="/logos/monad.svg" alt="Monad" width={56} height={18} className="dark:brightness-150" />
+             <Image src="/logos/agora.svg" alt="Agora" width={38} height={18} className="dark:brightness-150" />
+             <Image src="/logos/dynamic.svg" alt="Dynamic" width={56} height={18} className="dark:brightness-150" />
+             <Image src="/logos/pimlico.svg" alt="Pimlico" width={56} height={18} className="dark:brightness-150" />
            </div>
         </div>
       </div>

@@ -115,7 +115,7 @@ function OnboardingContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white flex flex-col items-center justify-center p-6 relative overflow-hidden transition-colors duration-300">
+    <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white flex flex-col items-center justify-center p-4 sm:p-6 relative overflow-y-auto py-12 transition-colors duration-300">
       {/* Top Controls */}
       <div className="absolute top-6 right-6 z-20">
         <ThemeToggle />
@@ -344,10 +344,10 @@ function OnboardingContent() {
               </div>
               <div>
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">
-                  Deploying Smart Account
+                  Setting Up Your Account
                 </h2>
                 <p className="text-slate-500 dark:text-white/50 text-xs max-w-xs mx-auto">
-                  Pimlico Paymaster sponsoring gas deployment on Monad Testnet (Chain ID 10143)...
+                  Securing your passkey with biometric protection and instant network sync...
                 </p>
               </div>
             </motion.div>

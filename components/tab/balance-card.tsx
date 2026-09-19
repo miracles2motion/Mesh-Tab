@@ -55,7 +55,7 @@ export function BalanceCard({ balance, currency, type, onSettle, onRemind, onCas
       <div className="mt-8 flex gap-3 relative z-10">
          {isSettled ? (
             <div className="w-full py-4 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-semibold flex justify-center items-center gap-2 text-base">
-              <CheckCircle2 className="w-5 h-5" /> All debts settled on-chain
+              <CheckCircle2 className="w-5 h-5" /> All balances settled
             </div>
          ) : type === 'debtor' ? (
             <button onClick={onSettle} className="flex-1 bg-slate-900 text-white dark:bg-white dark:text-black font-semibold py-4 rounded-2xl hover:bg-slate-800 dark:hover:bg-white/90 active:scale-95 transition-all flex justify-center items-center gap-2 text-lg shadow-lg dark:shadow-xl dark:shadow-white/10">

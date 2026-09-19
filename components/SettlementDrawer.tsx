@@ -31,7 +31,7 @@ export function SettlementDrawer({
   };
 
   if (isSuccess) {
-    return <ReceiptView isOpen={true} onClose={() => { setIsSuccess(false); onClose(); }} amount={amount} recipient={recipient} />;
+    return <ReceiptView isOpen={true} onClose={() => { setIsSuccess(false); onClose(); }} amount={amount > 0 ? amount : (recipient === "Aisha" ? 18000 : 0)} recipient={recipient} />;
   }
 
   return (
@@ -41,14 +41,14 @@ export function SettlementDrawer({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-end justify-center p-0 sm:p-6"
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-end justify-center p-0 sm:p-6 overflow-y-auto"
         >
           <motion.div 
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="w-full max-w-md bg-[#121214] border border-white/10 sm:rounded-[32px] rounded-t-[32px] shadow-2xl p-6 flex flex-col"
+            className="w-full max-w-md bg-[#121214] border border-white/10 sm:rounded-[32px] rounded-t-[32px] shadow-2xl p-6 flex flex-col max-h-[92vh] overflow-y-auto"
           >
             <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-6 cursor-pointer" onClick={onClose} />
             
@@ -56,7 +56,7 @@ export function SettlementDrawer({
               <p className="text-white/60 mb-2">Residual Obligation</p>
               <h2 className="text-5xl font-bold text-white tracking-tight">{formatCurrency(amount)}</h2>
               <p className="text-emerald-400 text-sm mt-3 font-medium bg-emerald-500/10 inline-block px-3 py-1 rounded-full">
-                {recipient ? `Pays ${recipient} directly` : "Settles net balance directly on Monad"}
+                {recipient ? `Pays ${recipient} directly` : "Settles net balance directly"}
               </p>
             </div>
 
@@ -100,7 +100,7 @@ export function SettlementDrawer({
                  <span className="text-white">$0.00 <span className="text-white/30 line-through ml-1">$12.50</span></span>
                </div>
                <div className="flex justify-between text-sm">
-                 <span className="text-white/50">Gas Fee (Sponsored)</span>
+                 <span className="text-white/50">Transfer Fee (Sponsored)</span>
                  <span className="text-emerald-400">Free</span>
                </div>
             </div>

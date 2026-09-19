@@ -372,25 +372,25 @@ export function FreshDemoModal({ isOpen, onClose }: FreshDemoModalProps) {
 
             <div className="space-y-2">
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                Deploying Smart Account on Monad
+                Setting Up Your Account
               </h2>
               <p className="text-xs text-slate-500 dark:text-white/60 max-w-xs mx-auto leading-relaxed">
-                Pimlico Paymaster sponsoring deployment • Binding Mera WebAuthn passkey to ERC-4337 contract...
+                Securing account with Face ID / Touch ID • Enabling instant ledger sync...
               </p>
             </div>
 
             <div className="space-y-2 w-full max-w-xs text-left text-xs bg-slate-50 dark:bg-white/5 p-4 rounded-2xl border border-slate-200 dark:border-white/10 font-mono">
               <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Passkey enrolled (P-256)</span>
+                <span>Passkey registered securely</span>
               </div>
               <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Chain ID 10143 (Monad Testnet)</span>
+                <span>Instant settlement network connected</span>
               </div>
               <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 animate-pulse">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Sponsored Account Genesis (0 gas)...</span>
+                <span>Zero-fee account protection active...</span>
               </div>
             </div>
           </motion.div>
