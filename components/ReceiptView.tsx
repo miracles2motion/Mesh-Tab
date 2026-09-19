@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, QrCode, Share, ExternalLink, Check, X } from "lucide-react";
 import Image from "next/image";
+import { MonadLogo, AgoraLogo, DynamicLogo, PimlicoLogo } from "./ui/partner-logo";
 
 export function ReceiptView({ 
   isOpen, 
@@ -119,13 +120,13 @@ export function ReceiptView({
             </div>
 
             {/* Official Partner Endorsement Strip */}
-            <div className="mt-3.5 pt-3 border-t border-slate-100 dark:border-white/10 w-full flex items-center justify-between text-[10.5px] text-slate-400 dark:text-white/40">
-              <span className="font-semibold text-slate-500 dark:text-white/50">Verified Ledger</span>
-              <div className="flex items-center gap-2 opacity-80 hover:opacity-100 transition-opacity">
-                <Image src="/logos/monad.svg" alt="Monad" width={46} height={14} className="dark:brightness-150" />
-                <Image src="/logos/agora.svg" alt="Agora" width={30} height={14} className="dark:brightness-150" />
-                <Image src="/logos/dynamic.svg" alt="Dynamic" width={46} height={14} className="dark:brightness-150" />
-                <Image src="/logos/pimlico.svg" alt="Pimlico" width={46} height={14} className="dark:brightness-150" />
+            <div className="mt-3.5 pt-3 border-t border-slate-100 dark:border-white/10 w-full flex items-center justify-between text-[10.5px] text-slate-500 dark:text-white/50">
+              <span className="font-semibold text-slate-600 dark:text-white/60">Verified Ledger</span>
+              <div className="flex items-center gap-2.5 opacity-90 hover:opacity-100 transition-opacity text-slate-800 dark:text-white">
+                <MonadLogo className="h-3.5 w-auto" />
+                <AgoraLogo className="h-3.5 w-auto" />
+                <DynamicLogo className="h-3.5 w-auto" />
+                <PimlicoLogo className="h-3.5 w-auto" />
               </div>
             </div>
           </motion.div>

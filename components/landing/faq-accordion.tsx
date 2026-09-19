@@ -12,8 +12,8 @@ export function FAQAccordion() {
   return (
     <section className="py-32 px-6 max-w-3xl mx-auto">
       <div className="text-center mb-16">
-        <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-6">Frequently Asked Questions</h2>
-        <p className="text-lg text-gray-600 dark:text-gray-400">Everything you need to know about how MeshTab works under the hood.</p>
+        <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-6 text-slate-900 dark:text-white">Frequently Asked Questions</h2>
+        <p className="text-lg text-slate-600 dark:text-white/60">Everything you need to know about how MeshTab works under the hood.</p>
       </div>
 
       <div className="space-y-4">
@@ -21,13 +21,13 @@ export function FAQAccordion() {
           const isOpen = openIndex === index;
           
           return (
-            <div key={index} className="border border-gray-200 dark:border-white/10 rounded-2xl bg-white dark:bg-black overflow-hidden transition-colors hover:border-gray-300 dark:hover:border-white/20">
+            <div key={index} className="border border-slate-200/80 dark:border-white/10 rounded-2xl bg-white dark:bg-[#161618] overflow-hidden transition-colors hover:border-slate-300 dark:hover:border-white/20 shadow-xs">
               <button
                 onClick={() => setOpenIndex(isOpen ? null : index)}
-                className="w-full px-6 py-5 text-left flex items-center justify-between font-semibold text-lg"
+                className="w-full px-6 py-5 text-left flex items-center justify-between font-semibold text-base md:text-lg text-slate-900 dark:text-white"
               >
-                {item.question}
-                <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />
+                <span>{item.question}</span>
+                <ChevronDown className={`w-5 h-5 text-slate-400 dark:text-white/40 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />
               </button>
               
               <AnimatePresence>

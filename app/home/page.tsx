@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode, Settings, Search, Filter, Crown, CheckCircle2, TrendingDown, TrendingUp, ArrowDownToLine, Coins, Sparkles, Award } from "lucide-react";
+import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode, Settings, Search, Filter, Crown, CheckCircle2, TrendingDown, TrendingUp, ArrowDownToLine, Coins, Sparkles, Award, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { TransactionOverlay, TransactionState } from "../../components/ui/transaction-overlay";
 import { formatCurrency } from "../../lib/utils";
 import { ThemeToggle } from "../../components/theme-toggle";
-import { useUserProfile, useStoredTabs, useVirtualBalance, useWorkspaceMode } from "../../lib/user";
+import { useUserProfile, useStoredTabs, useVirtualBalance, useWorkspaceMode, useSettledPayoutBalance } from "../../lib/user";
 import { CashOutDrawer } from "../../components/tab/cash-out-drawer";
 import { FaucetModal } from "../../components/tab/faucet-modal";
 import { PitchModal } from "../../components/home/pitch-modal";
@@ -21,7 +21,8 @@ export default function GlobalHub() {
   const profile = useUserProfile();
   const { tabs: mockTabs, saveTab } = useStoredTabs();
   const { balance: virtualBalance } = useVirtualBalance();
-  const { mode: workspaceMode, setMode: setWorkspaceMode } = useWorkspaceMode();
+  const { mode: workspaceMode, setMode: setWorkspaceMode, resetLisbonDemo } = useWorkspaceMode();
+  const { settledBalance } = useSettledPayoutBalance();
 
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showCashOutModal, setShowCashOutModal] = useState(false);
@@ -106,7 +107,7 @@ export default function GlobalHub() {
             <Link 
               href="/demo"
               className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors"
-              title="Open Judge Mode Selection"
+              title="Open Demo Mode Selection"
             >
               <Sparkles className="w-3 h-3" />
               <span>Change Mode</span>
@@ -123,8 +124,17 @@ export default function GlobalHub() {
               <span>Pitch Mode</span>
             </button>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{greeting}, {profile.name} {emoji}</h1>
-          <p className="text-slate-500 dark:text-white/60 mt-0.5 text-sm">Ready to settle up?</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{greeting}, {profile.name} {emoji}</h1>
+            {workspaceMode === "sample" && (
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/20" title="Exploring Lisbon Trip Demo as David">
+                🏖️ Lisbon Demo Persona
+              </span>
+            )}
+          </div>
+          <p className="text-slate-500 dark:text-white/60 mt-0.5 text-sm">
+            {workspaceMode === "sample" ? "Exploring Lisbon '24 benchmark data. Ready to settle up or test netting?" : "Your personal shared tabs and real settlement ledger."}
+          </p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <button
@@ -173,15 +183,21 @@ export default function GlobalHub() {
                 {netBalance < 0 ? "-" : "+"}<AnimatedCounter value={Math.abs(netBalance) / 100} prefix="$" decimals={2} />
               </div>
               <p className="text-slate-500 dark:text-white/50 text-xs mt-2 font-medium">Across {mockTabs.length} active shared groups</p>
-              {totalOwedToYou > 0 && (
+              
+              <div className="mt-3 flex items-center gap-2 flex-wrap">
                 <button 
                   onClick={() => setShowCashOutModal(true)}
-                  className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-transform active:scale-95 cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-md shadow-emerald-500/25 transition-all cursor-pointer"
                   title="Withdraw settled funds to your bank account"
                 >
                   <ArrowDownToLine className="w-3.5 h-3.5" /> Cash Out to Bank
                 </button>
-              )}
+                {settledBalance > 0 && (
+                  <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-2.5 py-1 rounded-full">
+                    {formatCurrency(settledBalance)} Settled & Ready
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Split Breakdown */}
@@ -201,10 +217,64 @@ export default function GlobalHub() {
                 </div>
                 <div className="font-bold text-slate-900 dark:text-white text-sm">{formatCurrency(totalOwedToYou)}</div>
               </div>
+              <div className="w-px h-8 bg-slate-200 dark:bg-white/10" />
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-semibold">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Settled Payouts</span>
+                </div>
+                <div className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">{formatCurrency(settledBalance)}</div>
+              </div>
             </div>
           </div>
           {/* Decorative Mesh */}
           <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-500/10 dark:bg-indigo-500/30 blur-[80px] rounded-full pointer-events-none" />
+        </div>
+
+        {/* Accumulated Settled Funds Available for Cash Out Card */}
+        <div className="bg-gradient-to-r from-emerald-500/15 via-emerald-500/5 to-teal-500/15 dark:from-emerald-500/20 dark:via-emerald-500/10 dark:to-teal-500/10 border border-emerald-500/30 dark:border-emerald-500/30 rounded-3xl p-6 sm:p-7 relative overflow-hidden shadow-sm">
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0 shadow-md shadow-emerald-500/20">
+                <ArrowDownToLine className="w-7 h-7" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                    Settled Balance (Ready to Cash Out)
+                  </span>
+                  <span className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-emerald-500/30">
+                    Agora AUSD • Instant Transfer
+                  </span>
+                </div>
+                <div className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tabular-nums tracking-tight mt-0.5">
+                  <AnimatedCounter value={settledBalance / 100} prefix="$" decimals={2} />
+                </div>
+                <p className="text-xs text-slate-500 dark:text-white/60 mt-1">
+                  Accumulated from friends settling their tab debts to you. Ready for instant bank transfer or debit card payout.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                sounds.playClick();
+                setShowCashOutModal(true);
+              }}
+              disabled={settledBalance <= 0}
+              className={`px-6 py-4 rounded-2xl font-bold text-sm shadow-lg flex items-center justify-center gap-2.5 transition-all shrink-0 cursor-pointer ${
+                settledBalance > 0
+                  ? "bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white shadow-emerald-500/25 hover:shadow-emerald-500/40"
+                  : "bg-slate-200 dark:bg-white/10 text-slate-400 dark:text-white/30 cursor-not-allowed"
+              }`}
+              title="Withdraw settled funds to your bank account or debit card"
+            >
+              <ArrowDownToLine className="w-5 h-5" />
+              <span>Cash Out to Bank</span>
+            </button>
+          </div>
+          {/* Subtle glow circle */}
+          <div className="absolute -right-16 -bottom-16 w-48 h-48 bg-emerald-500/10 dark:bg-emerald-500/20 blur-[60px] rounded-full pointer-events-none" />
         </div>
 
         {/* Active Tabs with Search & Filter Chips */}
@@ -216,41 +286,61 @@ export default function GlobalHub() {
               </h2>
 
               {/* Workspace Sandbox Mode Toggle */}
-              <div className="flex p-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setWorkspaceMode("sample");
-                    sounds.playClick();
-                    toast.info("Switched to Sample Trip Mode", {
-                      description: "Loaded Lisbon '24 and Lake Tahoe demo tabs."
-                    });
-                  }}
-                  className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                    workspaceMode === "sample"
-                      ? "bg-white dark:bg-white/15 text-indigo-600 dark:text-white shadow-sm"
-                      : "text-slate-500 hover:text-slate-900 dark:text-white/50 dark:hover:text-white"
-                  }`}
-                >
-                  🏖️ Sample Trip
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setWorkspaceMode("blank");
-                    sounds.playClick();
-                    toast.info("Switched to Blank Slate Mode", {
-                      description: "Workspace cleared for custom tab testing."
-                    });
-                  }}
-                  className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                    workspaceMode === "blank"
-                      ? "bg-white dark:bg-white/15 text-indigo-600 dark:text-white shadow-sm"
-                      : "text-slate-500 hover:text-slate-900 dark:text-white/50 dark:hover:text-white"
-                  }`}
-                >
-                  ✨ Blank Slate
-                </button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex p-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setWorkspaceMode("sample");
+                      sounds.playClick();
+                      toast.info("Switched to Sample Trip Mode", {
+                        description: "Loaded Lisbon '24 and Lake Tahoe demo tabs."
+                      });
+                    }}
+                    className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                      workspaceMode === "sample"
+                        ? "bg-white dark:bg-white/15 text-indigo-600 dark:text-white shadow-sm"
+                        : "text-slate-500 hover:text-slate-900 dark:text-white/50 dark:hover:text-white"
+                    }`}
+                  >
+                    🏖️ Sample Trip
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setWorkspaceMode("blank");
+                      sounds.playClick();
+                      toast.info("Switched to Clean Slate Mode", {
+                        description: "Workspace cleared for custom tab testing."
+                      });
+                    }}
+                    className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                      workspaceMode === "blank"
+                        ? "bg-white dark:bg-white/15 text-indigo-600 dark:text-white shadow-sm"
+                        : "text-slate-500 hover:text-slate-900 dark:text-white/50 dark:hover:text-white"
+                    }`}
+                  >
+                    ✨ Clean Slate
+                  </button>
+                </div>
+
+                {workspaceMode === "sample" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetLisbonDemo();
+                      sounds.playSuccessChime();
+                      toast.success("Lisbon Demo Reset", {
+                        description: "Benchmark restored to 4 members, $1,200 expenses, and -$180.00 debt."
+                      });
+                    }}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors cursor-pointer shadow-xs"
+                    title="Reset Lisbon trip to initial benchmark state"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Reset Lisbon Demo</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -298,20 +388,34 @@ export default function GlobalHub() {
                 key={tab.id} 
                 className="bg-white dark:bg-white/5 hover:bg-[#f5f5f7] dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10 rounded-3xl p-6 transition-all hover:scale-[1.02] shadow-sm hover:shadow-md cursor-pointer group flex flex-col h-[220px]"
               >
-                <div className="flex justify-between items-start mb-auto">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-bold text-lg text-slate-900 dark:text-white/90 group-hover:text-indigo-600 dark:group-hover:text-white transition-colors">{tab.name}</h3>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-slate-500 dark:text-white/40 text-xs">{tab.memberCount} members</span>
-                      <span className="text-slate-300 dark:text-white/20">•</span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${tab.role === "Creator" ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/20" : "bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-white/50"}`}>
-                        {tab.role === "Creator" ? "Creator (Admin)" : "Member"}
+                <div className="flex justify-between items-start mb-auto gap-3">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-lg text-slate-900 dark:text-white/90 group-hover:text-indigo-600 dark:group-hover:text-white transition-colors truncate mb-1.5">
+                      {tab.name}
+                    </h3>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-slate-500 dark:text-white/50 text-xs font-medium whitespace-nowrap flex items-center gap-1">
+                        <Users className="w-3.5 h-3.5 text-slate-400 dark:text-white/40" />
+                        <span>{tab.memberCount} {tab.memberCount === 1 ? "member" : "members"}</span>
+                      </span>
+                      <span className="text-slate-300 dark:text-white/20 text-xs select-none">•</span>
+                      <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap inline-flex items-center gap-1 shrink-0 ${
+                        tab.role === "Creator" 
+                          ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-500/20" 
+                          : "bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-white/60 border border-slate-200/60 dark:border-white/5"
+                      }`}>
+                        {tab.role === "Creator" ? (
+                          <>
+                            <Crown className="w-2.5 h-2.5 text-indigo-500 dark:text-indigo-400" />
+                            <span>Creator</span>
+                          </>
+                        ) : (
+                          <span>Member</span>
+                        )}
                       </span>
                     </div>
                   </div>
-                  <div className={`px-3 py-1.5 rounded-xl text-sm font-bold tabular-nums ${tab.balance >= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
+                  <div className={`px-3 py-1.5 rounded-xl text-sm font-bold tabular-nums shrink-0 whitespace-nowrap ${tab.balance >= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
                     {tab.balance > 0 ? '+' : ''}{formatCurrency(tab.balance)}
                   </div>
                 </div>
@@ -329,12 +433,44 @@ export default function GlobalHub() {
             ))}
 
             {filteredTabs.length === 0 && (
-              <div className="col-span-full py-12 text-center bg-white dark:bg-white/5 border border-dashed border-slate-200 dark:border-white/10 rounded-3xl">
-                <Users className="w-10 h-10 text-slate-300 dark:text-white/20 mx-auto mb-2" />
-                <p className="text-sm font-semibold text-slate-700 dark:text-white/70">No tabs match your filter</p>
-                <button onClick={() => { setActiveFilter("all"); setSearchQuery(""); }} className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold mt-1">
-                  Reset filters
-                </button>
+              <div className="col-span-full py-12 px-6 text-center bg-white dark:bg-white/5 border border-dashed border-slate-200 dark:border-white/10 rounded-3xl">
+                {workspaceMode === "blank" ? (
+                  <>
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mx-auto mb-3">
+                      <Sparkles className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Clean Slate Workspace</h3>
+                    <p className="text-xs text-slate-500 dark:text-white/60 max-w-sm mx-auto mt-1 mb-6">
+                      Pristine empty workspace with zero mock tabs. Create your own group tab from scratch or restore the Lisbon benchmark demo.
+                    </p>
+                    <div className="flex items-center justify-center gap-3 flex-wrap">
+                      <Link
+                        href="/tab/new"
+                        className="px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-black font-bold text-xs flex items-center gap-1.5 shadow-sm"
+                      >
+                        <Plus className="w-4 h-4" /> Create Custom Tab
+                      </Link>
+                      <button
+                        onClick={() => {
+                          setWorkspaceMode("sample");
+                          sounds.playSuccessChime();
+                          toast.success("Loaded Lisbon Demo Trip");
+                        }}
+                        className="px-4 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 font-bold text-xs flex items-center gap-1.5 hover:bg-indigo-100 cursor-pointer"
+                      >
+                        🏖️ Load Lisbon '24 Demo
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <Users className="w-10 h-10 text-slate-300 dark:text-white/20 mx-auto mb-2" />
+                    <p className="text-sm font-semibold text-slate-700 dark:text-white/70">No tabs match your filter</p>
+                    <button onClick={() => { setActiveFilter("all"); setSearchQuery(""); }} className="text-xs text-indigo-600 dark:text-indigo-400 font-semibold mt-1">
+                      Reset filters
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -429,7 +565,7 @@ export default function GlobalHub() {
       <CashOutDrawer 
         isOpen={showCashOutModal} 
         onClose={() => setShowCashOutModal(false)} 
-        availableAmount={totalOwedToYou > 0 ? totalOwedToYou : 30000} 
+        availableAmount={settledBalance > 0 ? settledBalance : (totalOwedToYou > 0 ? totalOwedToYou : 18000)} 
         currentUserName={profile.name} 
       />
 

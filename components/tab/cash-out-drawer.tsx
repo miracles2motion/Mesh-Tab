@@ -6,8 +6,12 @@ import { Sheet } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { formatCurrency } from "../../lib/utils";
 import Image from "next/image";
+import { DynamicLogo, AgoraLogo } from "../ui/partner-logo";
 
-import { DEFAULT_USER_NAME } from "../../lib/user";
+import { DEFAULT_USER_NAME, useSettledPayoutBalance } from "../../lib/user";
+import { sounds } from "../../lib/sounds";
+import { toast } from "sonner";
+import { fireSettlementConfetti } from "../../lib/confetti";
 
 interface CashOutDrawerProps {
   isOpen: boolean;
@@ -22,6 +26,7 @@ export function CashOutDrawer({
   availableAmount,
   currentUserName = DEFAULT_USER_NAME
 }: CashOutDrawerProps) {
+  const { withdrawPayout } = useSettledPayoutBalance();
   const [method, setMethod] = useState<"card" | "bank">("card");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -29,7 +34,13 @@ export function CashOutDrawer({
   const handleCashOut = async () => {
     setIsProcessing(true);
     // Simulate Dynamic Off-ramp withdrawal
-    await new Promise((r) => setTimeout(r, 2200));
+    await new Promise((r) => setTimeout(r, 1800));
+    withdrawPayout(availableAmount);
+    sounds.playSuccessChime();
+    fireSettlementConfetti();
+    toast.success("Cash Out Initiated!", {
+      description: `Sent ${formatCurrency(availableAmount)} via ${method === "card" ? "Visa Direct (Instant)" : "ACH Bank Transfer"}.`
+    });
     setIsProcessing(false);
     setIsSuccess(true);
   };
@@ -162,11 +173,11 @@ export function CashOutDrawer({
             </Button>
 
             {/* Dynamic Partner Badge */}
-            <div className="mt-6 flex items-center justify-center gap-3 text-slate-400 dark:text-white/40 text-xs">
+            <div className="mt-6 flex items-center justify-center gap-3 text-slate-500 dark:text-white/50 text-xs font-medium">
               <span>Off-ramp powered by</span>
-              <div className="flex items-center gap-2 opacity-80 hover:opacity-100 transition-opacity">
-                <Image src="/logos/dynamic.svg" alt="Dynamic" width={60} height={18} className="dark:brightness-150" />
-                <Image src="/logos/agora.svg" alt="Agora" width={40} height={18} className="dark:brightness-150" />
+              <div className="flex items-center gap-2.5 opacity-90 hover:opacity-100 transition-opacity text-slate-800 dark:text-white">
+                <DynamicLogo className="h-4 w-auto" />
+                <AgoraLogo className="h-4 w-auto" />
               </div>
             </div>
           </>

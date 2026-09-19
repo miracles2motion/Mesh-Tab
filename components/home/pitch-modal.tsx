@@ -156,7 +156,7 @@ export function PitchModal({ isOpen, onClose }: PitchModalProps) {
         </button>
       </div>
 
-      {/* Quick Navigation for Judges */}
+      {/* Quick Navigation */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
         <Link
           href="/demo"
@@ -164,7 +164,7 @@ export function PitchModal({ isOpen, onClose }: PitchModalProps) {
           className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
         >
           <Sparkles className="w-3.5 h-3.5" />
-          <span>Open Judge Demo Selector</span>
+          <span>Open Interactive Demo Selector</span>
         </Link>
 
         <button

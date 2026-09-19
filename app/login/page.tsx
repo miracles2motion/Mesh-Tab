@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { Fingerprint, Loader2 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import Image from "next/image";
+import { MeraLogo } from "../../components/ui/partner-logo";
 
 import { ThemeToggle } from "../../components/theme-toggle";
 
@@ -87,10 +88,10 @@ function LoginContent() {
       </motion.div>
 
       {/* Powered by Mera branding in bottom left */}
-      <div className="fixed bottom-6 left-6 flex items-center gap-2 text-slate-400 dark:text-white/40 text-xs font-medium">
+      <div className="fixed bottom-6 left-6 flex items-center gap-2 text-slate-500 dark:text-white/50 text-xs font-medium">
         <span>Powered by</span>
-        <div className="opacity-70 dark:opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all">
-          <Image src="/logos/mera.svg" alt="Mera" width={60} height={20} />
+        <div className="opacity-90 hover:opacity-100 transition-all text-slate-800 dark:text-white">
+          <MeraLogo className="h-5 w-auto" />
         </div>
       </div>
     </div>

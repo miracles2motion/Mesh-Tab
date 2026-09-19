@@ -88,10 +88,9 @@ export function FreshDemoModal({ isOpen, onClose }: FreshDemoModalProps) {
       color: AVATAR_COLORS[selectedColorIdx]
     });
 
-    // 2. Clear old demo tabs and switch to clean slate mode
+    // 2. Switch to clean slate mode
     setWorkspaceMode("blank");
     if (typeof window !== "undefined") {
-      localStorage.setItem("meshTab_tabs", JSON.stringify([]));
       window.dispatchEvent(new Event("meshTab-tabs-update"));
       window.dispatchEvent(new Event("meshTab-profile-update"));
     }

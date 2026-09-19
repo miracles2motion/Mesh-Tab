@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { ArrowLeft, Sparkles, CheckCircle2, ArrowRight, Compass, PlusCircle, Users, Receipt, ShieldCheck } from "lucide-react";
 import { ThemeToggle } from "../../components/theme-toggle";
-import { setWorkspaceMode } from "../../lib/user";
+import { setWorkspaceMode, resetLisbonDemo } from "../../lib/user";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
 import Image from "next/image";
@@ -18,7 +18,7 @@ export default function DemoSelectionPage() {
   const [showFreshModal, setShowFreshModal] = useState(false);
 
   const handleSelectSample = () => {
-    setWorkspaceMode("sample");
+    resetLisbonDemo();
     sounds.playSuccessChime();
     toast.success("Loaded Lisbon Trip Demo", {
       description: "Pre-loaded with 4 members, $1,200 expenses, and un-netted debts."
@@ -63,7 +63,7 @@ export default function DemoSelectionPage() {
         >
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-xs font-bold mb-4 border border-indigo-500/20">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Interactive Judge & Evaluator Sandbox</span>
+            <span>Interactive Demo Sandbox</span>
           </div>
           <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
             How would you like to explore MeshTab?
@@ -86,7 +86,7 @@ export default function DemoSelectionPage() {
           >
             {/* Corner Badge */}
             <div className="absolute top-0 right-0 bg-gradient-to-l from-indigo-600 to-purple-600 text-white text-[11px] font-bold px-4 py-1.5 rounded-bl-2xl shadow-sm">
-              Recommended for Judges
+              Recommended for Quick Tour
             </div>
 
             <div>

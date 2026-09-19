@@ -7,6 +7,7 @@ import { Button } from "../ui/button";
 import { formatCurrency } from "../../lib/utils";
 import Image from "next/image";
 import { ReceiptView } from "../ReceiptView";
+import { MonadLogo, AgoraLogo, DynamicLogo, PimlicoLogo } from "../ui/partner-logo";
 
 import { useUserProfile, settleTab, useVirtualBalance, useStoredTabMembers } from "../../lib/user";
 import { toast } from "sonner";
@@ -234,13 +235,13 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
         </Button>
         
         {/* Partner Branding */}
-        <div className="mt-6 flex items-center justify-center gap-3 text-slate-400 dark:text-white/40 text-xs font-medium">
+        <div className="mt-6 flex items-center justify-center gap-3 text-slate-500 dark:text-white/50 text-xs font-medium">
            <span>Powered by</span>
-           <div className="flex items-center gap-3 opacity-80 hover:opacity-100 transition-all">
-             <Image src="/logos/monad.svg" alt="Monad" width={56} height={18} className="dark:brightness-150" />
-             <Image src="/logos/agora.svg" alt="Agora" width={38} height={18} className="dark:brightness-150" />
-             <Image src="/logos/dynamic.svg" alt="Dynamic" width={56} height={18} className="dark:brightness-150" />
-             <Image src="/logos/pimlico.svg" alt="Pimlico" width={56} height={18} className="dark:brightness-150" />
+           <div className="flex items-center gap-3.5 opacity-90 hover:opacity-100 transition-all text-slate-800 dark:text-white">
+             <MonadLogo className="h-4 w-auto" />
+             <AgoraLogo className="h-4 w-auto" />
+             <DynamicLogo className="h-4 w-auto" />
+             <PimlicoLogo className="h-4 w-auto" />
            </div>
         </div>
       </div>

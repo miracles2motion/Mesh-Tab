@@ -1,0 +1,25 @@
+<svg viewBox="0 0 200 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .envio-text { fill: #0f172a; }
+    @media (prefers-color-scheme: dark) {
+      .envio-text { fill: #ffffff; }
+    }
+  </style>
+  <g>
+    <polygon points="24,4 42,14 42,34 24,44 6,34 6,14" stroke="#10B981" stroke-width="4" fill="none" />
+    <path d="M24 14L34 20V30L24 36L14 30V20Z" fill="#10B981" />
+    <circle cx="24" cy="24" r="3" fill="#ffffff" />
+  </g>
+  <text 
+    x="54" 
+    y="32" 
+    font-family="system-ui, -apple-system, sans-serif" 
+    font-weight="800" 
+    font-size="22" 
+    letter-spacing="0.08em" 
+    class="envio-text"
+    fill="currentColor"
+  >
+    ENVIO
+  </text>
+</svg>

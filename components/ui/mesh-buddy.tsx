@@ -21,7 +21,8 @@ import {
   BookOpen,
   Search,
   ChevronRight,
-  ArrowLeft
+  ArrowLeft,
+  Trash2
 } from "lucide-react";
 import { 
   useBuddySettings, 
@@ -40,6 +41,7 @@ import { formatCurrency } from "../../lib/utils";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { fireFaucetConfetti } from "../../lib/confetti";
+import { speak, stopSpeech, VoicePersona } from "../../lib/voice";
 import { BuddyAvatar, BuddyMood } from "./buddy-avatar";
 import {
   KB_CATEGORIES,
@@ -98,7 +100,7 @@ export function MeshBuddy() {
   const router = useRouter();
   const profile = useUserProfile();
   const { settings: buddySettings, updateSettings } = useBuddySettings();
-  const { mode: workspaceMode, setMode: setWorkspaceMode } = useWorkspaceMode();
+  const { mode: workspaceMode, setMode: setWorkspaceMode, resetLisbonDemo } = useWorkspaceMode();
   const { balance: virtualBalance, topUp } = useVirtualBalance();
   const { tabs: storedTabs } = useStoredTabs();
 
@@ -106,6 +108,8 @@ export function MeshBuddy() {
   const [drawerTab, setDrawerTab] = useState<"chat" | "kb">("chat");
   const [isConfiguring, setIsConfiguring] = useState(false);
   const [speechBubble, setSpeechBubble] = useState<string | null>(null);
+  const [isBubbleHovered, setIsBubbleHovered] = useState(false);
+  const bubbleTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [inputQuestion, setInputQuestion] = useState("");
   const [customName, setCustomName] = useState(buddySettings.name);
@@ -157,37 +161,20 @@ export function MeshBuddy() {
     return KB_ARTICLES;
   }, [kbSearchQuery, selectedCategory, currentTabId, isDemoTab, isCustomTab, workspaceMode, tabDisplayName]);
 
-  // Sound synthesis helper
+  // Sound synthesis helper using high-fidelity natural neural voice engine
   const speakText = (text: string) => {
-    if (buddySettings.voice === "mute" || typeof window === "undefined" || !("speechSynthesis" in window)) {
-      return;
-    }
-    try {
-      window.speechSynthesis.cancel();
-      const cleanText = text.replace(/[*_#`]/g, "").slice(0, 300);
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-      if (buddySettings.voice === "deep-male") {
-        utterance.pitch = 0.7;
-        utterance.rate = 0.95;
-      } else if (buddySettings.voice === "warm-female") {
-        utterance.pitch = 1.2;
-        utterance.rate = 1.0;
-      }
-      setIsSpeaking(true);
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
-      window.speechSynthesis.speak(utterance);
-    } catch (e) {
-      console.warn("Speech synthesis unavailable or restricted:", e);
-      setIsSpeaking(false);
-    }
+    speak(text, buddySettings.voice, {
+      onStart: () => setIsSpeaking(true),
+      onEnd: () => setIsSpeaking(false),
+      onError: () => setIsSpeaking(false)
+    });
   };
 
   // Route-based dynamic greetings & tips (Accurately scoped to context)
   useEffect(() => {
     let tip = "";
     if (pathname === "/demo") {
-      tip = "Judge Sandbox: Choose between the pre-loaded Lisbon '24 trip to evaluate netting, or start with a Clean Slate to test a fresh tab!";
+      tip = "Interactive Sandbox: Choose between the pre-loaded Lisbon '24 trip to explore netting, or start with a Clean Slate to test a fresh tab!";
     } else if (pathname === "/home") {
       tip = workspaceMode === "blank" 
         ? "Clean Slate Active (Main App): Tap + to create your first tab, or ask me to restore the Lisbon demo."
@@ -218,64 +205,159 @@ export function MeshBuddy() {
 
     if (tip) {
       setSpeechBubble(tip);
-      const timer = setTimeout(() => setSpeechBubble(null), 8000);
-      return () => clearTimeout(timer);
     }
   }, [pathname, workspaceMode, isDemoTab, isCustomTab, tabDisplayName]);
 
-  // Initial greeting when opening chat (Adaptive to demo vs custom tab vs blank slate)
+  // Bubble auto-hide timer: 20 seconds duration, freezes when hovered!
+  useEffect(() => {
+    if (!speechBubble || isBubbleHovered || isOpen) {
+      if (bubbleTimerRef.current) clearTimeout(bubbleTimerRef.current);
+      return;
+    }
+
+    bubbleTimerRef.current = setTimeout(() => {
+      setSpeechBubble(null);
+    }, 20000); // 20s generous window to read
+
+    return () => {
+      if (bubbleTimerRef.current) clearTimeout(bubbleTimerRef.current);
+    };
+  }, [speechBubble, isBubbleHovered, isOpen]);
+
+  // Load chat history from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("meshTab_buddy_chat_history");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+        }
+      }
+    } catch {}
+  }, []);
+
+  // Save chat history to localStorage on message updates
+  useEffect(() => {
+    if (messages.length > 0) {
+      try {
+        const toSave = messages.map(({ id, sender, text }) => ({
+          id,
+          sender,
+          text
+        }));
+        localStorage.setItem("meshTab_buddy_chat_history", JSON.stringify(toSave.slice(-30)));
+      } catch {}
+    }
+  }, [messages]);
+
+  // Opening drawer from floating speech bubble ensures the tip is preserved in conversation!
+  const handleOpenFromBubble = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const tipText = speechBubble;
+    setIsOpen(true);
+    setSpeechBubble(null);
+
+    if (tipText) {
+      const tipMsg: ChatMessage = {
+        id: `tip-${Date.now()}`,
+        sender: "buddy",
+        text: tipText,
+        actions: [
+          { label: "💡 Explain More", action: () => handleAskQuestion(`tell me more about: ${tipText}`) },
+          { label: "📚 Open Knowledge Base", action: () => setDrawerTab("kb") },
+          { label: "📊 Tab Recap", action: () => handleAskQuestion("give me a recap of what is going on here") }
+        ]
+      };
+      setMessages((prev) => {
+        if (prev.length > 0 && prev[prev.length - 1]?.text === tipText) return prev;
+        return [...prev, tipMsg];
+      });
+      speakText(tipText);
+    }
+  };
+
+  // Clear conversation history
+  const handleClearChat = () => {
+    sounds.playPop();
+    const freshWelcome: ChatMessage = {
+      id: `welcome-${Date.now()}`,
+      sender: "buddy",
+      text: `Chat history cleared. How can I assist you with ${isDemoTab ? "the Lisbon benchmark" : isCustomTab ? tabDisplayName : "your group tabs"}?`,
+      actions: [
+        { label: "📊 Tab Recap", action: () => handleAskQuestion("give me a recap of what is going on here") },
+        { label: "❓ How does Netting work?", action: () => handleAskQuestion("how does netting work") },
+        { label: "🚰 Top Up +$500", action: handleClaimFaucet }
+      ]
+    };
+    setMessages([freshWelcome]);
+    try {
+      localStorage.removeItem("meshTab_buddy_chat_history");
+    } catch {}
+    toast.info("Conversation history cleared");
+  };
+
+  // Initial greeting when opening chat (Adaptive to demo vs custom tab vs blank slate, preserving history)
   useEffect(() => {
     if (isOpen) {
       const contextChanged = lastContextRef.current !== currentContextKey;
-      if (messages.length === 0 || contextChanged) {
-        lastContextRef.current = currentContextKey;
+      lastContextRef.current = currentContextKey;
 
-        let welcomeText = `Hey ${profile.name || "there"}! I'm ${buddySettings.name}. How can I assist you with your group tab today?`;
-        let welcomeActions: { label: string; action: () => void }[] = [];
+      let welcomeText = `Hey ${profile.name || "there"}! I'm ${buddySettings.name}. How can I assist you with your group tab today?`;
+      let welcomeActions: { label: string; action: () => void }[] = [];
 
-        if (isDemoTab) {
-          welcomeText = `Hey ${profile.name || "there"}! I'm ${buddySettings.name}. You're viewing the Lisbon '24 demo trip ($1,200 spent across 4 members). Ready to run Tangle Netting or test settlements?`;
-          welcomeActions = [
-            { label: "❓ How does Netting work?", action: () => handleAskQuestion("How does netting work?") },
-            { label: "📸 Smart Scan Receipt", action: () => router.push("/tab/lisbon-24/expense/new") },
-            { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet },
-            { label: "🧹 Switch to Clean Slate", action: handleToggleWorkspace }
-          ];
-        } else if (isCustomTab) {
-          welcomeText = `Hey ${profile.name || "there"}! I'm ${buddySettings.name}. You're on your custom group tab "${tabDisplayName}". You can log shared expenses, invite friends with passkeys, or run netting once costs accumulate.`;
-          welcomeActions = [
-            { label: "➕ Add Expense", action: () => router.push(`/tab/${currentTabId}/expense/new`) },
-            { label: "👥 Invite Members", action: () => router.push(`/tab/${currentTabId}/members`) },
-            { label: "❓ How does Netting work?", action: () => handleAskQuestion("How does netting work on custom tabs?") },
-            { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet }
-          ];
-        } else if (workspaceMode === "blank") {
-          welcomeText = `Hey ${profile.name || "there"}! I'm ${buddySettings.name}. You're in Clean Slate mode (Main App with a fresh workspace). Ready to create your first tab?`;
-          welcomeActions = [
-            { label: "➕ Create New Tab", action: () => router.push("/tab/new") },
-            { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet },
-            { label: "🏖️ Restore Lisbon Demo", action: handleToggleWorkspace },
-            { label: "🎮 Open Demo Sandbox", action: () => router.push("/demo") }
-          ];
-        } else {
-          welcomeText = `Hey ${profile.name || "there"}! I'm ${buddySettings.name}. You're in Sample Trip Mode. Tap Lisbon Weekend to test netting, or explore your settings.`;
-          welcomeActions = [
-            { label: "🏖️ Open Lisbon Demo", action: () => router.push("/tab/lisbon-24") },
-            { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet },
-            { label: "❓ How does Netting work?", action: () => handleAskQuestion("How does netting work?") },
-            { label: "🧹 Switch to Clean Slate", action: handleToggleWorkspace }
-          ];
-        }
-
-        const welcome: ChatMessage = {
-          id: `msg-welcome-${Date.now()}`,
-          sender: "buddy",
-          text: welcomeText,
-          actions: welcomeActions
-        };
-        setMessages([welcome]);
-        speakText(welcome.text);
+      if (isDemoTab) {
+        welcomeText = `Hey ${profile.name || "there"}! I'm ${buddySettings.name}. You're viewing the Lisbon '24 demo trip ($1,200 spent across 4 members). Ready to run Tangle Netting or test settlements?`;
+        welcomeActions = [
+          { label: "❓ How does Netting work?", action: () => handleAskQuestion("How does netting work?") },
+          { label: "📸 Smart Scan Receipt", action: () => router.push("/tab/lisbon-24/expense/new") },
+          { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet },
+          { label: "🧹 Switch to Clean Slate", action: handleToggleWorkspace }
+        ];
+      } else if (isCustomTab) {
+        welcomeText = `Hey ${profile.name || "there"}! I'm ${buddySettings.name}. You're on your custom group tab "${tabDisplayName}". You can log shared expenses, invite friends with passkeys, or run netting once costs accumulate.`;
+        welcomeActions = [
+          { label: "➕ Add Expense", action: () => router.push(`/tab/${currentTabId}/expense/new`) },
+          { label: "👥 Invite Members", action: () => router.push(`/tab/${currentTabId}/members`) },
+          { label: "❓ How does Netting work?", action: () => handleAskQuestion("How does netting work on custom tabs?") },
+          { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet }
+        ];
+      } else if (workspaceMode === "blank") {
+        welcomeText = `Hey ${profile.name || "there"}! I'm ${buddySettings.name}. You're in Clean Slate mode (Main App with a fresh workspace). Ready to create your first tab?`;
+        welcomeActions = [
+          { label: "➕ Create New Tab", action: () => router.push("/tab/new") },
+          { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet },
+          { label: "🏖️ Restore Lisbon Demo", action: handleToggleWorkspace },
+          { label: "🎮 Open Demo Sandbox", action: () => router.push("/demo") }
+        ];
+      } else {
+        welcomeText = `Hey ${profile.name || "there"}! I'm ${buddySettings.name}. You're in Sample Trip Mode. Tap Lisbon Weekend to test netting, or explore your settings.`;
+        welcomeActions = [
+          { label: "🏖️ Open Lisbon Demo", action: () => router.push("/tab/lisbon-24") },
+          { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet },
+          { label: "❓ How does Netting work?", action: () => handleAskQuestion("How does netting work?") },
+          { label: "🧹 Switch to Clean Slate", action: handleToggleWorkspace }
+        ];
       }
+
+      const welcome: ChatMessage = {
+        id: `msg-welcome-${Date.now()}`,
+        sender: "buddy",
+        text: welcomeText,
+        actions: welcomeActions
+      };
+
+      setMessages((prev) => {
+        if (prev.length === 0) {
+          speakText(welcome.text);
+          return [welcome];
+        }
+        if (contextChanged && prev[prev.length - 1]?.text !== welcomeText) {
+          speakText(welcome.text);
+          return [...prev, welcome];
+        }
+        return prev;
+      });
     }
   }, [isOpen, isDemoTab, isCustomTab, workspaceMode, profile.name, buddySettings.name, currentTabId, tabDisplayName, currentContextKey]);
 
@@ -332,7 +414,11 @@ export function MeshBuddy() {
 
   function handleToggleWorkspace() {
     const nextMode = workspaceMode === "blank" ? "sample" : "blank";
-    setWorkspaceMode(nextMode);
+    if (nextMode === "sample") {
+      resetLisbonDemo();
+    } else {
+      setWorkspaceMode("blank");
+    }
     sounds.playClick();
     toast.info(nextMode === "blank" ? "Switched to Clean Slate" : "Restored Lisbon Demo Trip");
 
@@ -720,7 +806,7 @@ export function MeshBuddy() {
           { label: "🏖️ Restore Lisbon Demo", action: handleToggleWorkspace }
         ];
       } else {
-        replyText = "You are currently in Sample Trip Mode. The Lisbon '24 benchmark is loaded so judges can evaluate netting and off-ramps with pre-populated data. You can switch to Clean Slate to test a fresh setup.";
+        replyText = "You are currently in Sample Trip Mode. The Lisbon '24 benchmark is loaded so anyone can explore netting and off-ramps with pre-populated data. You can switch to Clean Slate to test a fresh setup.";
         actionItems = [
           { label: "🏖️ Open Lisbon Demo", action: () => router.push("/tab/lisbon-24") },
           { label: "🧹 Switch to Clean Slate", action: handleToggleWorkspace }
@@ -870,27 +956,55 @@ export function MeshBuddy() {
     <>
       {/* Floating Living Avatar Orb (Non-intrusive bottom-right position above mobile dock) */}
       <div className="fixed bottom-24 right-5 z-40 md:bottom-8 md:right-8 flex flex-col items-end">
-        {/* Subtle Idle Speech Bubble */}
+        {/* Subtle Idle Speech Bubble (20s reading window, pauses on hover) */}
         <AnimatePresence>
           {speechBubble && !isOpen && (
             <motion.div
-              initial={{ opacity: 0, y: 10, scale: 0.9 }}
+              initial={{ opacity: 0, y: 12, scale: 0.92 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 10, scale: 0.9 }}
-              onClick={() => {
-                setIsOpen(true);
-                setSpeechBubble(null);
-              }}
-              className="mb-3 max-w-[220px] sm:max-w-xs bg-white/95 dark:bg-[#18181b]/95 backdrop-blur-xl border border-indigo-200 dark:border-indigo-500/30 text-slate-800 dark:text-white p-3.5 rounded-2xl shadow-xl text-xs font-medium cursor-pointer transition-all hover:scale-105 select-none"
+              exit={{ opacity: 0, y: 10, scale: 0.92 }}
+              onMouseEnter={() => setIsBubbleHovered(true)}
+              onMouseLeave={() => setIsBubbleHovered(false)}
+              onClick={handleOpenFromBubble}
+              className="mb-3 max-w-[260px] sm:max-w-sm bg-white/95 dark:bg-[#18181b]/95 backdrop-blur-xl border border-indigo-200 dark:border-indigo-500/30 text-slate-800 dark:text-white p-4 rounded-3xl shadow-2xl text-xs font-medium cursor-pointer transition-all hover:border-indigo-400 select-none relative overflow-hidden group"
             >
-              <div className="flex items-start gap-2">
-                <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
-                <p className="leading-snug">{speechBubble}</p>
+              <div className="flex items-start justify-between gap-2.5">
+                <div className="flex items-start gap-2 min-w-0">
+                  <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+                  <p className="leading-relaxed text-[12px] font-normal">{speechBubble}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSpeechBubble(null);
+                  }}
+                  className="p-1 rounded-full text-slate-400 hover:text-slate-700 dark:text-white/40 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shrink-0 -mt-1 -mr-1 cursor-pointer"
+                  title="Dismiss tip"
+                  aria-label="Dismiss tip"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <div className="mt-1.5 flex justify-end">
-                <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-0.5">
-                  Chat with {buddySettings.name} <ArrowRight className="w-2.5 h-2.5" />
+
+              <div className="mt-2.5 flex items-center justify-between pt-2 border-t border-slate-100 dark:border-white/10 text-[10.5px]">
+                <span className="text-slate-400 dark:text-white/40">
+                  {isBubbleHovered ? "Paused • Click to open" : "Hover to pause"}
                 </span>
+                <span className="font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                  Open Chat <ArrowRight className="w-3 h-3" />
+                </span>
+              </div>
+
+              {/* Remaining Time Progress Bar (Pauses on Hover) */}
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-500/10 dark:bg-indigo-500/20 overflow-hidden rounded-b-3xl">
+                <motion.div
+                  key={speechBubble}
+                  initial={{ width: "100%" }}
+                  animate={{ width: isBubbleHovered ? undefined : "0%" }}
+                  transition={{ duration: 20, ease: "linear" }}
+                  className="h-full bg-gradient-to-r from-indigo-500 to-purple-500"
+                />
               </div>
             </motion.div>
           )}
@@ -930,9 +1044,30 @@ export function MeshBuddy() {
             isSpeaking={isSpeaking}
           />
 
-          {/* Voice status indicator */}
-          <div className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-slate-900 border border-white/20 flex items-center justify-center text-[8px] text-white z-20">
-            {buddySettings.voice === "mute" ? <VolumeX className="w-2.5 h-2.5 text-slate-400" /> : <Volume2 className="w-2.5 h-2.5 text-emerald-400" />}
+          {/* Quick Voice Mute/Unmute Toggle Button */}
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              if (buddySettings.voice === "mute") {
+                updateSettings({ voice: "warm-female" });
+                toast.success("Voice unmuted (Warm Female)");
+                setTimeout(() => speakText("Voice activated! Ready to guide you."), 150);
+              } else {
+                stopSpeech();
+                setIsSpeaking(false);
+                updateSettings({ voice: "mute" });
+                toast.info("Voice muted");
+              }
+            }}
+            className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-slate-900 dark:bg-black border border-white/30 flex items-center justify-center text-white z-20 hover:scale-115 active:scale-95 transition-transform shadow-md cursor-pointer"
+            title={buddySettings.voice === "mute" ? "Click to unmute voice" : "Click to mute voice"}
+            aria-label="Toggle voice mute"
+          >
+            {buddySettings.voice === "mute" ? (
+              <VolumeX className="w-2.5 h-2.5 text-rose-400" />
+            ) : (
+              <Volume2 className="w-2.5 h-2.5 text-emerald-400" />
+            )}
           </div>
         </button>
       </div>
@@ -986,6 +1121,14 @@ export function MeshBuddy() {
                 </div>
 
                 <div className="flex items-center gap-1">
+                  <button
+                    onClick={handleClearChat}
+                    className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-white/50 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
+                    title="Clear conversation history"
+                    aria-label="Clear chat history"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                   <button
                     onClick={() => setIsConfiguring(!isConfiguring)}
                     className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 transition-colors"
@@ -1515,9 +1658,26 @@ export function MeshBuddy() {
                           key={v.id}
                           type="button"
                           onClick={() => {
-                            updateSettings({ voice: v.id as "mute" | "deep-male" | "warm-female" });
-                            if (v.id !== "mute") {
-                              setTimeout(() => speakText("Voice activated! Ready to guide you."), 200);
+                            if (v.id === "mute") {
+                              stopSpeech();
+                              setIsSpeaking(false);
+                              updateSettings({ voice: "mute" });
+                              toast.info("MeshBuddy voice muted");
+                            } else {
+                              updateSettings({ voice: v.id as VoicePersona });
+                              toast.success(v.id === "deep-male" ? "Switched to Deep Male" : "Switched to Warm Female");
+                              setTimeout(() => {
+                                speak(
+                                  v.id === "deep-male"
+                                    ? "Deep Male voice activated. Ready to guide you."
+                                    : "Warm Female voice activated. Ready to guide you.",
+                                  v.id as VoicePersona,
+                                  {
+                                    onStart: () => setIsSpeaking(true),
+                                    onEnd: () => setIsSpeaking(false)
+                                  }
+                                );
+                              }, 150);
                             }
                           }}
                           className={`p-2.5 rounded-xl border text-center transition-all font-medium text-[11px] ${

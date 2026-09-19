@@ -68,9 +68,9 @@ export const KB_CATEGORIES: KBCategory[] = [
   },
   {
     id: "sandbox",
-    label: "Judge Sandbox",
+    label: "Interactive Sandbox",
     icon: "🎮",
-    description: "Lisbon '24 benchmark, Clean Slate mode, and evaluation guide."
+    description: "Lisbon '24 sample trip, Clean Slate mode, and demo guide."
   },
   {
     id: "security",
@@ -272,14 +272,14 @@ export const KB_ARTICLES: KBArticle[] = [
     ]
   },
 
-  // --- Judge Sandbox ---
+  // --- Interactive Sandbox ---
   {
     id: "sandbox-sample-vs-clean",
     categoryId: "sandbox",
     title: "What is the difference between Sample Trip and Clean Slate?",
-    keywords: ["sample", "clean slate", "demo", "mock", "blank", "switch", "sandbox", "judge"],
-    summary: "Sample Trip loads the Lisbon '24 benchmark ($1,200, 4 members) to evaluate netting. Clean Slate hides all mock data so you can test the main app from scratch.",
-    detailedContent: "For judges evaluating MeshTab:\n- **Sample Trip Mode**: Instantly shows an active group vacation with pre-populated expenses, netting graph visualizations, and settling flows ready to test.\n- **Clean Slate Mode**: Wipes sample tabs so you can experience the first-time user onboarding: create a fresh tab, invite members, snap receipts, and test real-time state updates.\nYou can toggle between these modes anytime without losing data!",
+    keywords: ["sample", "clean slate", "demo", "mock", "blank", "switch", "sandbox", "modes"],
+    summary: "Sample Trip loads the Lisbon '24 benchmark ($1,200, 4 members) to explore netting. Clean Slate hides all mock data so you can test the main app from scratch.",
+    detailedContent: "You can explore MeshTab in two interactive ways:\n- **Sample Trip Mode**: Instantly shows an active group vacation with pre-populated expenses, netting graph visualizations, and settling flows ready to test.\n- **Clean Slate Mode**: Wipes sample tabs so you can experience the first-time user onboarding: create a fresh tab, invite members, snap receipts, and test real-time state updates.\nYou can toggle between these modes anytime without losing data!",
     actions: [
       { label: "Open Demo Sandbox Selector", type: "navigate", destination: "/demo" },
       { label: "Switch Mode Now", type: "toggle-mode" }

@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Fingerprint, Loader2, CheckCircle2 } from "lucide-react";
+import { ArrowRight, Fingerprint, Loader2, CheckCircle2, ArrowLeft, LayoutGrid } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import Image from "next/image";
+import { MonadLogo, AgoraLogo } from "../../../components/ui/partner-logo";
 
 import { saveNewTab } from "../../../lib/user";
 
@@ -38,10 +40,23 @@ export default function CreateTab() {
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-6 bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white relative overflow-hidden min-h-[calc(100vh-64px)] transition-colors duration-300">
+    <div className="flex-1 flex flex-col items-center justify-center p-6 bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white relative overflow-hidden min-h-screen transition-colors duration-300">
       {/* Background Mesh */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-500/10 dark:bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none" />
       
+      {/* Back to All Tabs */}
+      <div className="w-full max-w-md mb-4 flex items-center justify-start relative z-10">
+        <Link 
+          href="/home" 
+          className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-white/80 transition-all text-xs font-semibold shadow-sm group"
+          title="Return to All Tabs"
+        >
+          <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform text-slate-500 dark:text-white/50" />
+          <LayoutGrid className="w-3 h-3 text-indigo-500 dark:text-indigo-400" />
+          <span>All Tabs</span>
+        </Link>
+      </div>
+
       <motion.div 
         layout
         className="w-full max-w-md bg-white dark:bg-white/5 backdrop-blur-xl border border-slate-200 dark:border-white/10 p-8 rounded-3xl relative z-10 shadow-2xl"
@@ -87,11 +102,11 @@ export default function CreateTab() {
               </Button>
               
               {/* Partner Branding */}
-              <div className="pt-2 flex items-center justify-center gap-3 text-slate-400 dark:text-white/30 text-[11px] font-medium">
+              <div className="pt-2 flex items-center justify-center gap-3 text-slate-500 dark:text-white/50 text-xs font-medium">
                 <span>Powered by</span>
-                <div className="flex gap-2 opacity-70 dark:opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all">
-                  <Image src="/logos/monad.svg" alt="Monad" width={60} height={16} />
-                  <Image src="/logos/agora.svg" alt="Agora" width={40} height={16} />
+                <div className="flex items-center gap-3 opacity-90 hover:opacity-100 transition-all text-slate-800 dark:text-white">
+                  <MonadLogo className="h-4 w-auto" />
+                  <AgoraLogo className="h-4 w-auto" />
                 </div>
               </div>
             </motion.form>

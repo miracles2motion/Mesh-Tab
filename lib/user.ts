@@ -125,8 +125,63 @@ export function getWorkspaceMode(): WorkspaceMode {
 export function setWorkspaceMode(mode: WorkspaceMode) {
   if (typeof window === "undefined") return;
   localStorage.setItem("meshTab_workspaceMode", mode);
+  
+  if (mode === "sample") {
+    // When switching to sample trip mode, ensure the Lisbon benchmark tabs exist
+    try {
+      const raw = localStorage.getItem("meshTab_tabs");
+      let current: TabSummary[] = [];
+      if (raw) current = JSON.parse(raw);
+      if (Array.isArray(current)) {
+        const hasLisbon = current.some(t => t.id === "lisbon-24");
+        if (!hasLisbon) {
+          const nonSample = current.filter(t => t.id !== "lisbon-24" && t.id !== "house-groceries");
+          localStorage.setItem("meshTab_tabs", JSON.stringify([...DEFAULT_TABS, ...nonSample]));
+        }
+      } else {
+        localStorage.setItem("meshTab_tabs", JSON.stringify(DEFAULT_TABS));
+      }
+    } catch (e) {
+      localStorage.setItem("meshTab_tabs", JSON.stringify(DEFAULT_TABS));
+    }
+  }
+
   window.dispatchEvent(new Event("meshTab-workspace-update"));
   window.dispatchEvent(new Event("meshTab-tabs-update"));
+}
+
+export function resetLisbonDemo() {
+  if (typeof window === "undefined") return;
+  const activeUser = getStoredUser().name || DEFAULT_USER_NAME;
+  
+  // 1. Reset Lisbon tab members
+  const defaultList: TabMember[] = [
+    ...DEFAULT_LISBON_MEMBERS,
+    { name: activeUser, balance: -18000, type: "debtor", role: "member" }
+  ];
+  localStorage.setItem("meshTab_members_lisbon-24", JSON.stringify(defaultList));
+
+  // 2. Clear added/settled expenses for Lisbon to restore initial benchmark
+  localStorage.removeItem("meshTab_expenses_lisbon-24");
+
+  // 3. Ensure Lisbon tab is active with -$180.00 debt
+  try {
+    const raw = localStorage.getItem("meshTab_tabs");
+    let current: TabSummary[] = [];
+    if (raw) current = JSON.parse(raw);
+    const nonLisbon = Array.isArray(current) ? current.filter(t => t.id !== "lisbon-24") : [];
+    localStorage.setItem("meshTab_tabs", JSON.stringify([DEFAULT_TABS[0], ...nonLisbon]));
+  } catch (e) {
+    localStorage.setItem("meshTab_tabs", JSON.stringify(DEFAULT_TABS));
+  }
+
+  // 4. Force mode to sample
+  localStorage.setItem("meshTab_workspaceMode", "sample");
+
+  window.dispatchEvent(new Event("meshTab-workspace-update"));
+  window.dispatchEvent(new Event("meshTab-tabs-update"));
+  window.dispatchEvent(new Event("meshTab-members-update"));
+  window.dispatchEvent(new Event("meshTab-expenses-update"));
 }
 
 export function useWorkspaceMode() {
@@ -143,7 +198,7 @@ export function useWorkspaceMode() {
     };
   }, []);
 
-  return { mode, setMode: setWorkspaceMode };
+  return { mode, setMode: setWorkspaceMode, resetLisbonDemo };
 }
 
 export function getStoredTabs(): TabSummary[] {
@@ -155,7 +210,16 @@ export function getStoredTabs(): TabSummary[] {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) {
         if (mode === "blank") {
+          // Clean Slate: filter out mock demo tabs so user has a fresh workspace
           return parsed.filter(t => t.id !== "lisbon-24" && t.id !== "house-groceries");
+        }
+        // Sample Mode: GUARANTEE Lisbon benchmark is present
+        const hasLisbon = parsed.some(t => t.id === "lisbon-24");
+        if (!hasLisbon) {
+          const nonSample = parsed.filter(t => t.id !== "lisbon-24" && t.id !== "house-groceries");
+          const merged = [...DEFAULT_TABS, ...nonSample];
+          localStorage.setItem("meshTab_tabs", JSON.stringify(merged));
+          return merged;
         }
         return parsed;
       }
@@ -231,9 +295,33 @@ export function getStoredTabMembers(tabId: string, currentUserName?: string): Ta
   try {
     const raw = localStorage.getItem(`meshTab_members_${tabId}`);
     if (raw) {
-      const parsed = JSON.parse(raw);
+      const parsed: TabMember[] = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        let members = parsed;
+
+        // In Lisbon benchmark: ensure activeUser is mapped to the 4th debtor slot
+        if (tabId === "lisbon-24") {
+          const hasActiveUser = members.some(m => m.name.toLowerCase() === activeUser.toLowerCase());
+          if (!hasActiveUser) {
+            // Find David or the non-core member and update name to activeUser
+            const debtorIdx = members.findIndex(m => m.name === "David" || (m.name !== "Aisha" && m.name !== "Kemi" && m.name !== "Ben"));
+            if (debtorIdx >= 0) {
+              members = members.map((m, idx) => idx === debtorIdx ? { ...m, name: activeUser } : m);
+              localStorage.setItem(`meshTab_members_${tabId}`, JSON.stringify(members));
+            }
+          }
+        }
+
+        // Enforce ledger consistency: if all debtors have settled (no negative balances), all members are settled
+        const totalDebts = members.reduce((sum, m) => sum + (m.balance < 0 ? Math.abs(m.balance) : 0), 0);
+        if (totalDebts === 0 && members.some(m => m.type === "settled" || m.balance === 0)) {
+          return members.map(m => ({
+            ...m,
+            balance: 0,
+            type: "settled" as const
+          }));
+        }
+        return members;
       }
     }
   } catch (e) {}
@@ -430,12 +518,29 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
   // 2. Update member balances for this tab
   try {
     const members = getStoredTabMembers(tabId, currentUserName);
+    let remainingToDeduct = amount;
+    
+    // First, mark the settling user as settled
     const updatedMembers = members.map(m => {
       if (m.name.toLowerCase() === currentUserName.toLowerCase()) {
         return { ...m, balance: 0, type: "settled" as const };
       }
       return m;
+    }).map(m => {
+      // Then reduce creditor balance accordingly
+      if (remainingToDeduct > 0 && m.balance > 0) {
+        const deduct = Math.min(m.balance, remainingToDeduct);
+        const newBal = m.balance - deduct;
+        remainingToDeduct -= deduct;
+        return {
+          ...m,
+          balance: newBal,
+          type: newBal === 0 ? ("settled" as const) : ("creditor" as const)
+        };
+      }
+      return m;
     });
+
     localStorage.setItem(`meshTab_members_${tabId}`, JSON.stringify(updatedMembers));
     window.dispatchEvent(new Event("meshTab-members-update"));
   } catch (e) {}
@@ -448,6 +553,59 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
     desc: "Settled balance in AUSD (Monad)",
     time: "Just now"
   });
+
+  // 4. Credit the accumulated settled payouts (cashable balance)
+  addSettledPayout(amount);
+}
+
+// -------------------------------------------------------------
+// Settled Payouts / Cashable Balance (Accumulated from others settling)
+// -------------------------------------------------------------
+export function getSettledPayoutBalance(): number {
+  if (typeof window === "undefined") return 18000; // default $180.00 accumulated in demo
+  const val = localStorage.getItem("meshTab_settledPayoutBalance");
+  if (val === null) return 18000;
+  const parsed = parseInt(val, 10);
+  return isNaN(parsed) ? 18000 : parsed;
+}
+
+export function addSettledPayout(amountCents: number) {
+  if (typeof window === "undefined") return;
+  const current = getSettledPayoutBalance();
+  const next = current + amountCents;
+  localStorage.setItem("meshTab_settledPayoutBalance", String(next));
+  window.dispatchEvent(new Event("meshTab-payout-update"));
+}
+
+export function withdrawSettledPayout(amountCents?: number): number {
+  if (typeof window === "undefined") return 0;
+  const current = getSettledPayoutBalance();
+  const toWithdraw = amountCents !== undefined ? Math.min(current, amountCents) : current;
+  const next = Math.max(0, current - toWithdraw);
+  localStorage.setItem("meshTab_settledPayoutBalance", String(next));
+  window.dispatchEvent(new Event("meshTab-payout-update"));
+  return toWithdraw;
+}
+
+export function useSettledPayoutBalance() {
+  const [balance, setBalance] = useState<number>(getSettledPayoutBalance);
+
+  useEffect(() => {
+    const sync = () => setBalance(getSettledPayoutBalance());
+    sync();
+    window.addEventListener("meshTab-payout-update", sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener("meshTab-payout-update", sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+
+  return {
+    settledBalance: balance,
+    addPayout: addSettledPayout,
+    withdrawPayout: withdrawSettledPayout
+  };
 }
 
 // -------------------------------------------------------------

@@ -25,18 +25,29 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${outfit.variable} ${geistMono.variable} h-full dark scroll-smooth`} suppressHydrationWarning>
+    <html lang="en" className={`${outfit.variable} ${geistMono.variable} h-full scroll-smooth`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col antialiased selection:bg-indigo-500/30 bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300">
         <script
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                const theme = localStorage.getItem('theme');
-                if (theme === 'light') {
-                  document.documentElement.classList.remove('dark');
-                } else if (theme === 'dark') {
-                  document.documentElement.classList.add('dark');
+                function applyTheme() {
+                  const saved = localStorage.getItem('theme') || 'system';
+                  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                  const isDark = saved === 'dark' || (saved === 'system' && prefersDark);
+                  if (isDark) {
+                    document.documentElement.classList.add('dark');
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                  }
                 }
+                applyTheme();
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
+                  if ((localStorage.getItem('theme') || 'system') === 'system') {
+                    applyTheme();
+                    window.dispatchEvent(new Event('theme-change'));
+                  }
+                });
               } catch (e) {}
             `,
           }}

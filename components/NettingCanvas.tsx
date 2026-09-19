@@ -2,11 +2,12 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { Network, Zap, CheckCircle2, Sparkles, PlusCircle, ArrowRight, ShieldCheck, RefreshCw } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
 import { sounds } from "../lib/sounds";
 import { fireSettlementConfetti } from "../lib/confetti";
 import { formatCurrency } from "../lib/utils";
+import { getStoredUser, DEFAULT_USER_NAME } from "../lib/user";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -54,8 +55,7 @@ export function NettingCanvas({
   grossVolume = 120000, 
   expenseCount = 3 
 }: NettingCanvasProps) {
-  const isCleanSlate = tabId !== "lisbon-24" && (expenseCount < 2 || grossVolume === 0);
-  const [nettingState, setNettingState] = useState<"chaotic" | "calculating" | "simplified">("chaotic");
+  const isCleanSlate = expenseCount === 0 && grossVolume === 0;
 
   // 1. Determine active members and their real balances
   const effectiveMembers = useMemo(() => {
@@ -63,16 +63,17 @@ export function NettingCanvas({
       return members;
     }
     // Default benchmark roster (Lisbon '24)
+    const activeName = getStoredUser().name || DEFAULT_USER_NAME;
     return [
       { name: "Aisha", balance: 30000 },
       { name: "Ben", balance: -8000 },
-      { name: "David", balance: -18000 },
+      { name: activeName, balance: -18000 },
       { name: "Kemi", balance: -4000 }
     ];
   }, [members]);
 
   // 2. Position nodes in a 540x320 unified SVG coordinate space
-  const { nodes, creditors, debtors } = useMemo(() => {
+  const { nodes, creditors, debtors, hasActiveDebts, totalActiveDebt } = useMemo(() => {
     const list = [...effectiveMembers];
     const n = list.length;
     const computedNodes: GraphNode[] = [];
@@ -89,44 +90,22 @@ export function NettingCanvas({
       else setts.push(m);
     });
 
-    // Fallback if balances are zero in mock
-    if (creds.length === 0 && debts.length === 0) {
-      list.forEach((m, idx) => {
-        if (idx === 0) creds.push({ ...m, balance: 30000 });
-        else debts.push({ ...m, balance: idx === 1 ? -18000 : idx === 2 ? -8000 : -4000 });
-      });
-    }
-
-    // Mathematical coordinate generation based on member count
-    const nodeRadius = n <= 4 ? 24 : n <= 8 ? 20 : 17;
-    const fontScale = n <= 4 ? 1 : n <= 8 ? 0.85 : 0.75;
+    const activeDebtSum = debts.reduce((sum, d) => sum + Math.abs(d.balance ?? 0), 0);
+    const hasDebts = debts.length > 0 && creds.length > 0 && activeDebtSum > 0;
 
     if (n <= 4) {
-      // Balanced diamond / triangular arrangement
-      const topCreditor = creds[0] || list[0];
-      computedNodes.push({
-        id: topCreditor.name,
-        name: topCreditor.name,
-        initial: topCreditor.name[0].toUpperCase(),
-        balance: topCreditor.balance ?? 30000,
-        isCreditor: true,
-        isDebtor: false,
-        isSettled: false,
-        x: 270,
-        y: 65,
-        color: "#10b981"
-      });
-
-      const debtorList = list.filter(m => m.name !== topCreditor.name);
-      const debtorCoords = [
-        { x: 105, y: 175 }, // Left
-        { x: 215, y: 245 }, // Bottom-Center-Left
-        { x: 395, y: 220 }  // Right
+      const diamondCoords = [
+        { x: 270, y: 65 },  // Top
+        { x: 105, y: 180 }, // Left
+        { x: 270, y: 250 }, // Bottom
+        { x: 415, y: 180 }  // Right
       ];
 
-      debtorList.forEach((m, i) => {
-        const coord = debtorCoords[i] || { x: 150 + i * 90, y: 220 };
-        const bal = m.balance ?? (i === 0 ? -18000 : i === 1 ? -8000 : -4000);
+      // Sort: creditors first, then debtors, then settled
+      const sorted = [...list].sort((a, b) => (b.balance ?? 0) - (a.balance ?? 0));
+      sorted.forEach((m, i) => {
+        const coord = diamondCoords[i] || { x: 150 + i * 90, y: 180 };
+        const bal = m.balance ?? 0;
         computedNodes.push({
           id: m.name,
           name: m.name,
@@ -137,12 +116,11 @@ export function NettingCanvas({
           isSettled: bal === 0,
           x: coord.x,
           y: coord.y,
-          color: bal > 0 ? "#10b981" : "#f43f5e"
+          color: bal > 0 ? "#10b981" : bal < 0 ? "#f43f5e" : "#10b981"
         });
       });
     } else {
       // Elliptical orbital distribution for 5 to 12+ members
-      // Creditors grouped smoothly at the top arc, debtors around the sides and base
       const sortedList = [...creds, ...debts, ...setts];
       const cx = 270;
       const cy = 155;
@@ -150,7 +128,6 @@ export function NettingCanvas({
       const ry = n <= 8 ? 95 : 105;
 
       sortedList.forEach((m, i) => {
-        // Distribute evenly around ellipse starting from top (-PI/2)
         const theta = (2 * Math.PI * i) / n - Math.PI / 2;
         const x = Math.round(cx + rx * Math.cos(theta));
         const y = Math.round(cy + ry * Math.sin(theta));
@@ -165,7 +142,7 @@ export function NettingCanvas({
           isSettled: bal === 0,
           x,
           y,
-          color: bal > 0 ? "#10b981" : bal < 0 ? "#f43f5e" : "#94a3b8"
+          color: bal > 0 ? "#10b981" : bal < 0 ? "#f43f5e" : "#10b981"
         });
       });
     }
@@ -173,13 +150,25 @@ export function NettingCanvas({
     return {
       nodes: computedNodes,
       creditors: computedNodes.filter(n => n.isCreditor),
-      debtors: computedNodes.filter(n => n.isDebtor)
+      debtors: computedNodes.filter(n => n.isDebtor),
+      hasActiveDebts: hasDebts,
+      totalActiveDebt: activeDebtSum
     };
   }, [effectiveMembers]);
 
+  const [nettingState, setNettingState] = useState<"chaotic" | "calculating" | "simplified">(() => {
+    return hasActiveDebts ? "chaotic" : "simplified";
+  });
+
+  useEffect(() => {
+    if (!hasActiveDebts) {
+      setNettingState("simplified");
+    }
+  }, [hasActiveDebts]);
+
   // 3. Compute vector edges for simplified direct settlement (Greedy multi-creditor matching)
   const simplifiedEdges: DirectedEdge[] = useMemo(() => {
-    if (nodes.length < 2) return [];
+    if (!hasActiveDebts || nodes.length < 2) return [];
     const edges: DirectedEdge[] = [];
     const n = nodes.length;
     const R = n <= 4 ? 24 : n <= 8 ? 20 : 17;
@@ -187,10 +176,6 @@ export function NettingCanvas({
     // Build mutable debt pools to resolve multilateral settlement
     const credPool = creditors.map(c => ({ node: c, remaining: Math.max(0, c.balance) }));
     const debtPool = debtors.map(d => ({ node: d, remaining: Math.abs(d.balance) }));
-
-    if (credPool.length === 0 && nodes.length > 0) {
-      credPool.push({ node: nodes[0], remaining: 30000 });
-    }
 
     let cIdx = 0;
     let dIdx = 0;
@@ -245,20 +230,21 @@ export function NettingCanvas({
     }
 
     return edges;
-  }, [nodes, creditors, debtors]);
+  }, [nodes, creditors, debtors, hasActiveDebts]);
 
   // 4. Compute chaotic edges for un-netted pre-settlement state
   const chaoticEdges = useMemo(() => {
-    if (nodes.length < 2) return [];
+    if (!hasActiveDebts || nodes.length < 2) return [];
     const edges: { path: string; id: string }[] = [];
     const n = nodes.length;
     const R = n <= 4 ? 24 : n <= 8 ? 20 : 17;
 
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = 0; j < nodes.length; j++) {
+    const activeNodes = nodes.filter(nd => nd.isDebtor || nd.isCreditor);
+    for (let i = 0; i < activeNodes.length; i++) {
+      for (let j = 0; j < activeNodes.length; j++) {
         if (i !== j && (i + j) % 2 === 1) {
-          const a = nodes[i];
-          const b = nodes[j];
+          const a = activeNodes[i];
+          const b = activeNodes[j];
           const dx = b.x - a.x;
           const dy = b.y - a.y;
           const dist = Math.hypot(dx, dy);
@@ -282,18 +268,18 @@ export function NettingCanvas({
         }
       }
     }
-    // For 8 users, cap at 12 visible animated lines so it doesn't become visual sludge
     return edges.slice(0, Math.min(14, edges.length));
-  }, [nodes]);
+  }, [nodes, hasActiveDebts]);
 
   const runSimplification = () => {
+    if (!hasActiveDebts) return;
     setNettingState("calculating");
     sounds.playClick();
     setTimeout(() => {
       setNettingState("simplified");
       sounds.playSuccessChime();
       fireSettlementConfetti();
-      const clearedAmount = tabId === "lisbon-24" ? "$900.00 (75%)" : `${formatCurrency(Math.round(grossVolume * 0.75))} (75%)`;
+      const clearedAmount = `${formatCurrency(Math.round(totalActiveDebt * 0.75))} (75%)`;
       toast.success("Tangle Graph Optimized!", {
         description: `Cleared ${clearedAmount} in redundant transfers via Monad Netting.`
       });
@@ -374,7 +360,11 @@ export function NettingCanvas({
           </div>
         </div>
         
-        {nettingState === "simplified" ? (
+        {!hasActiveDebts ? (
+          <span className="bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 shadow-sm">
+            <CheckCircle2 className="w-3.5 h-3.5" /> All Debts Settled
+          </span>
+        ) : nettingState === "simplified" ? (
           <span className="bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 shadow-sm">
             <CheckCircle2 className="w-3.5 h-3.5" /> 75% Volume Cleared
           </span>
@@ -385,16 +375,34 @@ export function NettingCanvas({
         )}
       </div>
 
-      {/* Sub-header banner: Explaining that Creditors are determined by who paid */}
-      <div className="px-5 py-2.5 bg-slate-100/70 dark:bg-white/5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between text-[11px] text-slate-600 dark:text-white/60">
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-emerald-500" />
-          <span>Creditors: <strong className="text-slate-900 dark:text-white">{creditorNames}</strong> (Covered expenses)</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-rose-500" />
-          <span>Debtors pay creditors directly</span>
-        </div>
+      {/* Sub-header banner */}
+      <div className={`px-5 py-2.5 border-b flex items-center justify-between text-[11px] ${
+        !hasActiveDebts 
+          ? "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+          : "bg-slate-100/70 dark:bg-white/5 border-slate-100 dark:border-white/5 text-slate-600 dark:text-white/60"
+      }`}>
+        {!hasActiveDebts ? (
+          <>
+            <div className="flex items-center gap-1.5 font-medium">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Ledger in equilibrium: Zero active debts across group roster.</span>
+            </div>
+            <div className="flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400">
+              <span>Monad Finality • Balanced</span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>Creditors: <strong className="text-slate-900 dark:text-white">{creditorNames}</strong> (Covered expenses)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-rose-500" />
+              <span>Debtors pay creditors directly</span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Unified Mathematical SVG Canvas */}
@@ -448,8 +456,22 @@ export function NettingCanvas({
             <line x1="405" y1="0" x2="405" y2="320" />
           </g>
 
+          {/* STATE 0: FULLY SETTLED LEDGER (Equilibrium) */}
+          {!hasActiveDebts && (
+            <g transform="translate(270, 160)">
+              <circle r="50" fill="none" stroke="#10b981" strokeWidth="1.5" opacity="0.3">
+                <animate attributeName="r" values="35;60;35" dur="3s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.4;0.05;0.4" dur="3s" repeatCount="indefinite" />
+              </circle>
+              <rect x="-120" y="-14" width="240" height="28" rx="14" fill="#022c22" stroke="#10b981" strokeWidth="1.5" />
+              <text x="0" y="4.5" textAnchor="middle" fill="#6ee7b7" fontSize="10.5" fontWeight="bold" fontFamily="sans-serif">
+                ✓ Ledger in Equilibrium • 0 Active Debts
+              </text>
+            </g>
+          )}
+
           {/* STATE 1: CHAOTIC EDGES (Mutual Crisscrossing Debts) */}
-          {nettingState === "chaotic" && (
+          {hasActiveDebts && nettingState === "chaotic" && (
             <g opacity="0.6">
               {chaoticEdges.map((edge, idx) => (
                 <motion.path
@@ -468,14 +490,14 @@ export function NettingCanvas({
               <g transform="translate(270, 160)">
                 <rect x="-95" y="-14" width="190" height="28" rx="14" fill="#1c1917" stroke="#f43f5e" strokeWidth="1.5" />
                 <text x="0" y="4" textAnchor="middle" fill="#fda4af" fontSize="10" fontWeight="bold" fontFamily="sans-serif">
-                  {unNettedCount} Un-Netted Transfers ({formatCurrency(grossVolume)})
+                  {unNettedCount} Un-Netted Transfers ({formatCurrency(totalActiveDebt)})
                 </text>
               </g>
             </g>
           )}
 
           {/* STATE 2: CALCULATING (Monad Consensus Wave) */}
-          {nettingState === "calculating" && (
+          {hasActiveDebts && nettingState === "calculating" && (
             <g transform="translate(270, 155)">
               <circle r="60" fill="none" stroke="#6366f1" strokeWidth="2" opacity="0.3">
                 <animate attributeName="r" values="20;75" dur="1.2s" repeatCount="indefinite" />
@@ -493,7 +515,7 @@ export function NettingCanvas({
           )}
 
           {/* STATE 3: SIMPLIFIED EDGES (Clean Directed Settlement Arrows) */}
-          {nettingState === "simplified" && (
+          {hasActiveDebts && nettingState === "simplified" && (
             <g>
               {simplifiedEdges.map((edge, idx) => (
                 <g key={`${edge.from.id}->${edge.to.id}`}>
@@ -589,8 +611,8 @@ export function NettingCanvas({
                 {/* Node Background Circle */}
                 <circle
                   r={nodeRadius}
-                  fill={isTargetCreditor ? "#064e3b" : node.isDebtor ? "#4c0519" : "#1e293b"}
-                  stroke={isTargetCreditor ? "#10b981" : node.isDebtor ? "#f43f5e" : "#64748b"}
+                  fill={node.isSettled ? "#064e3b" : isTargetCreditor ? "#064e3b" : node.isDebtor ? "#4c0519" : "#1e293b"}
+                  stroke={node.isSettled ? "#10b981" : isTargetCreditor ? "#10b981" : node.isDebtor ? "#f43f5e" : "#64748b"}
                   strokeWidth="2.5"
                   filter="drop-shadow(0 4px 8px rgba(0,0,0,0.5))"
                 />
@@ -608,15 +630,22 @@ export function NettingCanvas({
                   {node.initial}
                 </text>
 
-                {/* Role Pill Above Creditor */}
-                {isTargetCreditor && (
+                {/* Role Pill Above Node */}
+                {isTargetCreditor && !node.isSettled ? (
                   <g transform={`translate(0, -${nodeRadius + 11})`}>
                     <rect x="-30" y="-7" width="60" height="14" rx="7" fill="#047857" stroke="#34d399" strokeWidth="1" />
                     <text x="0" y="3" textAnchor="middle" fill="#ecfdf5" fontSize="7.5" fontWeight="bold" fontFamily="sans-serif">
                       CREDITOR
                     </text>
                   </g>
-                )}
+                ) : node.isSettled ? (
+                  <g transform={`translate(0, -${nodeRadius + 11})`}>
+                    <rect x="-26" y="-6.5" width="52" height="13" rx="6.5" fill="#065f46" stroke="#34d399" strokeWidth="1" />
+                    <text x="0" y="2.5" textAnchor="middle" fill="#a7f3d0" fontSize="7" fontWeight="bold" fontFamily="sans-serif">
+                      SETTLED
+                    </text>
+                  </g>
+                ) : null}
 
                 {/* Name Label Below Node */}
                 <text
@@ -636,12 +665,12 @@ export function NettingCanvas({
                   x="0"
                   y={nodeRadius + (nodes.length <= 4 ? 25 : 22)}
                   textAnchor="middle"
-                  fill={isTargetCreditor ? "#34d399" : node.isDebtor ? "#fb7185" : "#94a3b8"}
+                  fill={node.isSettled ? "#34d399" : isTargetCreditor ? "#34d399" : node.isDebtor ? "#fb7185" : "#94a3b8"}
                   fontSize={nodes.length <= 4 ? "9.5" : "8.5"}
                   fontWeight="bold"
                   fontFamily="sans-serif"
                 >
-                  {node.balance > 0 ? `+${formatCurrency(node.balance)}` : formatCurrency(node.balance)}
+                  {node.isSettled ? "✓ Settled ($0.00)" : node.balance > 0 ? `+${formatCurrency(node.balance)}` : formatCurrency(node.balance)}
                 </text>
               </g>
             );
@@ -653,21 +682,41 @@ export function NettingCanvas({
       <div className="p-5 sm:p-6 bg-slate-50 dark:bg-white/5 border-t border-slate-100 dark:border-white/10 space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="p-3.5 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10">
-            <p className="text-xs text-slate-500 dark:text-white/50 mb-1 font-medium">Un-Netted Gross Debt</p>
-            <p className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white line-through decoration-rose-500 decoration-2 tabular-nums">
-              {formatCurrency(grossVolume)}
+            <p className="text-xs text-slate-500 dark:text-white/50 mb-1 font-medium">
+              {hasActiveDebts ? "Un-Netted Gross Debt" : "Outstanding Debt"}
+            </p>
+            <p className={`text-lg sm:text-xl font-bold tabular-nums ${
+              hasActiveDebts 
+                ? "text-slate-900 dark:text-white line-through decoration-rose-500 decoration-2" 
+                : "text-emerald-600 dark:text-emerald-400"
+            }`}>
+              {formatCurrency(totalActiveDebt)}
             </p>
           </div>
           <div className="p-3.5 rounded-2xl bg-emerald-500/5 border border-emerald-500/20">
-            <p className="text-xs text-emerald-600 dark:text-emerald-400 mb-1 font-medium">Netted Capital Required</p>
+            <p className="text-xs text-emerald-600 dark:text-emerald-400 mb-1 font-medium">
+              {hasActiveDebts ? "Netted Capital Required" : "Ledger Status"}
+            </p>
             <p className="text-lg sm:text-xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
-              {formatCurrency(Math.round(grossVolume * 0.25))}
+              {hasActiveDebts ? formatCurrency(Math.round(totalActiveDebt * 0.25)) : "100% Balanced"}
             </p>
           </div>
         </div>
 
         <div>
-          {nettingState === "chaotic" ? (
+          {!hasActiveDebts ? (
+            <div className="space-y-3">
+              <div className="w-full py-3.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 rounded-2xl font-bold text-sm flex justify-center items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-500" /> All Debts Settled — Zero Outstanding Debt
+              </div>
+              <Link
+                href={`/tab/${tabId}/expense/new`}
+                className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-white/90 text-white dark:text-black rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer"
+              >
+                <PlusCircle className="w-4 h-4" /> Add New Expense to Form Graph
+              </Link>
+            </div>
+          ) : nettingState === "chaotic" ? (
             <button 
               onClick={runSimplification} 
               className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 cursor-pointer"

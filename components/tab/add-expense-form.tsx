@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
 import { TransactionOverlay, TransactionState } from "../ui/transaction-overlay";
 import Image from "next/image";
+import { PimlicoLogo } from "../ui/partner-logo";
 import { Check, ChevronDown, Sparkles, Camera, Mic, Zap, Loader2, Upload, FileText, SplitSquareHorizontal, AlertCircle } from "lucide-react";
 
 import { useUserProfile, saveStoredExpense } from "../../lib/user";
@@ -500,10 +501,10 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
             Log Expense
           </Button>
           
-          <div className="mt-4 flex items-center justify-center gap-2 text-slate-400 dark:text-white/30 text-[11px] font-medium">
-            <span>Zero-fee sync via</span>
-            <div className="opacity-70 dark:opacity-50 grayscale hover:grayscale-0 hover:opacity-100 transition-all">
-              <Image src="/logos/pimlico.svg" alt="Pimlico" width={50} height={16} />
+          <div className="mt-4 flex items-center justify-center gap-2 text-slate-500 dark:text-white/50 text-xs font-medium">
+            <span>Zero-fee sponsored sync via</span>
+            <div className="opacity-90 hover:opacity-100 transition-all text-slate-800 dark:text-white">
+              <PimlicoLogo className="h-4 w-auto" />
             </div>
           </div>
         </div>

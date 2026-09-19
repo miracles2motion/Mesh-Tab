@@ -86,7 +86,6 @@ function OnboardingContent() {
     if (isFresh) {
       setWorkspaceMode("blank");
       if (typeof window !== "undefined") {
-        localStorage.setItem("meshTab_tabs", JSON.stringify([]));
         window.dispatchEvent(new Event("meshTab-tabs-update"));
       }
     }

@@ -18,7 +18,7 @@ export const LANDING_CONTENT = {
       { name: "Monad", src: "/logos/monad.svg" },
       { name: "Dynamic", src: "/logos/dynamic.svg" },
       { name: "Pimlico", src: "/logos/pimlico.svg" },
-      { name: "Envio", src: "/logos/envio.png" },
+      { name: "Envio", src: "/logos/envio.svg" },
       { name: "Agora", src: "/logos/agora.svg" },
       { name: "Alchemy", src: "/logos/alchemy.svg" },
       { name: "Mera", src: "/logos/mera.svg" }

@@ -19,7 +19,10 @@ import {
   VolumeX, 
   RotateCcw, 
   Plus, 
-  Play 
+  Play,
+  Sun,
+  Moon,
+  Laptop
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { ThemeToggle } from "../../components/theme-toggle";
@@ -57,6 +60,45 @@ export default function SettingsPage() {
   const [buddyNameInput, setBuddyNameInput] = useState(buddySettings.name);
   const [faucetClaimStatus, setFaucetClaimStatus] = useState<string | null>(null);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [themeMode, setThemeMode] = useState<"light" | "dark" | "system">("system");
+
+  useEffect(() => {
+    const syncTheme = () => {
+      const saved = (localStorage.getItem("theme") as "light" | "dark" | "system") || "system";
+      setThemeMode(saved);
+    };
+    syncTheme();
+    window.addEventListener("theme-change", syncTheme);
+    window.addEventListener("storage", syncTheme);
+    return () => {
+      window.removeEventListener("theme-change", syncTheme);
+      window.removeEventListener("storage", syncTheme);
+    };
+  }, []);
+
+  const handleSelectTheme = (mode: "light" | "dark" | "system") => {
+    setThemeMode(mode);
+    localStorage.setItem("theme", mode);
+    
+    if (mode === "dark") {
+      document.documentElement.classList.add("dark");
+    } else if (mode === "light") {
+      document.documentElement.classList.remove("dark");
+    } else {
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      if (prefersDark) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    }
+    
+    sounds.playClick();
+    window.dispatchEvent(new Event("theme-change"));
+    toast.success("Theme Updated", {
+      description: mode === "system" ? "Set to Automatic System Mode (reacts to device OS)." : mode === "dark" ? "Set to Sleek Dark Mode." : "Set to Clean Apple White Light Mode."
+    });
+  };
 
   useEffect(() => {
     setDisplayName(profile.name);
@@ -161,37 +203,39 @@ export default function SettingsPage() {
       <main className="px-6 md:px-12 max-w-4xl mx-auto w-full py-8 grid grid-cols-1 md:grid-cols-4 gap-8">
         
         {/* Sidebar Nav */}
-        <div className="space-y-2 md:col-span-1">
-          <button 
-            onClick={() => setActiveTab("profile")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-sm font-semibold text-left ${
-              activeTab === "profile" 
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20" 
-                : "text-slate-600 dark:text-white/60 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
-            }`}
-          >
-            <User className="w-4 h-4 shrink-0" /> Profile & Theme
-          </button>
-          <button 
-            onClick={() => setActiveTab("copilot")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-sm font-semibold text-left ${
-              activeTab === "copilot" 
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20" 
-                : "text-slate-600 dark:text-white/60 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
-            }`}
-          >
-            <Bot className="w-4 h-4 shrink-0" /> Tab Co-Pilot & Faucet
-          </button>
-          <button 
-            onClick={() => setActiveTab("advanced")}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-sm font-semibold text-left ${
-              activeTab === "advanced" 
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20" 
-                : "text-slate-600 dark:text-white/60 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
-            }`}
-          >
-            <Key className="w-4 h-4 shrink-0" /> Web3 Security
-          </button>
+        <div className="md:col-span-1">
+          <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-2.5 shadow-sm space-y-1.5 h-fit">
+            <button 
+              onClick={() => setActiveTab("profile")}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-sm font-semibold text-left ${
+                activeTab === "profile" 
+                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20" 
+                  : "text-slate-600 dark:text-white/60 hover:bg-slate-50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              <User className="w-4 h-4 shrink-0" /> Profile & Theme
+            </button>
+            <button 
+              onClick={() => setActiveTab("copilot")}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-sm font-semibold text-left ${
+                activeTab === "copilot" 
+                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20" 
+                  : "text-slate-600 dark:text-white/60 hover:bg-slate-50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              <Bot className="w-4 h-4 shrink-0" /> Tab Co-Pilot & Faucet
+            </button>
+            <button 
+              onClick={() => setActiveTab("advanced")}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-sm font-semibold text-left ${
+                activeTab === "advanced" 
+                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20" 
+                  : "text-slate-600 dark:text-white/60 hover:bg-slate-50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white"
+              }`}
+            >
+              <Key className="w-4 h-4 shrink-0" /> Web3 Security
+            </button>
+          </div>
         </div>
 
         {/* Content Area */}
@@ -252,17 +296,70 @@ export default function SettingsPage() {
 
               {/* Appearance / Theme preference */}
               <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 shadow-sm">
-                <h2 className="text-lg font-bold mb-2 flex items-center gap-2 text-slate-900 dark:text-white">
-                  <Sparkles className="w-5 h-5 text-slate-400 dark:text-white/50" /> Interface Theme
-                </h2>
-                <p className="text-sm text-slate-500 dark:text-white/60 mb-6">MeshTab supports seamless switching between Clean High-Contrast Light and Sleek Dark.</p>
-                
-                <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-black/30 rounded-2xl border border-slate-200 dark:border-white/5">
-                  <div>
-                    <h3 className="font-semibold text-slate-900 dark:text-white text-sm">Theme Mode</h3>
-                    <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5">Toggle between Day (Light) and Night (Dark) mode</p>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-slate-900 dark:text-white">Interface Theme</h2>
+                      <p className="text-xs text-slate-500 dark:text-white/50">MeshTab dynamically adapts between Clean Apple White and Sleek Dark.</p>
+                    </div>
                   </div>
-                  <ThemeToggle />
+                </div>
+
+                <div className="p-4 bg-slate-50 dark:bg-black/30 rounded-2xl border border-slate-200 dark:border-white/5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-slate-700 dark:text-white/80">Active Mode</span>
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-200/60 dark:bg-white/10 text-slate-700 dark:text-white/70">
+                      {themeMode === "system" ? "System Auto" : themeMode === "dark" ? "Sleek Dark" : "Apple White Light"}
+                    </span>
+                  </div>
+
+                  {/* 3-way Segmented Control */}
+                  <div className="grid grid-cols-3 gap-2 p-1.5 bg-slate-200/60 dark:bg-black/40 rounded-2xl border border-slate-200 dark:border-white/5">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectTheme("light")}
+                      className={`flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-xs transition-all ${
+                        themeMode === "light"
+                          ? "bg-white text-slate-900 shadow-sm"
+                          : "text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
+                      }`}
+                    >
+                      <Sun className="w-4 h-4 text-amber-500" />
+                      <span>Light</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSelectTheme("dark")}
+                      className={`flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-xs transition-all ${
+                        themeMode === "dark"
+                          ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-sm"
+                          : "text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
+                      }`}
+                    >
+                      <Moon className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
+                      <span>Dark</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSelectTheme("system")}
+                      className={`flex items-center justify-center gap-2 py-2.5 rounded-xl font-semibold text-xs transition-all ${
+                        themeMode === "system"
+                          ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-sm"
+                          : "text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
+                      }`}
+                    >
+                      <Laptop className="w-4 h-4 text-emerald-500" />
+                      <span>Auto (System)</span>
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-white/40">
+                    Auto mode monitors your device&apos;s OS settings in real time and automatically transitions between Apple White and Sleek Dark.
+                  </p>
                 </div>
               </div>
 
@@ -488,7 +585,7 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="p-6 bg-slate-50 dark:bg-black/30 rounded-2xl border border-slate-200 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-6">
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <div className="text-xs font-medium text-slate-500 dark:text-white/50 mb-1 uppercase tracking-wider">
                       Available Sandbox Balance
                     </div>
@@ -504,9 +601,9 @@ export default function SettingsPage() {
                   <Button 
                     onClick={handleClaimFaucet}
                     variant="primary"
-                    className="gap-2 bg-emerald-600 hover:bg-emerald-500 text-white w-full sm:w-auto h-12 px-6 shadow-md shadow-emerald-600/20"
+                    className="shrink-0 whitespace-nowrap gap-2 bg-emerald-600 hover:bg-emerald-500 text-white w-full sm:w-auto h-12 px-6 shadow-md shadow-emerald-600/20 text-sm font-bold"
                   >
-                    <Plus className="w-4 h-4" /> Claim +$500.00 AUSD
+                    <Plus className="w-4 h-4" /> Claim $500.00 AUSD
                   </Button>
                 </div>
               </div>
@@ -535,13 +632,13 @@ export default function SettingsPage() {
                     }}
                     className={`p-5 rounded-2xl border text-left transition-all ${
                       workspaceMode === "sample"
-                        ? "bg-purple-50/80 dark:bg-purple-500/10 border-purple-500 shadow-md shadow-purple-500/10"
+                        ? "bg-indigo-50/80 dark:bg-indigo-500/10 border-indigo-500 shadow-md shadow-indigo-500/10 text-indigo-900 dark:text-indigo-300"
                         : "bg-slate-50 dark:bg-black/20 border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10"
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-2xl">🏖️</span>
-                      {workspaceMode === "sample" && <Check className="w-4 h-4 text-purple-600 dark:text-purple-400" />}
+                      {workspaceMode === "sample" && <Check className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />}
                     </div>
                     <div className="font-bold text-slate-900 dark:text-white text-sm">Sample Trip Mode</div>
                     <p className="text-xs text-slate-500 dark:text-white/50 mt-1 leading-relaxed">
@@ -560,17 +657,17 @@ export default function SettingsPage() {
                     }}
                     className={`p-5 rounded-2xl border text-left transition-all ${
                       workspaceMode === "blank"
-                        ? "bg-purple-50/80 dark:bg-purple-500/10 border-purple-500 shadow-md shadow-purple-500/10"
+                        ? "bg-emerald-50/80 dark:bg-emerald-500/10 border-emerald-500 shadow-md shadow-emerald-500/10 text-emerald-900 dark:text-emerald-300"
                         : "bg-slate-50 dark:bg-black/20 border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10"
                     }`}
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-2xl">✨</span>
-                      {workspaceMode === "blank" && <Check className="w-4 h-4 text-purple-600 dark:text-purple-400" />}
+                      {workspaceMode === "blank" && <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
                     </div>
                     <div className="font-bold text-slate-900 dark:text-white text-sm">Clean Slate Mode</div>
                     <p className="text-xs text-slate-500 dark:text-white/50 mt-1 leading-relaxed">
-                      Clears pre-loaded tabs so judges can test creating fresh custom tabs, adding expenses, and inviting members.
+                      Clears pre-loaded tabs so you can test creating fresh custom tabs, adding expenses, and inviting members.
                     </p>
                   </button>
                 </div>
@@ -582,18 +679,26 @@ export default function SettingsPage() {
           {/* WEB3 ADVANCED SECURITY TAB */}
           {activeTab === "advanced" && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="bg-white dark:bg-gradient-to-br dark:from-indigo-500/10 dark:to-purple-500/5 border border-slate-200 dark:border-indigo-500/20 rounded-3xl p-6 md:p-8 shadow-sm">
-                <h2 className="text-lg font-bold mb-2 flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
-                  <Settings2 className="w-5 h-5" /> Web3 Native Architecture
-                </h2>
-                <p className="text-slate-600 dark:text-white/60 text-sm mb-6">MeshTab abstracts blockchain complexity away for standard users. If you&apos;re verifying contract logic, your Smart Account details on Monad are below.</p>
-                
-                <div className="space-y-6">
-                  {/* Wallet Address */}
+              <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 shadow-sm">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                    <Settings2 className="w-5 h-5" />
+                  </div>
                   <div>
-                    <label className="text-sm font-semibold text-slate-700 dark:text-white/80 mb-2 block">Smart Account Address (Monad)</label>
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">Web3 Native Architecture</h2>
+                    <p className="text-xs text-slate-500 dark:text-white/50">Monad testnet smart account credentials and biometric security</p>
+                  </div>
+                </div>
+                <p className="text-slate-600 dark:text-white/60 text-sm mb-6 mt-3 leading-relaxed">
+                  MeshTab abstracts blockchain complexity away for standard users. If you&apos;re verifying contract logic, your Smart Account details on Monad are below.
+                </p>
+                
+                <div className="space-y-4">
+                  {/* Wallet Address Card */}
+                  <div className="p-5 bg-slate-50 dark:bg-black/30 rounded-2xl border border-slate-200 dark:border-white/5">
+                    <label className="text-sm font-semibold text-slate-900 dark:text-white mb-2 block">Smart Account Address (Monad)</label>
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-slate-50 dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-indigo-600 dark:text-indigo-300 text-sm font-mono truncate select-all">
+                      <div className="flex-1 bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-indigo-600 dark:text-indigo-300 text-sm font-mono truncate select-all shadow-xs">
                         {fullAddress}
                       </div>
                       <Button onClick={copyAddress} variant="secondary" className="h-11 px-4">
@@ -603,20 +708,22 @@ export default function SettingsPage() {
                     <p className="text-xs text-slate-500 dark:text-white/40 mt-2 font-medium">All ledger transactions and multilateral netting have zero fees and are 100% sponsored by the platform.</p>
                   </div>
 
-                  {/* Security Architecture */}
-                  <div className="pt-6 border-t border-slate-200 dark:border-white/10">
-                    <h3 className="text-sm font-bold text-slate-800 dark:text-white/80 mb-2">Biometric Enclave Security</h3>
-                    <p className="text-xs text-slate-500 dark:text-white/40 mb-3 leading-relaxed">Your account is secured by your device&apos;s biometric Secure Enclave. Credentials never leave physical hardware.</p>
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold border border-emerald-500/20">
+                  {/* Security Architecture Card */}
+                  <div className="p-5 bg-slate-50 dark:bg-black/30 rounded-2xl border border-slate-200 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Biometric Enclave Security</h3>
+                      <p className="text-xs text-slate-500 dark:text-white/50 leading-relaxed max-w-md">Your account is secured by your device&apos;s biometric Secure Enclave. Passkey credentials never leave physical hardware.</p>
+                    </div>
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold border border-emerald-500/20 shrink-0">
                       Hardware Secured
                     </div>
                   </div>
 
-                  {/* Dashboard Toggle */}
-                  <div className="pt-6 border-t border-slate-200 dark:border-white/10 flex items-center justify-between">
+                  {/* Dashboard Toggle Card */}
+                  <div className="p-5 bg-slate-50 dark:bg-black/30 rounded-2xl border border-slate-200 dark:border-white/5 flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-bold text-slate-800 dark:text-white/80">Developer Mode</h3>
-                      <p className="text-xs text-slate-500 dark:text-white/50 mt-1">Show smart account address badge in the dashboard header.</p>
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white">Developer Mode</h3>
+                      <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5">Show smart account address badge in the dashboard header.</p>
                     </div>
                     <button 
                       onClick={toggleAddress}
