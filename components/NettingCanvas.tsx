@@ -8,6 +8,7 @@ import { sounds } from "../lib/sounds";
 import { fireSettlementConfetti } from "../lib/confetti";
 import { formatCurrency } from "../lib/utils";
 import { getStoredUser, DEFAULT_USER_NAME } from "../lib/user";
+import { addNotification } from "../lib/notifications";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -283,6 +284,19 @@ export function NettingCanvas({
       toast.success("Tangle Graph Optimized!", {
         description: `Cleared ${clearedAmount} in redundant transfers via Monad Netting.`
       });
+
+      try {
+        addNotification({
+          type: "netting",
+          title: "Tangle Netting Optimized",
+          desc: `Netting algorithm simplified debts in ${tabId === "lisbon-24" ? "Lisbon Weekend" : "Group Tab"}. Cleared ${clearedAmount} in redundant transfers.`,
+          actor: "Mesh Engine",
+          tabId,
+          tabName: tabId === "lisbon-24" ? "Lisbon Weekend" : "Group Tab",
+          amount: Math.round(totalActiveDebt * 0.75),
+          link: `/tab/${tabId}`
+        });
+      } catch (e) {}
     }, 1800);
   };
 

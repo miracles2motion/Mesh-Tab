@@ -12,6 +12,7 @@ import { DEFAULT_USER_NAME, useSettledPayoutBalance } from "../../lib/user";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
 import { fireSettlementConfetti } from "../../lib/confetti";
+import { addNotification } from "../../lib/notifications";
 
 interface CashOutDrawerProps {
   isOpen: boolean;
@@ -41,6 +42,18 @@ export function CashOutDrawer({
     toast.success("Cash Out Initiated!", {
       description: `Sent ${formatCurrency(availableAmount)} via ${method === "card" ? "Visa Direct (Instant)" : "ACH Bank Transfer"}.`
     });
+
+    try {
+      addNotification({
+        type: "cashout",
+        title: "Cash Out to Bank",
+        desc: `Transferred ${formatCurrency(availableAmount)} via ${method === "card" ? "Visa Direct" : "ACH Bank Transfer"} to your bank account.`,
+        actor: "You",
+        amount: availableAmount,
+        link: "/home"
+      });
+    } catch (e) {}
+
     setIsProcessing(false);
     setIsSuccess(true);
   };

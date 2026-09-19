@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { addNotification, resetNotificationsToMode } from "./notifications";
 
 export interface UserProfile {
   name: string;
@@ -107,6 +108,7 @@ export interface TabSummary {
   balance: number;
   memberCount: number;
   lastActivity: string;
+  currency?: string;
 }
 
 export const DEFAULT_TABS: TabSummary[] = [
@@ -125,6 +127,7 @@ export function getWorkspaceMode(): WorkspaceMode {
 export function setWorkspaceMode(mode: WorkspaceMode) {
   if (typeof window === "undefined") return;
   localStorage.setItem("meshTab_workspaceMode", mode);
+  resetNotificationsToMode(mode);
   
   if (mode === "sample") {
     // When switching to sample trip mode, ensure the Lisbon benchmark tabs exist
@@ -175,8 +178,9 @@ export function resetLisbonDemo() {
     localStorage.setItem("meshTab_tabs", JSON.stringify(DEFAULT_TABS));
   }
 
-  // 4. Force mode to sample
+  // 4. Force mode to sample and reset notifications to sample
   localStorage.setItem("meshTab_workspaceMode", "sample");
+  resetNotificationsToMode("sample");
 
   window.dispatchEvent(new Event("meshTab-workspace-update"));
   window.dispatchEvent(new Event("meshTab-tabs-update"));
@@ -241,6 +245,18 @@ export function saveNewTab(tab: TabSummary) {
   }
   localStorage.setItem("meshTab_tabs", JSON.stringify(updated));
   window.dispatchEvent(new Event("meshTab-tabs-update"));
+
+  try {
+    addNotification({
+      type: "tab_created",
+      title: "Group Tab Created",
+      desc: `You created "${tab.name}". Ready to share group costs!`,
+      actor: "You",
+      tabId: tab.id,
+      tabName: tab.name,
+      link: `/tab/${tab.id}`
+    });
+  } catch (e) {}
 }
 
 export function useStoredTabs() {
@@ -472,6 +488,26 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense) {
       }
     } catch (e) {}
   }
+
+  // Live Notification Dispatch
+  try {
+    const tabs = getStoredTabs();
+    const tabName = tabId === "lisbon-24" ? "Lisbon Weekend" : tabId === "house-groceries" ? "House Groceries" : (tabs.find(t => t.id === tabId)?.name || "Group Tab");
+    const isSettle = expense.id.startsWith("settle-");
+
+    addNotification({
+      type: isSettle ? "settlement" : "expense",
+      title: isSettle ? "Debt Settled" : "New Expense Added",
+      desc: isSettle 
+        ? `${expense.payer} settled $${(expense.amount / 100).toFixed(2)} on ${tabName} via Agora AUSD.`
+        : `${expense.payer} added '${expense.desc}' for $${(expense.amount / 100).toFixed(2)} in ${tabName}.`,
+      actor: expense.payer,
+      tabId,
+      tabName,
+      amount: expense.amount,
+      link: `/tab/${tabId}`
+    });
+  } catch (e) {}
 
   window.dispatchEvent(new Event("meshTab-expenses-update"));
 }

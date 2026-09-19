@@ -8,6 +8,7 @@ import { TransactionOverlay, TransactionState } from "../../components/ui/transa
 import { formatCurrency } from "../../lib/utils";
 import { ThemeToggle } from "../../components/theme-toggle";
 import { useUserProfile, useStoredTabs, useVirtualBalance, useWorkspaceMode, useSettledPayoutBalance } from "../../lib/user";
+import { useNotifications } from "../../lib/notifications";
 import { CashOutDrawer } from "../../components/tab/cash-out-drawer";
 import { FaucetModal } from "../../components/tab/faucet-modal";
 import { PitchModal } from "../../components/home/pitch-modal";
@@ -23,6 +24,7 @@ export default function GlobalHub() {
   const { balance: virtualBalance } = useVirtualBalance();
   const { mode: workspaceMode, setMode: setWorkspaceMode, resetLisbonDemo } = useWorkspaceMode();
   const { settledBalance } = useSettledPayoutBalance();
+  const { unreadCount } = useNotifications();
 
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showCashOutModal, setShowCashOutModal] = useState(false);
@@ -151,10 +153,14 @@ export default function GlobalHub() {
           <Link 
             href="/notifications" 
             className="relative w-10 h-10 md:w-12 md:h-12 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shadow-sm text-slate-700 dark:text-white/80"
-            title="Notifications"
+            title={`Notifications ${unreadCount > 0 ? `(${unreadCount} unread)` : ""}`}
           >
             <Bell className="w-5 h-5" />
-            <div className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white dark:border-[#0a0a0a]" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[10px] font-extrabold rounded-full flex items-center justify-center border-2 border-white dark:border-[#0a0a0a] shadow-sm">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </Link>
           <Link 
             href="/settings" 
