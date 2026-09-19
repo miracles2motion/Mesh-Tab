@@ -57,6 +57,7 @@ interface ChatMessage {
   id: string;
   sender: "buddy" | "user";
   text: string;
+  spokenText?: string;
   actions?: { label: string; action: () => void }[];
 }
 
@@ -162,8 +163,8 @@ export function MeshBuddy() {
   }, [kbSearchQuery, selectedCategory, currentTabId, isDemoTab, isCustomTab, workspaceMode, tabDisplayName]);
 
   // Sound synthesis helper using high-fidelity natural neural voice engine
-  const speakText = (text: string) => {
-    speak(text, buddySettings.voice, {
+  const speakText = (text: string, customSpokenText?: string) => {
+    speak(customSpokenText || text, buddySettings.voice, {
       onStart: () => setIsSpeaking(true),
       onEnd: () => setIsSpeaking(false),
       onError: () => setIsSpeaking(false)
@@ -340,20 +341,29 @@ export function MeshBuddy() {
         ];
       }
 
+      const spokenWelcome = isDemoTab
+        ? `Hey ${profile.name || "there"}, ready to explore the Lisbon tab.`
+        : isCustomTab
+        ? `Hey ${profile.name || "there"}, ready to check ${tabDisplayName}.`
+        : workspaceMode === "blank"
+        ? `Hey ${profile.name || "there"}, ready to create your new tab.`
+        : `Hey ${profile.name || "there"}, ready to assist you.`;
+
       const welcome: ChatMessage = {
         id: `msg-welcome-${Date.now()}`,
         sender: "buddy",
         text: welcomeText,
-        actions: welcomeActions
+        actions: welcomeActions,
+        spokenText: spokenWelcome
       };
 
       setMessages((prev) => {
         if (prev.length === 0) {
-          speakText(welcome.text);
+          speakText(welcome.text, spokenWelcome);
           return [welcome];
         }
         if (contextChanged && prev[prev.length - 1]?.text !== welcomeText) {
-          speakText(welcome.text);
+          speakText(welcome.text, spokenWelcome);
           return [...prev, welcome];
         }
         return prev;
@@ -406,10 +416,11 @@ export function MeshBuddy() {
     const reply: ChatMessage = {
       id: `faucet-${Date.now()}`,
       sender: "buddy",
-      text: `Done! Credited +$500.00 in Virtual AUSD to your sandbox account. Current balance: ${formatCurrency(virtualBalance + 50000)}. You can use this to settle debts in the settlement drawer!`
+      text: `Done! Credited +$500.00 in Virtual AUSD to your sandbox account. Current balance: ${formatCurrency(virtualBalance + 50000)}. You can use this to settle debts in the settlement drawer!`,
+      spokenText: "Added 500 test dollars to your sandbox account."
     };
     setMessages((prev) => [...prev, reply]);
-    speakText(reply.text);
+    speakText(reply.text, "Added 500 test dollars to your sandbox account.");
   }
 
   function handleToggleWorkspace() {
@@ -422,21 +433,24 @@ export function MeshBuddy() {
     sounds.playClick();
     toast.info(nextMode === "blank" ? "Switched to Clean Slate" : "Restored Lisbon Demo Trip");
 
+    const modeSpeech = nextMode === "blank" ? "Switched to Clean Slate mode." : "Restored the Lisbon demo trip.";
     const reply: ChatMessage = {
       id: `mode-${Date.now()}`,
       sender: "buddy",
       text: nextMode === "blank"
         ? "Switched to Clean Slate! All sample tabs are hidden. You are now in the Main App fresh workspace to test creating custom groups from scratch."
-        : "Restored Sample Trip! The Lisbon '24 benchmark is back with full mock data and the netting graph."
+        : "Restored Sample Trip! The Lisbon '24 benchmark is back with full mock data and the netting graph.",
+      spokenText: modeSpeech
     };
     setMessages((prev) => [...prev, reply]);
-    speakText(reply.text);
+    speakText(reply.text, modeSpeech);
   }
 
   function handleAskQuestion(query: string) {
     const q = query.toLowerCase().trim();
     const userName = profile.name || "friend";
     let replyText = "";
+    let spokenPunchline: string | undefined = undefined;
     let actionItems: { label: string; action: () => void }[] | undefined = undefined;
 
     // Immediately append user message and trigger thinking animation
@@ -448,6 +462,7 @@ export function MeshBuddy() {
     if (
       /(tell me about (this|the) app|what is (this|the) app|what is meshtab|what is mesh tab|explain (this|the) app|explain meshtab|explain mesh tab|how does (this|the) app work|what does (this|the) app do|about (this|the) app|pitch me (this|the) app|app overview|what are we doing here|what is the purpose of (this|the) app|why meshtab|tell me about meshtab)/i.test(q)
     ) {
+      spokenPunchline = "MeshTab simplifies group expenses by netting out debts so you make fewer payments.";
       replyText =
         `**MeshTab** is a modern group expense tracker and instant debt-clearing app designed for group trips, housemates, and shared events! 🚀\n\n` +
         `Here is what makes MeshTab so simple and fast:\n\n` +
@@ -500,6 +515,10 @@ export function MeshBuddy() {
             ? `Smart debt netting is active and ready to collapse circular loops whenever members settle.`
             : `Only ${stats.expenses.length} expense logged so far. Add more shared expenses to form circular debt cycles.`);
 
+        spokenPunchline = userBal < 0
+          ? `Here is your live recap for ${tabDisplayName}. You have an outstanding debt to settle.`
+          : `Here is your live recap for ${tabDisplayName}. All balances and netting status are on screen.`;
+
         actionItems = [
           { label: "🔴 Who is in Debt?", action: () => handleAskQuestion("who is currently in debt and has not settled") },
           { label: "➕ Add Expense", action: () => router.push(`/tab/${currentTabId}/expense/new`) },
@@ -510,6 +529,8 @@ export function MeshBuddy() {
         const tabs = getStoredTabs();
         const totalTabs = tabs.length;
         const totalNetBalance = tabs.reduce((sum, t) => sum + (t.balance || 0), 0);
+
+        spokenPunchline = "Here is an overview of your active group tabs.";
 
         replyText =
           `Here is a recap of your **Main Hub**:\n\n` +
@@ -533,6 +554,7 @@ export function MeshBuddy() {
           { label: workspaceMode === "blank" ? "🏖️ Restore Lisbon Demo" : "🧹 Switch to Clean Slate", action: handleToggleWorkspace },
         ];
       } else if (pathname === "/demo") {
+        spokenPunchline = "You are in the demo sandbox selector.";
         replyText =
           `You are currently in the **Evaluation Sandbox**.\n\n` +
           `Here you can choose between two environments:\n` +
@@ -545,6 +567,7 @@ export function MeshBuddy() {
           { label: "🧹 Switch to Clean Slate", action: handleToggleWorkspace },
         ];
       } else if (pathname?.includes("/expense/new")) {
+        spokenPunchline = "You're on the Add Expense screen. You can snap a receipt or type costs manually.";
         replyText =
           `You are on the **Add Expense** screen for ${isCustomTab ? `"${tabDisplayName}"` : "the group tab"}.\n\n` +
           `You can log shared costs using three simple methods:\n` +
@@ -557,6 +580,7 @@ export function MeshBuddy() {
         ];
       } else if (pathname?.includes("/members")) {
         const stats = currentTabId ? getLiveTabStats(currentTabId, userName, tabDisplayName) : null;
+        spokenPunchline = "You're on the Group Members screen. Share the invite code to add friends.";
         replyText =
           `You are on the **Group Members & Invitations** screen.\n\n` +
           `• Current Roster (${stats ? stats.members.length : 4}): ${stats ? stats.members.map((m) => m.name).join(", ") : "Aisha, Kemi, Ben, " + userName}\n` +
@@ -567,6 +591,7 @@ export function MeshBuddy() {
           { label: "Back to Tab", action: () => router.push(currentTabId ? `/tab/${currentTabId}` : "/tab/lisbon-24") },
         ];
       } else if (pathname === "/settings") {
+        spokenPunchline = "Here are your account and security settings.";
         replyText =
           `You are on your **Settings & Account** screen.\n\n` +
           `Here you can:\n` +
@@ -580,6 +605,7 @@ export function MeshBuddy() {
           { label: "🚰 Claim Faucet (+$500)", action: handleClaimFaucet },
         ];
       } else if (pathname === "/error") {
+        spokenPunchline = "You are on the recovery screen. Your tabs are safe.";
         replyText =
           `You are on the **Safe Recovery Screen**.\n\n` +
           `An unexpected screen error was intercepted, but all your group tabs and account balances are safely preserved in your browser. You can reload the route or return to the hub safely.`;
@@ -589,6 +615,7 @@ export function MeshBuddy() {
           { label: "🎮 Open Demo Sandbox", action: () => router.push("/demo") },
         ];
       } else {
+        spokenPunchline = "I'm monitoring your group tabs and ready to assist.";
         replyText =
           `You are currently viewing MeshTab at **${pathname || "/home"}**.\n\n` +
           `I am monitoring your local ledger. You can ask me for a tab recap, who owes money, how debt netting works, or how to cash out to your bank!`;
@@ -605,6 +632,10 @@ export function MeshBuddy() {
     ) {
       if (currentTabId) {
         const stats = getLiveTabStats(currentTabId, userName, tabDisplayName);
+
+        spokenPunchline = stats.debtors.length > 0
+          ? "Here are the group members with pending balances."
+          : `All members in ${tabDisplayName} are fully settled up.`;
 
         replyText =
           `Here is the exact debt & settlement breakdown for **"${tabDisplayName}"**:\n\n` +
@@ -813,12 +844,14 @@ export function MeshBuddy() {
         ];
       }
     } else if ((q.includes("aisha") || q.includes("lisbon") || q.includes("villa")) && isCustomTab) {
+      spokenPunchline = "That is part of the Lisbon demo benchmark, separate from your custom tab.";
       replyText = `Aisha and the villa booking are part of the Lisbon '24 Demo benchmark. You are currently viewing your own custom group tab "${tabDisplayName}", which has its own independent members and expenses!`;
       actionItems = [
         { label: "➕ Add Expense to this Tab", action: () => router.push(`/tab/${currentTabId}/expense/new`) },
         { label: "Explore Lisbon Demo Trip", action: () => router.push("/tab/lisbon-24") }
       ];
     } else if (q.includes("netting") || q.includes("tangle")) {
+      spokenPunchline = "Netting eliminates circular debts across your group so nobody pays each other back and forth.";
       if (isDemoTab) {
         replyText = "Smart Netting simplifies group debts by finding circular payment loops (A owes B, B owes C, C owes A) and canceling them out. In this Lisbon trip, it cuts 12 crisscrossing international transfers down to 3 direct payments pointing to Aisha, clearing $900 (75% of transfer volume) without moving unnecessary money!";
         actionItems = [
@@ -837,17 +870,20 @@ export function MeshBuddy() {
         ];
       }
     } else if (q.includes("cash out") || q.includes("withdraw") || q.includes("bank") || q.includes("off-ramp") || q.includes("offramp")) {
+      spokenPunchline = "You can cash out your digital dollars directly to your debit card or bank account from your tab.";
       replyText = "When friends settle up and you are owed money, your balance turns green (+). You can tap 'Cash Out to Bank' on your balance card to transfer your Digital Dollars directly to your debit card (Visa Direct) or bank account in seconds!";
       actionItems = [
         { label: "🏦 Open Bank Settings", action: () => router.push("/settings") },
         { label: "Go to Hub", action: () => router.push("/home") },
       ];
     } else if (q.includes("receipt") || q.includes("camera") || q.includes("ocr") || q.includes("scan")) {
+      spokenPunchline = "Tap Smart Scan to photograph a receipt, and the line items will be extracted automatically.";
       replyText = "On the 'Add Expense' screen, tap 'Smart Scan' to snap a photo or upload a receipt. The smart scanner automatically extracts the merchant, line items, and total into an editable preview before you confirm!";
       actionItems = [
         { label: currentTabId ? `Open Add Expense (${tabDisplayName})` : "Go to Add Expense", action: () => router.push(currentTabId ? `/tab/${currentTabId}/expense/new` : "/tab/lisbon-24/expense/new") }
       ];
     } else if (q.includes("member") || q.includes("invite") || q.includes("share")) {
+      spokenPunchline = "Share the group QR code or link. Friends can claim seats with Face ID or Touch ID.";
       if (currentTabId) {
         replyText = `You can invite friends to join "${tabDisplayName}" by sharing the QR code or invitation link. Members join with Face ID or Touch ID in seconds without downloading an app or setting a password!`;
         actionItems = [
@@ -860,6 +896,7 @@ export function MeshBuddy() {
         ];
       }
     } else if (q.includes("fee") || q.includes("pimlico") || q.includes("gas")) {
+      spokenPunchline = "Routine group actions and settlements in MeshTab are sponsored with zero network fees.";
       replyText = "You never pay transaction fees in MeshTab! Routine group actions—logging expenses, creating tabs, and claiming seats—are 100% free and sponsored by the platform. You never have to pay transfer fees to split a bill with friends.";
       actionItems = [
         { label: "📚 Read Guides", action: () => setDrawerTab("kb") },
@@ -877,6 +914,7 @@ export function MeshBuddy() {
 
       if (kbMatches.length > 0 && kbMatches[0].score >= 18) {
         const top = kbMatches[0];
+        spokenPunchline = `Here is what our guide says about ${top.article.title}. Full details are on screen.`;
         replyText = `That's a great question, ${userName}! Here's how that works:\n\n${top.article.detailedContent}`;
         if (top.contextAdviceText) {
           replyText += `\n\n💡 Current Context: ${top.contextAdviceText}`;
@@ -914,6 +952,7 @@ export function MeshBuddy() {
           ? "Group Members screen"
           : "MeshTab";
 
+        spokenPunchline = "I've pulled up verified actions for you on screen.";
         replyText =
           `I want to make sure I only give you accurate, verified information, ${userName}! 💡\n\n` +
           `I don't have a direct answer for "${query.slice(0, 60)}" in our local ledger or technical guides. As your MeshTab financial co-pilot, I specialize strictly in your group tabs, live expense splits, debt netting, and settlements.\n\n` +
@@ -936,9 +975,9 @@ export function MeshBuddy() {
     // Deliver response with natural conversational timing and voice animation
     setTimeout(() => {
       setIsThinking(false);
-      const botMsg: ChatMessage = { id: `bot-${Date.now()}`, sender: "buddy", text: replyText, actions: actionItems };
+      const botMsg: ChatMessage = { id: `bot-${Date.now()}`, sender: "buddy", text: replyText, actions: actionItems, spokenText: spokenPunchline };
       setMessages((prev) => [...prev, botMsg]);
-      speakText(replyText);
+      speakText(replyText, spokenPunchline);
     }, 320);
   }
 

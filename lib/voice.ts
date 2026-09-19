@@ -1,10 +1,11 @@
-// MeshTab Living Voice Engine
+// MeshTab Living Voice Engine — Siri-Grade Conversational Prosody
 // Selects natural, high-fidelity neural voices across modern browsers (Chrome, Edge, Safari, Firefox)
-// Bypasses low-quality robotic synthesizers in favor of human-like natural voices.
+// Eliminates artificial pitch-shifting distortion (which causes synthetic crying/whimpering effects)
+// and ensures voice acts like modern conversational assistants (Siri, Alexa, ChatGPT Voice) rather than a screen reader.
 
 export type VoicePersona = "mute" | "deep-male" | "warm-female";
 
-// Preferred high-quality neural voices in order of fidelity
+// Preferred natural/neural voices in order of fidelity
 const FEMALE_PREFERRED = [
   "Microsoft Jenny Online (Natural)",
   "Microsoft Jenny",
@@ -110,6 +111,70 @@ export interface SpeakOptions {
   onError?: () => void;
 }
 
+/**
+ * Siri-Grade Conversational Speech Sanitizer
+ * Transforms screen-reading raw markdown, emojis, code blocks, and walls of text
+ * into a single, punchy conversational sentence with calm, confident cadence.
+ */
+export function formatSiriSpeech(rawText: string): string {
+  if (!rawText) return "";
+
+  let speech = rawText;
+
+  // 1. Remove markdown formatting (bold, italics, headers, blockquotes, code blocks)
+  speech = speech.replace(/[*_#`~>]/g, "");
+  speech = speech.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+
+  // 2. Remove ALL emojis and pictographs so the synthesizer NEVER verbalizes emoji names (e.g., "light bulb", "rocket")
+  speech = speech.replace(/\p{Extended_Pictographic}/gu, "");
+  speech = speech.replace(/\p{Emoji_Presentation}/gu, "");
+  speech = speech.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}]/gu, "");
+  speech = speech.replace(/[•●▪■◆▲▼▶◀→←↑↓]/g, " ");
+
+  // 3. Mask technical contract hashes / addresses
+  speech = speech.replace(/0x[a-fA-F0-9]{3,}\.{0,3}[a-fA-F0-9]*/g, "your account");
+
+  // 4. Convert currencies into natural human phrasing ("500 dollars" instead of "plus sign five hundred dot zero zero A-U-S-D")
+  speech = speech.replace(/\+\$?([0-9,]+(?:\.[0-9]{2})?)\s*(?:AUSD|USD)?/gi, "$1 dollars");
+  speech = speech.replace(/\$([0-9,]+(?:\.[0-9]{2})?)\s*(?:AUSD|USD)?/gi, "$1 dollars");
+  speech = speech.replace(/\bAUSD\b/gi, "dollars");
+
+  // 5. Eliminate punctuation that causes vocal whimpers, tremolos, or sighs
+  // Trailing ellipses "..." -> period
+  speech = speech.replace(/\.{2,}/g, ".");
+  // Multiple exclamation marks "!!" -> single period (calm prosody)
+  speech = speech.replace(/[!]{2,}/g, ".");
+  speech = speech.replace(/[?]{2,}/g, "?");
+  speech = speech.replace(/!/g, "."); // period provides confident, relaxed intonation rather than shrill pitch spikes
+
+  // 6. Anti-Screen-Reader: Extract ONLY the first punchline sentence
+  // Siri gives a quick 1-sentence vocal acknowledgment, leaving details on screen
+  const sentences = speech
+    .split(/(?<=[.?!])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (sentences.length > 0) {
+    speech = sentences[0];
+    // If the first sentence was super brief (e.g. "Done."), allow a second short sentence
+    if (speech.length < 35 && sentences[1] && sentences[1].length < 65) {
+      speech = `${speech} ${sentences[1]}`;
+    }
+  }
+
+  // 7. Final whitespace cleanup
+  speech = speech.replace(/\s+/g, " ").trim();
+
+  // 8. Max length guard: Never speak more than ~140 characters
+  if (speech.length > 140) {
+    const truncated = speech.slice(0, 140);
+    const lastSpace = truncated.lastIndexOf(" ");
+    speech = (lastSpace > 60 ? truncated.slice(0, lastSpace) : truncated) + ".";
+  }
+
+  return speech;
+}
+
 export function speak(text: string, persona: VoicePersona, options: SpeakOptions = {}) {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) {
     options.onEnd?.();
@@ -126,32 +191,28 @@ export function speak(text: string, persona: VoicePersona, options: SpeakOptions
   try {
     stopSpeech();
 
-    // Clean markdown, symbols, and limit duration
-    const cleanText = text
-      .replace(/[*_#`~>]/g, "")
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-      .trim()
-      .slice(0, 350);
+    // Siri-grade sanitization: brief, calm, no crying vocal strain
+    const speechPunchline = formatSiriSpeech(text);
 
-    if (!cleanText) {
+    if (!speechPunchline) {
       options.onEnd?.();
       return;
     }
 
-    const utterance = new SpeechSynthesisUtterance(cleanText);
+    const utterance = new SpeechSynthesisUtterance(speechPunchline);
     const voice = getBestVoice(persona);
 
     if (voice) {
       utterance.voice = voice;
     }
 
-    if (persona === "warm-female") {
-      utterance.pitch = 1.05;
-      utterance.rate = 1.02;
-    } else if (persona === "deep-male") {
-      utterance.pitch = 0.88;
-      utterance.rate = 0.98;
-    }
+    // Siri / Apple Assistant Prosody Standards:
+    // 1. Pitch = 1.0 STRICTLY. NEVER artificially pitch-shift with DSP, which introduces
+    //    the tremolo/choked-up/crying artifacts!
+    // 2. Rate = 1.04. Upbeat, brisk, confident conversational pace without dragging clauses.
+    utterance.pitch = 1.0;
+    utterance.rate = persona === "warm-female" ? 1.04 : 1.02;
+    utterance.volume = 1.0;
 
     utterance.onstart = () => {
       options.onStart?.();
