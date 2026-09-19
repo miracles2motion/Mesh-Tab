@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { 
   ArrowLeft, 
   User, 
@@ -42,12 +43,27 @@ import { fireFaucetConfetti } from "../../lib/confetti";
 import { AnimatedCounter } from "../../components/ui/animated-counter";
 import { speak, stopSpeech, VoicePersona } from "../../lib/voice";
 
-export default function SettingsPage() {
+function SettingsContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromUrl = searchParams.get("from");
+
   const profile = useUserProfile();
   const { showAddress: showAddressOnDashboard, toggleAddress } = useDeveloperMode();
   const { settings: buddySettings, updateSettings: updateBuddySettings } = useBuddySettings();
   const { balance: virtualBalance, topUp: topUpFaucet } = useVirtualBalance();
   const { mode: workspaceMode, setMode: setWorkspaceMode } = useWorkspaceMode();
+
+  const handleBack = () => {
+    sounds.playClick();
+    if (fromUrl && fromUrl.startsWith("/")) {
+      router.push(fromUrl);
+    } else if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/home");
+    }
+  };
 
   const [activeTab, setActiveTab] = useState<"profile" | "copilot" | "advanced">("profile");
   const [copied, setCopied] = useState(false);
@@ -191,13 +207,15 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300">
       <header className="px-6 md:px-12 pt-10 pb-6 border-b border-slate-200 dark:border-white/10 max-w-4xl mx-auto w-full flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link 
-            href="/home" 
-            className="w-10 h-10 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shadow-sm text-slate-700 dark:text-white/80"
-            title="Back to Hub"
+          <button 
+            type="button"
+            onClick={handleBack}
+            className="w-10 h-10 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shadow-sm text-slate-700 dark:text-white/80 cursor-pointer"
+            title={fromUrl?.startsWith("/tab") ? "Back to Tab" : "Back to Hub"}
+            aria-label="Go Back"
           >
             <ArrowLeft className="w-5 h-5" />
-          </Link>
+          </button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Settings</h1>
             <p className="text-slate-500 dark:text-white/60 text-sm mt-0.5">Manage your profile, Tab Co-Pilot, and sandbox preferences</p>
@@ -758,5 +776,13 @@ export default function SettingsPage() {
       {/* Floating Tab Co-Pilot for instant real-time live preview */}
       <MeshBuddy />
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a]" />}>
+      <SettingsContent />
+    </Suspense>
   );
 }

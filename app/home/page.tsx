@@ -107,7 +107,7 @@ export default function GlobalHub() {
               Demo Sandbox (Monad Testnet)
             </span>
             <Link 
-              href="/demo"
+              href="/demo?from=/home"
               className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors"
               title="Open Demo Mode Selection"
             >
@@ -151,7 +151,7 @@ export default function GlobalHub() {
           </button>
           <ThemeToggle />
           <Link 
-            href="/notifications" 
+            href="/notifications?from=/home" 
             className="relative w-10 h-10 md:w-12 md:h-12 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shadow-sm text-slate-700 dark:text-white/80"
             title={`Notifications ${unreadCount > 0 ? `(${unreadCount} unread)` : ""}`}
           >
@@ -163,14 +163,14 @@ export default function GlobalHub() {
             )}
           </Link>
           <Link 
-            href="/settings" 
+            href="/settings?from=/home" 
             className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shadow-sm text-slate-700 dark:text-white/80"
             title="Settings"
           >
             <Settings className="w-5 h-5" />
           </Link>
           <Link 
-            href="/settings" 
+            href="/settings?from=/home" 
             className={`w-10 h-10 md:w-12 md:h-12 rounded-full ${profile.avatarColor} text-white flex items-center justify-center shadow-md hover:scale-105 transition-transform text-lg font-bold`}
             title={`Profile (${profile.name})`}
           >
@@ -521,7 +521,7 @@ export default function GlobalHub() {
           </button>
 
           <Link 
-            href="/settings"
+            href="/settings?from=/home"
             className="p-3 rounded-full bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-white/80 hover:bg-slate-200 dark:hover:bg-white/15 transition-colors"
             title="Settings"
           >

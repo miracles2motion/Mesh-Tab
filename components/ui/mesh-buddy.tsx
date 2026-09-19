@@ -329,7 +329,7 @@ export function MeshBuddy() {
           { label: "➕ Create New Tab", action: () => router.push("/tab/new") },
           { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet },
           { label: "🏖️ Restore Lisbon Demo", action: handleToggleWorkspace },
-          { label: "🎮 Open Demo Sandbox", action: () => router.push("/demo") }
+          { label: "🎮 Open Demo Sandbox", action: () => router.push(pathname ? `/demo?from=${encodeURIComponent(pathname)}` : "/demo") }
         ];
       } else {
         welcomeText = `Hey ${profile.name || "there"}! I'm ${buddySettings.name}. You're in Sample Trip Mode. Tap Lisbon Weekend to test netting, or explore your settings.`;
@@ -612,7 +612,7 @@ export function MeshBuddy() {
 
         actionItems = [
           { label: "🏠 Return to Hub", action: () => router.push("/home") },
-          { label: "🎮 Open Demo Sandbox", action: () => router.push("/demo") },
+          { label: "🎮 Open Demo Sandbox", action: () => router.push(pathname ? `/demo?from=${encodeURIComponent(pathname)}` : "/demo") },
         ];
       } else {
         spokenPunchline = "I'm monitoring your group tabs and ready to assist.";
@@ -799,7 +799,7 @@ export function MeshBuddy() {
     } else if (/passkey|passkeys|mera|biometric|webauthn|touch id|face id/i.test(q)) {
       replyText = `MeshTab uses Touch ID and Face ID passkeys built right into your phone or laptop. You approve group expenses with your fingerprint or face just like Apple Pay—no passwords to forget, no 2FA text codes, and no account setup hassle!`;
       actionItems = [
-        { label: "🔑 Test Passkey in Settings", action: () => router.push("/settings") },
+        { label: "🔑 Test Passkey in Settings", action: () => router.push(pathname ? `/settings?from=${encodeURIComponent(pathname)}` : "/settings") },
         { label: "👥 Manage Group Members", action: () => router.push(currentTabId ? `/tab/${currentTabId}/members` : "/home") },
       ];
     } else if (/ausd|agora|currency|digital dollar|stablecoin/i.test(q)) {
@@ -822,7 +822,7 @@ export function MeshBuddy() {
         replyText = `You are currently viewing the Lisbon '24 Demo Trip (Sample Trip Mode). 4 international members and $1,200 in mock expenses are pre-loaded to evaluate Tangle Netting. If you want to test the main app with a fresh ledger, you can switch to Clean Slate!`;
         actionItems = [
           { label: "🧹 Switch to Clean Slate", action: handleToggleWorkspace },
-          { label: "🎮 Open Demo Selector", action: () => router.push("/demo") }
+          { label: "🎮 Open Demo Selector", action: () => router.push(pathname ? `/demo?from=${encodeURIComponent(pathname)}` : "/demo") }
         ];
       } else if (isCustomTab) {
         replyText = `You are currently in the Main App, viewing your custom group tab "${tabDisplayName}". This is an independent ledger for your group — mock data from the Lisbon demo is not mixed in here!`;
@@ -866,14 +866,14 @@ export function MeshBuddy() {
         replyText = "Smart Netting cancels circular debt loops across group members. In the Lisbon benchmark, 12 international transfers collapse into just 3 direct payments, saving 75% in total money transfers!";
         actionItems = [
           { label: "Explore Lisbon Demo", action: () => router.push("/tab/lisbon-24") },
-          { label: "🎮 View Demo Selector", action: () => router.push("/demo") }
+          { label: "🎮 View Demo Selector", action: () => router.push(pathname ? `/demo?from=${encodeURIComponent(pathname)}` : "/demo") }
         ];
       }
     } else if (q.includes("cash out") || q.includes("withdraw") || q.includes("bank") || q.includes("off-ramp") || q.includes("offramp")) {
       spokenPunchline = "You can cash out your digital dollars directly to your debit card or bank account from your tab.";
       replyText = "When friends settle up and you are owed money, your balance turns green (+). You can tap 'Cash Out to Bank' on your balance card to transfer your Digital Dollars directly to your debit card (Visa Direct) or bank account in seconds!";
       actionItems = [
-        { label: "🏦 Open Bank Settings", action: () => router.push("/settings") },
+        { label: "🏦 Open Bank Settings", action: () => router.push(pathname ? `/settings?from=${encodeURIComponent(pathname)}` : "/settings") },
         { label: "Go to Hub", action: () => router.push("/home") },
       ];
     } else if (q.includes("receipt") || q.includes("camera") || q.includes("ocr") || q.includes("scan")) {
@@ -1410,7 +1410,7 @@ export function MeshBuddy() {
                             🏖️ Restore Demo
                           </button>
                           <button
-                            onClick={() => router.push("/demo")}
+                            onClick={() => router.push(pathname ? `/demo?from=${encodeURIComponent(pathname)}` : "/demo")}
                             className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold cursor-pointer"
                           >
                             🎮 Sandbox

@@ -190,7 +190,7 @@ function DashboardContent() {
                 <span>Real-time Sync • 0.3s</span>
               </div>
               <Link
-                href="/demo"
+                href={`/demo?from=/tab/${rawTabId}`}
                 className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border transition-all shrink-0 ${
                   workspaceMode === "sample"
                     ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/20 hover:bg-indigo-100"
@@ -230,7 +230,7 @@ function DashboardContent() {
           </Link>
           <ThemeToggle />
           <Link 
-            href="/settings"
+            href={`/settings?from=/tab/${rawTabId}`}
             className="p-2 sm:p-2.5 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-white/80 transition-colors shadow-sm"
             title="Settings"
             aria-label="Settings"
@@ -238,7 +238,7 @@ function DashboardContent() {
             <Settings className="w-4 h-4" />
           </Link>
           <Link 
-            href="/settings"
+            href={`/settings?from=/tab/${rawTabId}`}
             className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full ${profile.avatarColor} text-white flex items-center justify-center font-bold text-sm sm:text-base shadow-md hover:scale-105 active:scale-95 transition-transform`}
             title={`Profile (${currentUser})`}
           >

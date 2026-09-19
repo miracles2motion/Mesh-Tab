@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { 
   ArrowLeft, 
   Bell, 
@@ -26,11 +26,24 @@ import { useWorkspaceMode } from "../../lib/user";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
 
-export default function NotificationsPage() {
+function NotificationsContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromUrl = searchParams.get("from");
   const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll } = useNotifications();
   const { mode: workspaceMode } = useWorkspaceMode();
   const [filter, setFilter] = useState<"all" | "unread" | "expense" | "settlement" | "netting">("all");
+
+  const handleBack = () => {
+    sounds.playClick();
+    if (fromUrl && fromUrl.startsWith("/")) {
+      router.push(fromUrl);
+    } else if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/home");
+    }
+  };
 
   const filteredNotifications = useMemo(() => {
     return notifications.filter((notif) => {
@@ -106,13 +119,15 @@ export default function NotificationsPage() {
     <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300">
       <header className="px-6 md:px-12 pt-8 pb-5 border-b border-slate-200/80 dark:border-white/10 max-w-3xl mx-auto w-full flex items-center justify-between sticky top-0 bg-[#f5f5f7]/85 dark:bg-[#0a0a0a]/85 backdrop-blur-xl z-20">
         <div className="flex items-center gap-4">
-          <Link 
-            href="/home" 
+          <button 
+            type="button"
+            onClick={handleBack}
             className="w-10 h-10 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shadow-sm text-slate-700 dark:text-white/80 cursor-pointer"
-            title="Back to Hub"
+            title={fromUrl?.startsWith("/tab") ? "Back to Tab" : "Back to Hub"}
+            aria-label="Go Back"
           >
             <ArrowLeft className="w-5 h-5" />
-          </Link>
+          </button>
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Notifications</h1>
@@ -290,5 +305,13 @@ export default function NotificationsPage() {
 
       <MeshBuddy />
     </div>
+  );
+}
+
+export default function NotificationsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a]" />}>
+      <NotificationsContent />
+    </Suspense>
   );
 }
