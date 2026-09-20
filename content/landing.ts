@@ -5,7 +5,7 @@ export const LANDING_CONTENT = {
     keywords: ["Monad", "expense tracker", "debt netting", "stablecoin settlement", "gasless", "passkeys", "fintech"],
   },
   hero: {
-    badge: "Live on Monad Mainnet",
+    badge: "Monad Metropolis Hackathon Sandbox",
     headline: "The end of group debt.",
     headlineHighlight: "Settled instantly.",
     subheadline: "MeshTab replaces crisscrossing international bank wires with a single, gasless ledger. We calculate the minimum possible payments and settle them instantly in stablecoins.",
