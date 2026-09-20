@@ -1254,14 +1254,16 @@ export function MeshBuddy() {
                                 : "Sample Trip Mode"}
                         </span>
                       </div>
-                      <button
-                        onClick={handleToggleWorkspace}
-                        className="shrink-0 text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold hover:underline flex items-center gap-1 ml-2"
-                        title={workspaceMode === "blank" ? "Restore Lisbon Demo" : "Switch to Clean Slate"}
-                      >
-                        <RefreshCw className="w-2.5 h-2.5" />
-                        <span>{workspaceMode === "blank" ? "Restore Demo" : "Clean Slate"}</span>
-                      </button>
+                      {workspaceMode === "sample" && (
+                        <button
+                          onClick={handleToggleWorkspace}
+                          className="shrink-0 text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold hover:underline flex items-center gap-1 ml-2 cursor-pointer"
+                          title="Switch to Clean Slate"
+                        >
+                          <RefreshCw className="w-2.5 h-2.5" />
+                          <span>Clean Slate</span>
+                        </button>
+                      )}
                     </div>
 
                     {/* Messages Feed */}
@@ -1407,16 +1409,16 @@ export function MeshBuddy() {
                             ➕ New Tab
                           </button>
                           <button
-                            onClick={handleToggleWorkspace}
+                            onClick={() => handleAskQuestion("how do i split a bill?")}
                             className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold cursor-pointer"
                           >
-                            🏖️ Restore Demo
+                            ❓ Split Bills
                           </button>
                           <button
-                            onClick={() => router.push(pathname ? `/demo?from=${encodeURIComponent(pathname)}` : "/demo")}
+                            onClick={() => handleAskQuestion("how does netting work?")}
                             className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold cursor-pointer"
                           >
-                            🎮 Sandbox
+                            🌀 Netting
                           </button>
                         </>
                       ) : (
@@ -1734,27 +1736,26 @@ export function MeshBuddy() {
                     </p>
                   </div>
 
-                  {/* Workspace Sandbox Mode Shortcut */}
-                  <div className="p-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold">Workspace Mode</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-mono">
-                        {workspaceMode === "blank" ? "Clean Slate (Main App)" : "Sample Trip (Demo Mode)"}
-                      </span>
+                  {workspaceMode === "sample" && (
+                    <div className="p-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold">Workspace Mode</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-mono">
+                          Sample Trip (Demo Mode)
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-white/50">
+                        You are currently viewing the Lisbon &apos;24 trip benchmark with 4 pre-loaded members.
+                      </p>
+                      <button
+                        onClick={handleToggleWorkspace}
+                        className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-black font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Switch to Clean Slate</span>
+                      </button>
                     </div>
-                    <p className="text-[11px] text-slate-500 dark:text-white/50">
-                      {workspaceMode === "blank"
-                        ? "You are in the Main App with clean data. All sample tabs are hidden. Tap below to reload the Lisbon demo."
-                        : "You are currently viewing the Lisbon '24 trip benchmark with 4 pre-loaded members."}
-                    </p>
-                    <button
-                      onClick={handleToggleWorkspace}
-                      className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-black font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors"
-                    >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                      {workspaceMode === "blank" ? "Restore Lisbon Demo" : "Switch to Clean Slate"}
-                    </button>
-                  </div>
+                  )}
 
                   {/* Quick Faucet Top-up */}
                   <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl space-y-2">

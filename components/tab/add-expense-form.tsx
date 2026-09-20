@@ -7,7 +7,7 @@ import Image from "next/image";
 import { PimlicoLogo } from "../ui/partner-logo";
 import { Check, ChevronDown, Sparkles, Camera, Mic, Zap, Loader2, Upload, FileText, SplitSquareHorizontal, AlertCircle } from "lucide-react";
 
-import { useUserProfile, saveStoredExpense } from "../../lib/user";
+import { useUserProfile, saveStoredExpense, useWorkspaceMode } from "../../lib/user";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 
@@ -20,11 +20,12 @@ interface AddExpenseFormProps {
 
 export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, tabId = "lisbon-24" }: AddExpenseFormProps) {
   const profile = useUserProfile();
+  const { mode: workspaceMode } = useWorkspaceMode();
   const activeUser = currentUser || profile.name || "David";
 
   const rawList = members.length > 0 
     ? members 
-    : (tabId === "lisbon-24" ? ["Aisha", "Kemi", "Ben", activeUser] : [activeUser]);
+    : (workspaceMode === "sample" && tabId === "lisbon-24" ? ["Aisha", "Kemi", "Ben", activeUser] : [activeUser]);
   const normalizedMembers = Array.from(new Set(
     rawList.map(m => (m === "Sarah" && activeUser !== "Sarah") ? activeUser : m)
   ));

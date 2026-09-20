@@ -9,7 +9,7 @@ import Image from "next/image";
 import { ReceiptView } from "../ReceiptView";
 import { MonadLogo, AgoraLogo } from "../ui/partner-logo";
 
-import { useUserProfile, settleTab, useVirtualBalance, useStoredTabMembers } from "../../lib/user";
+import { useUserProfile, settleTab, useVirtualBalance, useStoredTabMembers, useWorkspaceMode } from "../../lib/user";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { fireSettlementConfetti, fireFaucetConfetti } from "../../lib/confetti";
@@ -24,12 +24,13 @@ interface SettlementDrawerProps {
 
 export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-24", currentUserName }: SettlementDrawerProps) {
   const profile = useUserProfile();
+  const { mode: workspaceMode } = useWorkspaceMode();
   const { balance: virtualBalance, deduct, topUp } = useVirtualBalance();
   const activeUser = currentUserName || profile.name || "David";
   const { members: tabMembers } = useStoredTabMembers(tabId, activeUser);
 
   // Dynamically identify who paid for the expenses (creditor with positive balance)
-  const primaryCreditor = tabMembers.find(m => m.balance > 0)?.name || (tabId === "lisbon-24" ? "Aisha" : undefined);
+  const primaryCreditor = tabMembers.find(m => m.balance > 0)?.name || (workspaceMode === "sample" && tabId === "lisbon-24" ? "Aisha" : undefined);
 
   const [paymentMethod, setPaymentMethod] = useState<"ausd" | "apple-pay">("ausd");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -77,7 +78,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
           setIsSuccess(false); 
           onClose(); 
         }} 
-        amount={debtAmount > 0 ? debtAmount : (tabId === "lisbon-24" ? 18000 : 0)} 
+        amount={debtAmount > 0 ? debtAmount : (workspaceMode === "sample" && tabId === "lisbon-24" ? 18000 : 0)} 
         recipient={primaryCreditor}
       />
     );

@@ -199,8 +199,8 @@ export default function GlobalHub() {
               <span className="text-slate-600 dark:text-white/70 font-semibold text-xs uppercase tracking-wider">
                 Total Net Balance
               </span>
-              <div className={`text-3xl sm:text-4xl md:text-5xl font-bold mt-1 tracking-tight break-words min-w-0 ${netBalance < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>
-                {netBalance < 0 ? "-" : "+"}<AnimatedCounter value={Math.abs(netBalance) / 100} prefix="$" decimals={2} />
+              <div className={`text-3xl sm:text-4xl md:text-5xl font-bold mt-1 tracking-tight break-words min-w-0 ${netBalance < 0 ? "text-rose-600 dark:text-rose-400" : netBalance > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-900 dark:text-white"}`}>
+                {netBalance < 0 ? "-" : netBalance > 0 ? "+" : ""}<AnimatedCounter value={Math.abs(netBalance) / 100} prefix="$" decimals={2} />
               </div>
               <p className="text-slate-500 dark:text-white/50 text-xs mt-2 font-medium">
                 Across {syncedTabs.length} active shared {syncedTabs.length === 1 ? "group" : "groups"}

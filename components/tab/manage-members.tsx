@@ -14,7 +14,7 @@ interface MemberItem {
   role?: "admin" | "member";
 }
 
-import { useUserProfile, saveStoredTabMembers } from "../../lib/user";
+import { useUserProfile, saveStoredTabMembers, useWorkspaceMode } from "../../lib/user";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 
@@ -28,12 +28,13 @@ export function ManageMembers({
   currentUser?: string;
 }) {
   const profile = useUserProfile();
+  const { mode: workspaceMode } = useWorkspaceMode();
   const activeUser = currentUser || profile.name;
   const [copied, setCopied] = useState(false);
   
   // Dynamic Creator identification
   const creatorMember = members.find(m => m.role === "admin");
-  const creatorName = tabId === "lisbon-24" ? "Aisha" : (creatorMember ? creatorMember.name : activeUser);
+  const creatorName = (workspaceMode === "sample" && tabId === "lisbon-24") ? "Aisha" : (creatorMember ? creatorMember.name : activeUser);
   const isCurrentUserAdmin = activeUser.toLowerCase() === creatorName.toLowerCase();
 
   // Initialize with members enriched with roles matching actual tab data
