@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode, Settings, Search, Filter, Crown, CheckCircle2, TrendingDown, TrendingUp, ArrowDownToLine, Coins, Sparkles, Award } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TransactionOverlay, TransactionState } from "../../components/ui/transaction-overlay";
 import { formatCurrency } from "../../lib/utils";
 import { ThemeToggle } from "../../components/theme-toggle";
@@ -34,6 +34,11 @@ export default function GlobalHub() {
   const [txState, setTxState] = useState<TransactionState>("idle");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<"all" | "owe" | "owed">("all");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Sync each tab's balance from its real member ledger (so settling inside a tab instantly updates Home)
   const currentUserName = profile.name || "David";
@@ -140,14 +145,14 @@ export default function GlobalHub() {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{greeting}, {profile.name} {emoji}</h1>
-            {workspaceMode === "sample" && (
+            {mounted && workspaceMode === "sample" && (
               <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/20" title="Exploring Lisbon Trip Demo as David">
                 🏖️ Lisbon Demo Persona
               </span>
             )}
           </div>
           <p className="text-slate-500 dark:text-white/60 mt-0.5 text-sm">
-            {workspaceMode === "sample" ? "Exploring Lisbon '24 benchmark data. Ready to settle up or test netting?" : "Your personal shared tabs and real settlement ledger."}
+            {mounted && workspaceMode === "sample" ? "Exploring Lisbon '24 benchmark data. Ready to settle up or test netting?" : "Your personal shared tabs and real settlement ledger."}
           </p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
