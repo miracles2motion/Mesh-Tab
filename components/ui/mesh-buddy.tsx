@@ -49,6 +49,8 @@ import {
   searchKnowledgeBase,
   getArticlesByCategory,
   getPopularArticles,
+  getAllArticles,
+  getKBCategories,
   KBArticle,
   KBCategoryId
 } from "../../lib/meshbuddy-kb";
@@ -157,9 +159,9 @@ export function MeshBuddy() {
       return scored.map((s) => s.article);
     }
     if (selectedCategory !== "all") {
-      return getArticlesByCategory(selectedCategory);
+      return getArticlesByCategory(selectedCategory, workspaceMode);
     }
-    return KB_ARTICLES;
+    return getAllArticles(workspaceMode);
   }, [kbSearchQuery, selectedCategory, currentTabId, isDemoTab, isCustomTab, workspaceMode, tabDisplayName]);
 
   // Sound synthesis helper using high-fidelity natural neural voice engine
@@ -566,26 +568,32 @@ export function MeshBuddy() {
       } else if (pathname?.includes("/expense/new")) {
         spokenPunchline = "You're on the Add Expense screen. You can snap a receipt or type costs manually.";
         replyText =
-          `You are on the **Add Expense** screen for ${isCustomTab ? `"${tabDisplayName}"` : "the group tab"}.\n\n` +
+          `You are on the **Add Expense** screen for ${isCustomTab ? `"${tabDisplayName}"` : isDemoTab ? "the Lisbon Demo trip" : "your group tab"}.\n\n` +
           `You can log shared costs using three simple methods:\n` +
           `• 📸 **Smart Scan**: Take a photo or upload a receipt to automatically extract merchant, total, and line items.\n` +
           `• 🎙️ **Voice Dictate**: Tap the microphone icon to dictate expense details naturally.\n` +
           `• ⌨️ **Manual Entry**: Type the amount, description, and select who paid and how to split.`;
 
         actionItems = [
-          { label: "Back to Tab", action: () => router.push(currentTabId ? `/tab/${currentTabId}` : "/tab/lisbon-24") },
+          { label: "Back to Tab", action: () => router.push(currentTabId ? `/tab/${currentTabId}` : workspaceMode === "blank" ? "/home" : "/tab/lisbon-24") },
         ];
       } else if (pathname?.includes("/members")) {
         const stats = currentTabId ? getLiveTabStats(currentTabId, userName, tabDisplayName) : null;
         spokenPunchline = "You're on the Group Members screen. Share the invite code to add friends.";
+        const rosterText = stats
+          ? stats.members.map((m) => m.name).join(", ")
+          : isDemoTab
+            ? "Aisha, Kemi, Ben, " + userName
+            : userName + " (Organizer)";
+        const memberCount = stats ? stats.members.length : (isDemoTab ? 4 : 1);
         replyText =
           `You are on the **Group Members & Invitations** screen.\n\n` +
-          `• Current Roster (${stats ? stats.members.length : 4}): ${stats ? stats.members.map((m) => m.name).join(", ") : "Aisha, Kemi, Ben, " + userName}\n` +
+          `• Current Roster (${memberCount}): ${rosterText}\n` +
           `• Friends join instantly by scanning the QR code or tapping your invite link.\n` +
           `• They sign in with Face ID or Touch ID in seconds—no passwords or app downloads needed!`;
 
         actionItems = [
-          { label: "Back to Tab", action: () => router.push(currentTabId ? `/tab/${currentTabId}` : "/tab/lisbon-24") },
+          { label: "Back to Tab", action: () => router.push(currentTabId ? `/tab/${currentTabId}` : workspaceMode === "blank" ? "/home" : "/tab/lisbon-24") },
         ];
       } else if (pathname === "/settings") {
         spokenPunchline = "Here are your account and security settings.";
@@ -706,23 +714,33 @@ export function MeshBuddy() {
       // 4. Core Intent: "What expenses were logged?" / Expense History Breakdown
       /(what expenses( were| have been)? logged|expense (history|breakdown|list)|recent (expenses|purchases)|who paid for what|show (me )?expenses|list expenses|what did we buy|what was bought|cost breakdown)/i.test(q)
     ) {
-      const activeTabKey = currentTabId || "lisbon-24";
-      const expenses = getStoredExpenses(activeTabKey);
-      const total = expenses.reduce((s, e) => s + (e.amount || 0), 0);
+      if (!currentTabId && workspaceMode === "blank") {
+        replyText = "You are in Clean Slate mode with no tab selected. Create or open a tab to view its expense ledger!";
+        actionItems = [
+          { label: "➕ Create New Tab", action: () => router.push("/tab/new") },
+          { label: "🏠 Go to Hub", action: () => router.push("/home") },
+        ];
+      } else {
+        const activeTabKey = currentTabId || (workspaceMode === "blank" ? "" : "lisbon-24");
+        const expenses = activeTabKey ? getStoredExpenses(activeTabKey) : [];
+        const total = expenses.reduce((s, e) => s + (e.amount || 0), 0);
 
-      replyText =
-        `Here are the recorded expenses for **"${tabDisplayName}"**:\n\n` +
-        (expenses.length > 0
-          ? expenses.map((e) => `• **${e.desc}**: **${formatCurrency(e.amount)}** (Paid by ${e.payer}, ${e.time})`).join("\n") + "\n\n"
-          : "• No expenses logged yet on this tab.\n\n") +
-        `💰 **Total Tab Volume**: **${formatCurrency(total)}** across **${expenses.length}** item${expenses.length === 1 ? "" : "s"}.\n\n` +
-        `Every expense is split equally among tab members unless custom splits are selected.`;
+        replyText =
+          `Here are the recorded expenses for **"${tabDisplayName}"**:\n\n` +
+          (expenses.length > 0
+            ? expenses.map((e) => `• **${e.desc}**: **${formatCurrency(e.amount)}** (Paid by ${e.payer}, ${e.time})`).join("\n") + "\n\n"
+            : "• No expenses logged yet on this tab.\n\n") +
+          `💰 **Total Tab Volume**: **${formatCurrency(total)}** across **${expenses.length}** item${expenses.length === 1 ? "" : "s"}.\n\n` +
+          `Every expense is split equally among tab members unless custom splits are selected.`;
 
-      actionItems = [
-        { label: "➕ Add New Expense", action: () => router.push(`/tab/${activeTabKey}/expense/new`) },
-        { label: "🔴 Who is in Debt?", action: () => handleAskQuestion("who is currently in debt and has not settled") },
-        { label: "🌀 How Netting Works", action: () => handleAskQuestion("how does netting work") },
-      ];
+        actionItems = [
+          activeTabKey
+            ? { label: "➕ Add New Expense", action: () => router.push(`/tab/${activeTabKey}/expense/new`) }
+            : { label: "➕ Create Tab", action: () => router.push("/tab/new") },
+          { label: "🔴 Who is in Debt?", action: () => handleAskQuestion("who is currently in debt and has not settled") },
+          { label: "🌀 How Netting Works", action: () => handleAskQuestion("how does netting work") },
+        ];
+      }
     } else if (
       /^(hi|hello|hey|sup|what's up|howdy|yo|good morning|good afternoon|good evening|hiya|hello buddy|hey buddy|hi buddy)\b/i.test(q) ||
       q === "hi" || q === "hello" || q === "hey" || q === "hello buddy" || q === "hey buddy"
@@ -742,10 +760,10 @@ export function MeshBuddy() {
           { label: "🚰 Claim Sandbox Faucet", action: handleClaimFaucet },
         ];
       } else if (workspaceMode === "blank") {
-        replyText = `Hey ${userName}! 👋 Welcome to your clean workspace! I'm ${buddySettings.name}, your co-pilot for group expenses.\n\nYou have a blank canvas right now. Would you like to create your first group tab, or should I show you around?`;
+        replyText = `Hey ${userName}! 👋 Welcome to your clean workspace! I'm ${buddySettings.name}, your co-pilot for group expenses.\n\nYou have a blank canvas right now. Ready to create your first shared tab, snap receipts, and invite friends?`;
         actionItems = [
           { label: "➕ Create First Tab", action: () => router.push("/tab/new") },
-          { label: "🏖️ Restore Lisbon Demo", action: handleToggleWorkspace },
+          { label: "❓ How to Split Bills?", action: () => handleAskQuestion("how do i split a bill?") },
           { label: "📚 Open Knowledge Base", action: () => setDrawerTab("kb") },
         ];
       } else {
@@ -796,7 +814,7 @@ export function MeshBuddy() {
         `🏦 **Instant Cash Out**: Withdraw settled funds directly to your debit card or bank.\n\n` +
         `🚰 **Sandbox Faucet**: Claim +$500 test funds anytime to test settlements!`;
       actionItems = [
-        { label: "📚 Open Knowledge Base (20 Guides)", action: () => setDrawerTab("kb") },
+        { label: "📚 Open Knowledge Base", action: () => setDrawerTab("kb") },
         { label: "🚰 Top Up $500 AUSD", action: handleClaimFaucet },
       ];
     } else if (/why monad|what is monad|parallel evm|10000 tps|tps|blockchain/i.test(q)) {
@@ -856,7 +874,7 @@ export function MeshBuddy() {
       replyText = `Aisha and the villa booking are part of the Lisbon '24 Demo benchmark. You are currently viewing your own custom group tab "${tabDisplayName}", which has its own independent members and expenses!`;
       actionItems = [
         { label: "➕ Add Expense to this Tab", action: () => router.push(`/tab/${currentTabId}/expense/new`) },
-        { label: "Explore Lisbon Demo Trip", action: () => router.push("/tab/lisbon-24") }
+        { label: "👥 View Members", action: () => router.push(`/tab/${currentTabId}/members`) }
       ];
     } else if (q.includes("netting") || q.includes("tangle")) {
       spokenPunchline = "Netting eliminates circular debts across your group so nobody pays each other back and forth.";
@@ -869,6 +887,12 @@ export function MeshBuddy() {
         replyText = `Smart Netting mathematically simplifies your group debts. Once members of "${tabDisplayName}" log crisscrossing expenses, tapping 'Run Tangle Netting' calculates the minimum direct payments needed to settle the entire tab with zero-sum fairness!`;
         actionItems = [
           { label: "Add Expense to Tab", action: () => router.push(`/tab/${currentTabId}/expense/new`) }
+        ];
+      } else if (workspaceMode === "blank") {
+        replyText = "Smart Netting cancels circular debt loops across group members. Once you create a tab and log crisscrossing expenses, our graph algorithm computes the minimal direct payments so nobody pays each other back and forth!";
+        actionItems = [
+          { label: "➕ Create First Tab", action: () => router.push("/tab/new") },
+          { label: "📚 Netting Guide", action: () => setDrawerTab("kb") },
         ];
       } else {
         replyText = "Smart Netting cancels circular debt loops across group members. In the Lisbon benchmark, 12 international transfers collapse into just 3 direct payments, saving 75% in total money transfers!";
@@ -888,7 +912,7 @@ export function MeshBuddy() {
       spokenPunchline = "Tap Smart Scan to photograph a receipt, and the line items will be extracted automatically.";
       replyText = "On the 'Add Expense' screen, tap 'Smart Scan' to snap a photo or upload a receipt. The smart scanner automatically extracts the merchant, line items, and total into an editable preview before you confirm!";
       actionItems = [
-        { label: currentTabId ? `Open Add Expense (${tabDisplayName})` : "Go to Add Expense", action: () => router.push(currentTabId ? `/tab/${currentTabId}/expense/new` : "/tab/lisbon-24/expense/new") }
+        { label: currentTabId ? `Open Add Expense (${tabDisplayName})` : "Go to Add Expense", action: () => router.push(currentTabId ? `/tab/${currentTabId}/expense/new` : workspaceMode === "blank" ? "/tab/new" : "/tab/lisbon-24/expense/new") }
       ];
     } else if (q.includes("member") || q.includes("invite") || q.includes("share")) {
       spokenPunchline = "Share the group QR code or link. Friends can claim seats with Face ID or Touch ID.";
@@ -1356,7 +1380,7 @@ export function MeshBuddy() {
                         onClick={() => setDrawerTab("kb")}
                         className="shrink-0 px-2.5 py-1 rounded-full bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
                       >
-                        <BookOpen className="w-3 h-3" /> Guides ({KB_ARTICLES.length})
+                        <BookOpen className="w-3 h-3" /> Guides ({getAllArticles(workspaceMode).length})
                       </button>
                       {isCustomTab ? (
                         <>
@@ -1503,9 +1527,9 @@ export function MeshBuddy() {
                               : "bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-white/60 hover:bg-slate-200"
                             }`}
                         >
-                          All ({KB_ARTICLES.length})
+                          All ({getAllArticles(workspaceMode).length})
                         </button>
-                        {KB_CATEGORIES.map((cat) => (
+                        {getKBCategories(workspaceMode).map((cat) => (
                           <button
                             key={cat.id}
                             onClick={() => {
@@ -1564,31 +1588,35 @@ export function MeshBuddy() {
 
                             {/* Action buttons */}
                             <div className="pt-2 flex flex-wrap gap-2">
-                              {activeArticle.actions.map((act, i) => (
-                                <button
-                                  key={i}
-                                  onClick={() => {
-                                    if (act.type === "navigate") {
-                                      let dest = act.destination || "/home";
-                                      if (isCustomTab && dest.includes("/tab/lisbon-24/expense/new")) {
-                                        dest = `/tab/${currentTabId}/expense/new`;
-                                      } else if (isCustomTab && dest.includes("/tab/lisbon-24/members")) {
-                                        dest = `/tab/${currentTabId}/members`;
+                                {activeArticle.actions
+                                  .filter(act => workspaceMode !== "blank" || (act.destination !== "/tab/lisbon-24" && act.destination !== "/demo" && act.type !== "toggle-mode"))
+                                  .map((act, i) => (
+                                  <button
+                                    key={i}
+                                    onClick={() => {
+                                      if (act.type === "navigate") {
+                                        let dest = act.destination || "/home";
+                                        if (isCustomTab && dest.includes("/tab/lisbon-24/expense/new")) {
+                                          dest = `/tab/${currentTabId}/expense/new`;
+                                        } else if (isCustomTab && dest.includes("/tab/lisbon-24/members")) {
+                                          dest = `/tab/${currentTabId}/members`;
+                                        } else if (workspaceMode === "blank" && dest.includes("/tab/lisbon-24")) {
+                                          dest = currentTabId ? `/tab/${currentTabId}` : "/home";
+                                        }
+                                        router.push(dest);
+                                        setIsOpen(false);
+                                      } else if (act.type === "faucet") {
+                                        handleClaimFaucet();
+                                      } else if (act.type === "toggle-mode") {
+                                        handleToggleWorkspace();
                                       }
-                                      router.push(dest);
-                                      setIsOpen(false);
-                                    } else if (act.type === "faucet") {
-                                      handleClaimFaucet();
-                                    } else if (act.type === "toggle-mode") {
-                                      handleToggleWorkspace();
-                                    }
-                                  }}
-                                  className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-[11px] flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
-                                >
-                                  <span>{act.label}</span>
-                                  <ArrowRight className="w-3 h-3" />
-                                </button>
-                              ))}
+                                    }}
+                                    className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-[11px] flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
+                                  >
+                                    <span>{act.label}</span>
+                                    <ArrowRight className="w-3 h-3" />
+                                  </button>
+                                ))}
                               <button
                                 onClick={() => {
                                   setDrawerTab("chat");

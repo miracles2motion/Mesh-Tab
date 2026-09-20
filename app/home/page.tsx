@@ -208,14 +208,22 @@ export default function GlobalHub() {
               <span className="text-slate-600 dark:text-white/70 font-semibold text-xs uppercase tracking-wider">
                 Total Net Balance
               </span>
-              <div className={`text-3xl sm:text-4xl md:text-5xl font-bold mt-1 tracking-tight break-words min-w-0 ${netBalance < 0 ? "text-rose-600 dark:text-rose-400" : netBalance > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-900 dark:text-white"}`}>
-                {netBalance < 0 ? "-" : netBalance > 0 ? "+" : ""}<AnimatedCounter value={Math.abs(netBalance) / 100} prefix="$" decimals={2} />
-              </div>
+              {!mounted ? (
+                <div className="h-10 w-44 bg-slate-200 dark:bg-white/10 rounded-2xl animate-pulse mt-1 mb-2" />
+              ) : (
+                <div className={`text-3xl sm:text-4xl md:text-5xl font-bold mt-1 tracking-tight break-words min-w-0 ${netBalance < 0 ? "text-rose-600 dark:text-rose-400" : netBalance > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-900 dark:text-white"}`}>
+                  {netBalance < 0 ? "-" : netBalance > 0 ? "+" : ""}<AnimatedCounter value={Math.abs(netBalance) / 100} prefix="$" decimals={2} />
+                </div>
+              )}
               <p className="text-slate-500 dark:text-white/50 text-xs mt-2 font-medium">
-                Across {syncedTabs.length} active shared {syncedTabs.length === 1 ? "group" : "groups"}
+                {!mounted ? (
+                  <span className="inline-block h-3.5 w-36 bg-slate-200 dark:bg-white/10 rounded animate-pulse" />
+                ) : (
+                  `Across ${syncedTabs.length} active shared ${syncedTabs.length === 1 ? "group" : "groups"}`
+                )}
               </p>
 
-              {settledBalance > 0 && (
+              {mounted && settledBalance > 0 && (
                 <div className="mt-4 flex items-center gap-3 flex-wrap">
                   <button 
                     onClick={() => {
@@ -243,7 +251,7 @@ export default function GlobalHub() {
                   <span>You Owe</span>
                 </div>
                 <div className="font-bold text-slate-900 dark:text-white text-base">
-                  {formatCurrency(totalYouOwe)}
+                  {!mounted ? <span className="inline-block h-4 w-14 bg-slate-200 dark:bg-white/10 rounded animate-pulse" /> : formatCurrency(totalYouOwe)}
                 </div>
               </div>
               <div className="w-px h-8 bg-slate-200 dark:bg-white/10" />
@@ -253,7 +261,7 @@ export default function GlobalHub() {
                   <span>You're Owed</span>
                 </div>
                 <div className="font-bold text-slate-900 dark:text-white text-base">
-                  {formatCurrency(totalOwedToYou)}
+                  {!mounted ? <span className="inline-block h-4 w-14 bg-slate-200 dark:bg-white/10 rounded animate-pulse" /> : formatCurrency(totalOwedToYou)}
                 </div>
               </div>
               {settledBalance > 0 && (
@@ -323,7 +331,31 @@ export default function GlobalHub() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredTabs.map(tab => (
+            {!mounted ? (
+              // Themed ash skeleton cards while client storage and workspace mode initialize
+              [1, 2, 3].map((n) => (
+                <div 
+                  key={n} 
+                  className="bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-3xl p-6 flex flex-col h-[220px] animate-pulse"
+                >
+                  <div className="flex justify-between items-start mb-auto gap-3">
+                    <div className="flex-1 space-y-2.5">
+                      <div className="h-5 w-3/4 bg-slate-200 dark:bg-white/10 rounded-lg" />
+                      <div className="flex items-center gap-2">
+                        <div className="h-3.5 w-16 bg-slate-200 dark:bg-white/10 rounded-md" />
+                        <div className="h-3.5 w-20 bg-slate-200 dark:bg-white/10 rounded-md" />
+                      </div>
+                    </div>
+                    <div className="h-7 w-16 bg-slate-200 dark:bg-white/10 rounded-xl shrink-0" />
+                  </div>
+                  <div className="border-t border-slate-100 dark:border-white/10 pt-4 mt-4 flex items-center justify-between">
+                    <div className="h-3.5 w-24 bg-slate-200 dark:bg-white/10 rounded-md" />
+                    <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-white/10" />
+                  </div>
+                </div>
+              ))
+            ) : (
+              filteredTabs.map(tab => (
               <Link 
                 href={`/tab/${tab.id}`}
                 key={tab.id} 
@@ -371,7 +403,7 @@ export default function GlobalHub() {
                   </div>
                 </div>
               </Link>
-            ))}
+            )))}
 
             {filteredTabs.length === 0 && (
               <div className="col-span-full py-12 px-6 text-center bg-white dark:bg-white/5 border border-dashed border-slate-200 dark:border-white/10 rounded-3xl">

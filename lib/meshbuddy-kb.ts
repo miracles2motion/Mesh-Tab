@@ -355,7 +355,16 @@ export function searchKnowledgeBase(
 
   const results: KBSearchResult[] = [];
 
+  const isBlank = options.workspaceMode === "blank";
+
   for (const article of KB_ARTICLES) {
+    // In Clean Slate mode, completely exclude benchmark-specific and sample restoration articles
+    if (isBlank) {
+      if (article.id === "netting-lisbon-benchmark" || article.id === "sandbox-restore-lisbon") {
+        continue;
+      }
+    }
+
     let score = 0;
     const matchedKeywords: string[] = [];
 
@@ -406,8 +415,8 @@ export function searchKnowledgeBase(
     if (options.isCustomTab && (article.id.includes("create") || article.id.includes("split") || article.categoryId === "expenses" || article.categoryId === "groups")) {
       score += 10;
     }
-    if (options.workspaceMode === "blank" && article.categoryId === "sandbox") {
-      score += 8;
+    if (options.workspaceMode === "blank" && (article.id.includes("create") || article.categoryId === "groups" || article.categoryId === "expenses")) {
+      score += 10;
     }
 
     if (score > 10) {
@@ -422,8 +431,27 @@ export function searchKnowledgeBase(
         }
       }
 
+      // Filter actions for clean slate
+      let actions = article.actions;
+      if (isBlank) {
+        actions = article.actions
+          .filter(a => a.destination !== "/tab/lisbon-24" && a.destination !== "/demo" && a.type !== "toggle-mode")
+          .map(a => {
+            if (a.destination?.includes("/tab/lisbon-24/expense/new")) {
+              return { ...a, destination: options.currentTabId ? `/tab/${options.currentTabId}/expense/new` : "/home" };
+            }
+            if (a.destination?.includes("/tab/lisbon-24/members")) {
+              return { ...a, destination: options.currentTabId ? `/tab/${options.currentTabId}/members` : "/home" };
+            }
+            return a;
+          });
+      }
+
       results.push({
-        article,
+        article: {
+          ...article,
+          actions
+        },
         score,
         matchedKeywords: Array.from(new Set(matchedKeywords)),
         contextAdviceText
@@ -437,23 +465,58 @@ export function searchKnowledgeBase(
 }
 
 /**
- * Get articles for a specific category
+ * Get articles for a specific category, optionally filtered by workspace mode
  */
-export function getArticlesByCategory(categoryId: KBCategoryId): KBArticle[] {
-  return KB_ARTICLES.filter((a) => a.categoryId === categoryId);
+export function getArticlesByCategory(categoryId: KBCategoryId, mode?: "sample" | "blank"): KBArticle[] {
+  let list = KB_ARTICLES.filter((a) => a.categoryId === categoryId);
+  if (mode === "blank") {
+    list = list.filter((a) => a.id !== "netting-lisbon-benchmark" && a.id !== "sandbox-restore-lisbon");
+  }
+  return list;
+}
+
+/**
+ * Get all available articles filtered by workspace mode
+ */
+export function getAllArticles(mode?: "sample" | "blank"): KBArticle[] {
+  if (mode === "blank") {
+    return KB_ARTICLES.filter((a) => a.id !== "netting-lisbon-benchmark" && a.id !== "sandbox-restore-lisbon");
+  }
+  return KB_ARTICLES;
+}
+
+/**
+ * Get categories filtered by workspace mode
+ */
+export function getKBCategories(mode?: "sample" | "blank"): KBCategory[] {
+  if (mode === "blank") {
+    // In clean slate, hide the Interactive Sandbox category
+    return KB_CATEGORIES.filter((c) => c.id !== "sandbox");
+  }
+  return KB_CATEGORIES;
 }
 
 /**
  * Get popular/featured articles
  */
-export function getPopularArticles(): KBArticle[] {
-  const popularIds = [
-    "netting-how-it-works",
-    "settlement-cash-out",
-    "web3-zero-gas-paymaster",
-    "web3-mera-passkeys",
-    "sandbox-sample-vs-clean",
-    "expense-smart-scan"
-  ];
+export function getPopularArticles(mode?: "sample" | "blank"): KBArticle[] {
+  const popularIds = mode === "blank"
+    ? [
+        "group-create-tab",
+        "netting-how-it-works",
+        "settlement-cash-out",
+        "web3-zero-gas-paymaster",
+        "web3-mera-passkeys",
+        "expense-smart-scan"
+      ]
+    : [
+        "netting-how-it-works",
+        "netting-lisbon-benchmark",
+        "settlement-cash-out",
+        "web3-zero-gas-paymaster",
+        "web3-mera-passkeys",
+        "sandbox-sample-vs-clean",
+        "expense-smart-scan"
+      ];
   return KB_ARTICLES.filter((a) => popularIds.includes(a.id));
 }
