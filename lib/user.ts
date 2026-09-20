@@ -183,7 +183,11 @@ export function resetLisbonDemo() {
     localStorage.setItem("meshTab_sample_tabs", JSON.stringify(DEFAULT_TABS));
   }
 
-  // 4. Force mode to sample and reset notifications to sample
+  // 4. Reset settled payout balance to benchmark clean state ($0)
+  localStorage.removeItem("meshTab_settledPayoutBalance");
+  window.dispatchEvent(new Event("meshTab-payout-update"));
+
+  // 5. Force mode to sample and reset notifications to sample
   localStorage.setItem("meshTab_workspaceMode", "sample");
   resetNotificationsToMode("sample");
 
@@ -628,27 +632,38 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
 // Settled Payouts / Cashable Balance (Accumulated from others settling)
 // -------------------------------------------------------------
 export function getSettledPayoutBalance(): number {
-  if (typeof window === "undefined") return 18000; // default $180.00 accumulated in demo
+  if (typeof window === "undefined") return 0;
+  const mode = getWorkspaceMode();
+  if (mode === "blank") {
+    const val = localStorage.getItem("meshTab_clean_settledPayoutBalance");
+    if (val === null) return 0;
+    const parsed = parseInt(val, 10);
+    return isNaN(parsed) ? 0 : Math.max(0, parsed);
+  }
   const val = localStorage.getItem("meshTab_settledPayoutBalance");
-  if (val === null) return 18000;
+  if (val === null) return 0;
   const parsed = parseInt(val, 10);
-  return isNaN(parsed) ? 18000 : parsed;
+  return isNaN(parsed) ? 0 : Math.max(0, parsed);
 }
 
 export function addSettledPayout(amountCents: number) {
   if (typeof window === "undefined") return;
+  const mode = getWorkspaceMode();
+  const key = mode === "blank" ? "meshTab_clean_settledPayoutBalance" : "meshTab_settledPayoutBalance";
   const current = getSettledPayoutBalance();
   const next = current + amountCents;
-  localStorage.setItem("meshTab_settledPayoutBalance", String(next));
+  localStorage.setItem(key, String(next));
   window.dispatchEvent(new Event("meshTab-payout-update"));
 }
 
 export function withdrawSettledPayout(amountCents?: number): number {
   if (typeof window === "undefined") return 0;
+  const mode = getWorkspaceMode();
+  const key = mode === "blank" ? "meshTab_clean_settledPayoutBalance" : "meshTab_settledPayoutBalance";
   const current = getSettledPayoutBalance();
   const toWithdraw = amountCents !== undefined ? Math.min(current, amountCents) : current;
   const next = Math.max(0, current - toWithdraw);
-  localStorage.setItem("meshTab_settledPayoutBalance", String(next));
+  localStorage.setItem(key, String(next));
   window.dispatchEvent(new Event("meshTab-payout-update"));
   return toWithdraw;
 }
@@ -660,9 +675,11 @@ export function useSettledPayoutBalance() {
     const sync = () => setBalance(getSettledPayoutBalance());
     sync();
     window.addEventListener("meshTab-payout-update", sync);
+    window.addEventListener("meshTab-workspace-update", sync);
     window.addEventListener("storage", sync);
     return () => {
       window.removeEventListener("meshTab-payout-update", sync);
+      window.removeEventListener("meshTab-workspace-update", sync);
       window.removeEventListener("storage", sync);
     };
   }, []);

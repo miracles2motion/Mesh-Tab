@@ -7,7 +7,7 @@ import { Button } from "../ui/button";
 import { formatCurrency } from "../../lib/utils";
 import Image from "next/image";
 import { ReceiptView } from "../ReceiptView";
-import { MonadLogo, AgoraLogo, DynamicLogo, PimlicoLogo } from "../ui/partner-logo";
+import { MonadLogo, AgoraLogo } from "../ui/partner-logo";
 
 import { useUserProfile, settleTab, useVirtualBalance, useStoredTabMembers } from "../../lib/user";
 import { toast } from "sonner";
@@ -235,13 +235,12 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
         </Button>
         
         {/* Partner Branding */}
-        <div className="mt-6 flex items-center justify-center gap-3 text-slate-500 dark:text-white/50 text-xs font-medium">
+        <div className="mt-6 flex items-center justify-center gap-2.5 text-slate-500 dark:text-white/50 text-xs font-medium">
            <span>Powered by</span>
-           <div className="flex items-center gap-3.5 opacity-90 hover:opacity-100 transition-all text-slate-800 dark:text-white">
-             <MonadLogo className="h-4 w-auto" />
-             <AgoraLogo className="h-4 w-auto" />
-             <DynamicLogo className="h-4 w-auto" />
-             <PimlicoLogo className="h-4 w-auto" />
+           <div className="flex items-center gap-2.5 opacity-80 hover:opacity-100 transition-all text-slate-700 dark:text-white/80">
+             <MonadLogo className="h-3.5 w-auto" />
+             <span className="text-slate-300 dark:text-white/20">×</span>
+             <AgoraLogo className="h-3.5 w-auto" />
            </div>
         </div>
       </div>

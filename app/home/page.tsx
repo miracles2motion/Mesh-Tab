@@ -7,7 +7,7 @@ import { useState } from "react";
 import { TransactionOverlay, TransactionState } from "../../components/ui/transaction-overlay";
 import { formatCurrency } from "../../lib/utils";
 import { ThemeToggle } from "../../components/theme-toggle";
-import { useUserProfile, useStoredTabs, useVirtualBalance, useWorkspaceMode, useSettledPayoutBalance } from "../../lib/user";
+import { useUserProfile, useStoredTabs, useVirtualBalance, useWorkspaceMode, useSettledPayoutBalance, getStoredTabMembers } from "../../lib/user";
 import { useNotifications } from "../../lib/notifications";
 import { CashOutDrawer } from "../../components/tab/cash-out-drawer";
 import { FaucetModal } from "../../components/tab/faucet-modal";
@@ -35,9 +35,21 @@ export default function GlobalHub() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<"all" | "owe" | "owed">("all");
 
-  const netBalance = mockTabs.reduce((acc, tab) => acc + tab.balance, 0);
-  const totalYouOwe = mockTabs.filter(t => t.balance < 0).reduce((acc, t) => acc + Math.abs(t.balance), 0);
-  const totalOwedToYou = mockTabs.filter(t => t.balance > 0).reduce((acc, t) => acc + t.balance, 0);
+  // Sync each tab's balance from its real member ledger (so settling inside a tab instantly updates Home)
+  const currentUserName = profile.name || "David";
+  const syncedTabs = mockTabs.map(tab => {
+    const members = getStoredTabMembers(tab.id, currentUserName);
+    const userMember = members.find(m => m.name.toLowerCase() === currentUserName.toLowerCase());
+    return {
+      ...tab,
+      balance: userMember !== undefined ? userMember.balance : tab.balance,
+      memberCount: members.length > 0 ? members.length : tab.memberCount
+    };
+  });
+
+  const netBalance = syncedTabs.reduce((acc, tab) => acc + tab.balance, 0);
+  const totalYouOwe = syncedTabs.filter(t => t.balance < 0).reduce((acc, t) => acc + Math.abs(t.balance), 0);
+  const totalOwedToYou = syncedTabs.filter(t => t.balance > 0).reduce((acc, t) => acc + t.balance, 0);
 
   // Dynamic Greeting Logic
   const hour = new Date().getHours();
@@ -79,7 +91,7 @@ export default function GlobalHub() {
   };
 
   // Filter and search tabs
-  const filteredTabs = mockTabs.filter(tab => {
+  const filteredTabs = syncedTabs.filter(tab => {
     const matchesSearch = tab.name.toLowerCase().includes(searchQuery.toLowerCase());
     if (!matchesSearch) return false;
     if (activeFilter === "owe") return tab.balance < 0;
@@ -180,40 +192,50 @@ export default function GlobalHub() {
       </header>
 
       <main className="px-6 md:px-12 max-w-5xl mx-auto w-full space-y-10">
-        {/* Overall Balance Summary Card with Web2 Financial Breakdown */}
+        {/* Unified Overall Balance & Payout Hub */}
         <div className="bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-indigo-500/15 dark:from-indigo-500/20 dark:to-purple-500/10 border border-indigo-200/80 dark:border-indigo-500/20 rounded-3xl p-6 md:p-8 relative overflow-hidden shadow-sm">
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
-              <span className="text-slate-600 dark:text-white/70 font-semibold text-xs uppercase tracking-wider">Total Net Balance</span>
+              <span className="text-slate-600 dark:text-white/70 font-semibold text-xs uppercase tracking-wider">
+                Total Net Balance
+              </span>
               <div className={`text-3xl sm:text-4xl md:text-5xl font-bold mt-1 tracking-tight break-words min-w-0 ${netBalance < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>
                 {netBalance < 0 ? "-" : "+"}<AnimatedCounter value={Math.abs(netBalance) / 100} prefix="$" decimals={2} />
               </div>
-              <p className="text-slate-500 dark:text-white/50 text-xs mt-2 font-medium">Across {mockTabs.length} active shared groups</p>
-              
-              <div className="mt-3 flex items-center gap-2 flex-wrap">
-                <button 
-                  onClick={() => setShowCashOutModal(true)}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-md shadow-emerald-500/25 transition-all cursor-pointer"
-                  title="Withdraw settled funds to your bank account"
-                >
-                  <ArrowDownToLine className="w-3.5 h-3.5" /> Cash Out to Bank
-                </button>
-                {settledBalance > 0 && (
-                  <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-2.5 py-1 rounded-full">
-                    {formatCurrency(settledBalance)} Settled & Ready
+              <p className="text-slate-500 dark:text-white/50 text-xs mt-2 font-medium">
+                Across {syncedTabs.length} active shared {syncedTabs.length === 1 ? "group" : "groups"}
+              </p>
+
+              {settledBalance > 0 && (
+                <div className="mt-4 flex items-center gap-3 flex-wrap">
+                  <button 
+                    onClick={() => {
+                      sounds.playClick();
+                      setShowCashOutModal(true);
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-md shadow-emerald-500/25 transition-all cursor-pointer"
+                    title="Withdraw settled funds to your bank account"
+                  >
+                    <ArrowDownToLine className="w-4 h-4" /> Cash Out to Bank
+                  </button>
+                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-3 py-1.5 rounded-full flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>{formatCurrency(settledBalance)} Ready for Transfer</span>
                   </span>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             {/* Split Breakdown */}
-            <div className="flex items-center gap-4 bg-white/70 dark:bg-black/30 backdrop-blur-md p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/10 text-xs">
+            <div className="flex items-center gap-4 bg-white/70 dark:bg-black/30 backdrop-blur-md p-4 rounded-2xl border border-slate-200/80 dark:border-white/10 text-xs shrink-0">
               <div className="space-y-0.5">
                 <div className="flex items-center gap-1 text-rose-600 dark:text-rose-400 font-semibold">
                   <TrendingDown className="w-3.5 h-3.5" />
                   <span>You Owe</span>
                 </div>
-                <div className="font-bold text-slate-900 dark:text-white text-sm">{formatCurrency(totalYouOwe)}</div>
+                <div className="font-bold text-slate-900 dark:text-white text-base">
+                  {formatCurrency(totalYouOwe)}
+                </div>
               </div>
               <div className="w-px h-8 bg-slate-200 dark:bg-white/10" />
               <div className="space-y-0.5">
@@ -221,66 +243,28 @@ export default function GlobalHub() {
                   <TrendingUp className="w-3.5 h-3.5" />
                   <span>You're Owed</span>
                 </div>
-                <div className="font-bold text-slate-900 dark:text-white text-sm">{formatCurrency(totalOwedToYou)}</div>
-              </div>
-              <div className="w-px h-8 bg-slate-200 dark:bg-white/10" />
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-semibold">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Settled Payouts</span>
+                <div className="font-bold text-slate-900 dark:text-white text-base">
+                  {formatCurrency(totalOwedToYou)}
                 </div>
-                <div className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">{formatCurrency(settledBalance)}</div>
               </div>
+              {settledBalance > 0 && (
+                <>
+                  <div className="w-px h-8 bg-slate-200 dark:bg-white/10" />
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-semibold">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Settled Payouts</span>
+                    </div>
+                    <div className="font-bold text-emerald-600 dark:text-emerald-400 text-base">
+                      {formatCurrency(settledBalance)}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
           {/* Decorative Mesh */}
           <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-500/10 dark:bg-indigo-500/30 blur-[80px] rounded-full pointer-events-none" />
-        </div>
-
-        {/* Accumulated Settled Funds Available for Cash Out Card */}
-        <div className="bg-gradient-to-r from-emerald-500/15 via-emerald-500/5 to-teal-500/15 dark:from-emerald-500/20 dark:via-emerald-500/10 dark:to-teal-500/10 border border-emerald-500/30 dark:border-emerald-500/30 rounded-3xl p-6 sm:p-7 relative overflow-hidden shadow-sm">
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0 shadow-md shadow-emerald-500/20">
-                <ArrowDownToLine className="w-7 h-7" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
-                    Settled Balance (Ready to Cash Out)
-                  </span>
-                  <span className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-emerald-500/30">
-                    Agora AUSD • Instant Transfer
-                  </span>
-                </div>
-                <div className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-white tabular-nums tracking-tight mt-0.5 break-words min-w-0">
-                  <AnimatedCounter value={settledBalance / 100} prefix="$" decimals={2} />
-                </div>
-                <p className="text-xs text-slate-500 dark:text-white/60 mt-1">
-                  Accumulated from friends settling their tab debts to you. Ready for instant bank transfer or debit card payout.
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => {
-                sounds.playClick();
-                setShowCashOutModal(true);
-              }}
-              disabled={settledBalance <= 0}
-              className={`px-6 py-4 rounded-2xl font-bold text-sm shadow-lg flex items-center justify-center gap-2.5 transition-all shrink-0 cursor-pointer ${
-                settledBalance > 0
-                  ? "bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white shadow-emerald-500/25 hover:shadow-emerald-500/40"
-                  : "bg-slate-200 dark:bg-white/10 text-slate-400 dark:text-white/30 cursor-not-allowed"
-              }`}
-              title="Withdraw settled funds to your bank account or debit card"
-            >
-              <ArrowDownToLine className="w-5 h-5" />
-              <span>Cash Out to Bank</span>
-            </button>
-          </div>
-          {/* Subtle glow circle */}
-          <div className="absolute -right-16 -bottom-16 w-48 h-48 bg-emerald-500/10 dark:bg-emerald-500/20 blur-[60px] rounded-full pointer-events-none" />
         </div>
 
         {/* Active Tabs with Search & Filter Chips */}
@@ -571,7 +555,7 @@ export default function GlobalHub() {
       <CashOutDrawer 
         isOpen={showCashOutModal} 
         onClose={() => setShowCashOutModal(false)} 
-        availableAmount={settledBalance > 0 ? settledBalance : (totalOwedToYou > 0 ? totalOwedToYou : 18000)} 
+        availableAmount={Math.max(0, settledBalance)} 
         currentUserName={profile.name} 
       />
 
