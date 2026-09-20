@@ -18,9 +18,10 @@ export interface ExpenseItem {
 
 interface FeedListProps {
   expenses: ExpenseItem[];
+  currentUserName?: string;
 }
 
-export function FeedList({ expenses }: FeedListProps) {
+export function FeedList({ expenses, currentUserName }: FeedListProps) {
   const params = useParams();
   const tabId = params?.id || "default";
 
@@ -115,7 +116,7 @@ export function FeedList({ expenses }: FeedListProps) {
                       <span className={isSettlement ? "text-emerald-700/80 dark:text-emerald-300/70 font-medium" : "text-slate-500 dark:text-white/50"}>
                         {isSettlement ? "Settled by" : "Paid by"}{" "}
                         <span className={`font-bold ${isSettlement ? "text-emerald-900 dark:text-emerald-200" : "text-slate-700 dark:text-white/80"}`}>
-                          {item.payer}
+                          {currentUserName && item.payer.toLowerCase() === currentUserName.toLowerCase() ? `You (${item.payer})` : item.payer}
                         </span>
                       </span>
                       <span className={isSettlement ? "text-emerald-600/70 dark:text-emerald-400/60 font-semibold" : "text-slate-400 dark:text-white/40"}>

@@ -9,7 +9,7 @@ import { Button } from "../../../components/ui/button";
 import Image from "next/image";
 import { MonadLogo, AgoraLogo } from "../../../components/ui/partner-logo";
 
-import { saveNewTab } from "../../../lib/user";
+import { saveNewTab, getStoredUser, DEFAULT_USER_NAME } from "../../../lib/user";
 
 export default function CreateTab() {
   const router = useRouter();
@@ -26,10 +26,12 @@ export default function CreateTab() {
 
     const cleanId = tabName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
     const newTabId = cleanId || "custom-tab";
+    const currentUserName = getStoredUser().name || DEFAULT_USER_NAME;
     
     saveNewTab({
       id: newTabId,
       name: tabName.trim(),
+      creator: currentUserName,
       role: "Creator",
       balance: 0,
       memberCount: 1,

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowUpRight, Check, BellRing, Bell } from "lucide-react";
+import { ArrowUpRight, Check, BellRing, Bell, Crown } from "lucide-react";
 import { formatCurrency } from "../../lib/utils";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
@@ -11,15 +11,17 @@ interface RosterMember {
   name: string;
   balance: number; // in cents
   type: 'debtor' | 'creditor' | 'settled';
+  role?: 'admin' | 'member';
 }
 
 interface RosterCarouselProps {
   members: RosterMember[];
   grossVolume: number; // in cents
   currentUserName?: string;
+  creatorName?: string;
 }
 
-export function RosterCarousel({ members, grossVolume, currentUserName }: RosterCarouselProps) {
+export function RosterCarousel({ members, grossVolume, currentUserName, creatorName }: RosterCarouselProps) {
   const [isAllPinged, setIsAllPinged] = useState(false);
   const [pingedSingle, setPingedSingle] = useState<Record<string, boolean>>({});
 
@@ -113,6 +115,8 @@ export function RosterCarousel({ members, grossVolume, currentUserName }: Roster
         {members.map((member, i) => {
           const isSettled = member.balance === 0 || member.type === 'settled';
           const isCreditor = member.type === 'creditor';
+          const isUser = member.name.toLowerCase() === (currentUserName || "").toLowerCase();
+          const isCreator = member.role === "admin" || (creatorName && member.name.toLowerCase() === creatorName.toLowerCase());
 
           return (
             <motion.div 
@@ -120,10 +124,33 @@ export function RosterCarousel({ members, grossVolume, currentUserName }: Roster
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.05 }}
               key={member.name}
-              className="flex-shrink-0 bg-white dark:bg-white/5 backdrop-blur-md border border-slate-200 dark:border-white/10 rounded-2xl p-4 w-[140px] flex flex-col justify-between h-[100px] shadow-sm"
+              className={`flex-shrink-0 bg-white dark:bg-white/5 backdrop-blur-md border rounded-2xl p-3.5 w-[150px] flex flex-col justify-between h-[112px] shadow-sm relative transition-all ${
+                isUser 
+                  ? "border-indigo-400/60 dark:border-indigo-500/50 bg-indigo-50/20 dark:bg-indigo-500/[0.06] ring-1 ring-indigo-500/20 shadow-indigo-500/5" 
+                  : "border-slate-200 dark:border-white/10"
+              }`}
             >
-              <div className="flex items-start justify-between">
-                <span className="font-semibold text-slate-900 dark:text-white/90 text-sm truncate max-w-[80px]">{member.name}</span>
+              <div className="flex items-start justify-between gap-1">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className={`font-bold text-sm truncate max-w-[84px] ${isUser ? "text-indigo-950 dark:text-white" : "text-slate-900 dark:text-white/90"}`}>
+                      {member.name}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    {isUser && (
+                      <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-md bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shrink-0">
+                        You
+                      </span>
+                    )}
+                    {isCreator && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20 shrink-0 flex items-center gap-0.5" title="Tab Creator / Host">
+                        <Crown className="w-2.5 h-2.5" /> Host
+                      </span>
+                    )}
+                  </div>
+                </div>
+
                 {isSettled ? (
                   <div className="w-6 h-6 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0" title="Settled ($0.00)">
                     <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 stroke-[2.5]" />

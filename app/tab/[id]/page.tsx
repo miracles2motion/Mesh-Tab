@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { Activity, Plus, ArrowLeft, Settings, Users, Download, CheckCircle2, LayoutGrid, Sparkles } from "lucide-react";
+import { Activity, Plus, ArrowLeft, Settings, Users, Download, CheckCircle2, LayoutGrid, Sparkles, Crown } from "lucide-react";
 import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { BalanceCard } from "../../../components/tab/balance-card";
@@ -31,6 +31,13 @@ function DashboardContent() {
   const currentUser = profile.name || "David";
   const { members: activeMembers } = useStoredTabMembers(rawTabId, currentUser);
 
+  const creatorName = rawTabId === "lisbon-24" 
+    ? "Aisha" 
+    : rawTabId === "house-groceries" 
+    ? "Alex" 
+    : (activeMembers.find(m => m.role === "admin")?.name || currentUser);
+  const isCurrentUserCreator = currentUser.toLowerCase() === creatorName.toLowerCase();
+
   const currentTab = storedTabs.find(t => t.id === rawTabId) || {
     id: rawTabId,
     name: rawTabId === "house-groceries" 
@@ -39,7 +46,8 @@ function DashboardContent() {
       ? "Lisbon Weekend"
       : rawTabId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
     balance: rawTabId === "lisbon-24" ? -18000 : 0,
-    role: "Creator" as const,
+    role: isCurrentUserCreator ? ("Creator" as const) : ("Member" as const),
+    creator: creatorName,
     memberCount: activeMembers.length,
     lastActivity: "Just now"
   };
@@ -184,7 +192,16 @@ function DashboardContent() {
           </Link>
           <div className="min-w-0">
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 dark:text-white tracking-tight truncate">{currentTab.name}</h1>
-            <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              {isCurrentUserCreator ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/20 shrink-0">
+                  <Crown className="w-3 h-3 text-indigo-500" /> Created by You
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/20 shrink-0">
+                  <Crown className="w-3 h-3 text-amber-500" /> Host: {creatorName}
+                </span>
+              )}
               <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">
                 <Activity className="w-3.5 h-3.5 animate-pulse" />
                 <span>Real-time Sync • 0.3s</span>
@@ -297,8 +314,13 @@ function DashboardContent() {
 
         {/* Right Column (Roster & Feed) */}
         <div className="lg:col-span-8 space-y-10">
-          <RosterCarousel members={activeMembers} grossVolume={grossVolume} currentUserName={currentUser} />
-          <FeedList expenses={expenses} />
+          <RosterCarousel 
+            members={activeMembers} 
+            grossVolume={grossVolume} 
+            currentUserName={currentUser} 
+            creatorName={creatorName} 
+          />
+          <FeedList expenses={expenses} currentUserName={currentUser} />
         </div>
       </div>
 
@@ -308,18 +330,18 @@ function DashboardContent() {
           <button 
             onClick={() => setIsNettingModalOpen(true)}
             className={`flex-1 border font-bold py-4 rounded-2xl backdrop-blur-xl flex items-center justify-center gap-2 shadow-md cursor-pointer ${
-              hasOutstandingTabDebt
-                ? "bg-white/90 dark:bg-indigo-500/20 border-slate-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-100"
-                : "bg-white/90 dark:bg-emerald-500/10 border-slate-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-300"
+              hasOutstandingTabDebt 
+                ? "bg-indigo-600/90 hover:bg-indigo-600 text-white border-indigo-500/30" 
+                : "bg-emerald-600/90 hover:bg-emerald-600 text-white border-emerald-500/30"
             }`}
           >
             {hasOutstandingTabDebt ? (
               <>
-                <Activity className="w-5 h-5" /> Netting
+                <Activity className="w-5 h-5" /> Run Netting
               </>
             ) : (
               <>
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Netting (Settled)
+                <CheckCircle2 className="w-5 h-5" /> Settled
               </>
             )}
           </button>
@@ -350,7 +372,14 @@ function DashboardContent() {
 
       {isNettingModalOpen && (
         <Modal onClose={() => setIsNettingModalOpen(false)} className="max-w-xl bg-transparent border-0 shadow-none">
-          <NettingCanvas tabId={rawTabId} members={activeMembers} grossVolume={grossVolume} expenseCount={expenses.length} />
+          <NettingCanvas 
+            tabId={rawTabId} 
+            members={activeMembers} 
+            grossVolume={grossVolume} 
+            expenseCount={expenses.length}
+            currentUserName={currentUser}
+            creatorName={creatorName}
+          />
         </Modal>
       )}
     </div>

@@ -413,10 +413,10 @@ export default function GlobalHub() {
                         {tab.role === "Creator" ? (
                           <>
                             <Crown className="w-2.5 h-2.5 text-indigo-500 dark:text-indigo-400" />
-                            <span>Creator</span>
+                            <span>Creator (You)</span>
                           </>
                         ) : (
-                          <span>Member</span>
+                          <span>Member (Host: {tab.creator || (tab.id === 'lisbon-24' ? 'Aisha' : tab.id === 'house-groceries' ? 'Alex' : 'Organizer')})</span>
                         )}
                       </span>
                     </div>

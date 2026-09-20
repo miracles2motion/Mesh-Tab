@@ -3,18 +3,18 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Sparkles, 
-  X, 
-  Settings, 
-  Volume2, 
-  VolumeX, 
-  ArrowRight, 
-  Coins, 
-  Send, 
-  Check, 
-  HelpCircle, 
-  Palette, 
+import {
+  Sparkles,
+  X,
+  Settings,
+  Volume2,
+  VolumeX,
+  ArrowRight,
+  Coins,
+  Send,
+  Check,
+  HelpCircle,
+  Palette,
   RefreshCw,
   Zap,
   Bot,
@@ -24,10 +24,10 @@ import {
   ArrowLeft,
   Trash2
 } from "lucide-react";
-import { 
-  useBuddySettings, 
-  useUserProfile, 
-  useWorkspaceMode, 
+import {
+  useBuddySettings,
+  useUserProfile,
+  useWorkspaceMode,
   useVirtualBalance,
   useStoredTabs,
   getStoredTabMembers,
@@ -177,7 +177,7 @@ export function MeshBuddy() {
     if (pathname === "/demo") {
       tip = "Interactive Sandbox: Choose between the pre-loaded Lisbon '24 trip to explore netting, or start with a Clean Slate to test a fresh tab!";
     } else if (pathname === "/home") {
-      tip = workspaceMode === "blank" 
+      tip = workspaceMode === "blank"
         ? "Clean Slate Active (Main App): Tap + to create your first tab, or ask me to restore the Lisbon demo."
         : "Sample Trip Mode: Tap Lisbon Weekend to test netting, or tap Change Mode to test a clean slate.";
     } else if (pathname === "/tab/new") {
@@ -186,14 +186,14 @@ export function MeshBuddy() {
       tip = isDemoTab
         ? "Tip: Try Smart Scan or Voice OCR to add another expense to the Lisbon benchmark!"
         : isCustomTab
-        ? `Tip: Adding an expense to "${tabDisplayName}". Snap a receipt or dictate with your mic!`
-        : "Tip: You can snap a receipt photo with your camera or dictate your expense with your mic!";
+          ? `Tip: Adding an expense to "${tabDisplayName}". Snap a receipt or dictate with your mic!`
+          : "Tip: You can snap a receipt photo with your camera or dictate your expense with your mic!";
     } else if (pathname?.includes("/members")) {
       tip = isDemoTab
         ? "Invite additional friends to the Lisbon trip with the QR code. They'll claim seats with biometric passkeys!"
         : isCustomTab
-        ? `Invite members to "${tabDisplayName}". Anyone who scans can claim a seat via TouchID / FaceID!`
-        : "Invite group members with the shareable QR code or link. Members claim seats with biometric passkeys!";
+          ? `Invite members to "${tabDisplayName}". Anyone who scans can claim a seat via TouchID / FaceID!`
+          : "Invite group members with the shareable QR code or link. Members claim seats with biometric passkeys!";
     } else if (isDemoTab) {
       tip = "In the Lisbon benchmark, Aisha paid $600 for the villa. Tap Run Tangle Netting to see 12 debts collapse into 3 payments!";
     } else if (isCustomTab) {
@@ -235,7 +235,7 @@ export function MeshBuddy() {
           setMessages(parsed);
         }
       }
-    } catch {}
+    } catch { }
   }, []);
 
   // Save chat history to localStorage on message updates
@@ -248,7 +248,7 @@ export function MeshBuddy() {
           text
         }));
         localStorage.setItem("meshTab_buddy_chat_history", JSON.stringify(toSave.slice(-30)));
-      } catch {}
+      } catch { }
     }
   }, [messages]);
 
@@ -294,7 +294,7 @@ export function MeshBuddy() {
     setMessages([freshWelcome]);
     try {
       localStorage.removeItem("meshTab_buddy_chat_history");
-    } catch {}
+    } catch { }
     toast.info("Conversation history cleared");
   };
 
@@ -344,10 +344,10 @@ export function MeshBuddy() {
       const spokenWelcome = isDemoTab
         ? `Hey ${profile.name || "there"}, ready to explore the Lisbon tab.`
         : isCustomTab
-        ? `Hey ${profile.name || "there"}, ready to check ${tabDisplayName}.`
-        : workspaceMode === "blank"
-        ? `Hey ${profile.name || "there"}, ready to create your new tab.`
-        : `Hey ${profile.name || "there"}, ready to assist you.`;
+          ? `Hey ${profile.name || "there"}, ready to check ${tabDisplayName}.`
+          : workspaceMode === "blank"
+            ? `Hey ${profile.name || "there"}, ready to create your new tab.`
+            : `Hey ${profile.name || "there"}, ready to assist you.`;
 
       const welcome: ChatMessage = {
         id: `msg-welcome-${Date.now()}`,
@@ -501,10 +501,9 @@ export function MeshBuddy() {
           `💰 **Debt & Balance Breakdown**:\n` +
           `• **Owed Money** (${stats.creditors.length}): ${creditorsList || "None"}\n` +
           `• **In Debt** (${stats.debtors.length}): ${debtorsList || "All members are fully settled!"}\n` +
-          `• **Your Position**: ${
-            userBal < 0
-              ? `🔴 You owe **${formatCurrency(Math.abs(userBal))}** to the tab.`
-              : userBal > 0
+          `• **Your Position**: ${userBal < 0
+            ? `🔴 You owe **${formatCurrency(Math.abs(userBal))}** to the tab.`
+            : userBal > 0
               ? `🟢 You are owed **+${formatCurrency(userBal)}**.`
               : "⚪ You are fully settled ($0.00)."
           }\n\n` +
@@ -512,8 +511,8 @@ export function MeshBuddy() {
           (isDemoTab
             ? `Smart Netting has simplified 12 international transfers down to 3 direct payments pointing to Aisha, clearing $900.00 (75% of transfers saved without moving capital)!`
             : stats.expenses.length >= 2
-            ? `Smart debt netting is active and ready to collapse circular loops whenever members settle.`
-            : `Only ${stats.expenses.length} expense logged so far. Add more shared expenses to form circular debt cycles.`);
+              ? `Smart debt netting is active and ready to collapse circular loops whenever members settle.`
+              : `Only ${stats.expenses.length} expense logged so far. Add more shared expenses to form circular debt cycles.`);
 
         spokenPunchline = userBal < 0
           ? `Here is your live recap for ${tabDisplayName}. You have an outstanding debt to settle.`
@@ -539,10 +538,9 @@ export function MeshBuddy() {
           (totalTabs > 0
             ? tabs.map((t) => `• **${t.name}**: ${t.balance < 0 ? `You owe ${formatCurrency(Math.abs(t.balance))}` : t.balance > 0 ? `You are owed +${formatCurrency(t.balance)}` : "Settled ($0.00)"} (${t.memberCount} members)`).join("\n") + "\n\n"
             : "• You currently have 0 active tabs.\n\n") +
-          `💵 **Net Position Across All Tabs**: ${
-            totalNetBalance < 0
-              ? `🔴 Net Debt: ${formatCurrency(Math.abs(totalNetBalance))}`
-              : totalNetBalance > 0
+          `💵 **Net Position Across All Tabs**: ${totalNetBalance < 0
+            ? `🔴 Net Debt: ${formatCurrency(Math.abs(totalNetBalance))}`
+            : totalNetBalance > 0
               ? `🟢 Net Owed to You: +${formatCurrency(totalNetBalance)}`
               : "⚪ Even ($0.00)"
           }\n` +
@@ -682,16 +680,16 @@ export function MeshBuddy() {
           (tabs.length === 0
             ? `You are currently in Clean Slate mode with 0 tabs. No debts exist right now!\n\n`
             : `📁 **Tabs Where You Owe Money (${tabsWithDebt.length})**:\n` +
-              (tabsWithDebt.length > 0
-                ? tabsWithDebt.map((t) => `• **${t.name}**: you owe **${formatCurrency(Math.abs(t.balance))}**`).join("\n") + "\n\n"
-                : "• None! You have no outstanding debts on any tab.\n\n") +
-              `🟢 **Tabs Where You Are Owed Money (${tabsWithCredit.length})**:\n` +
-              (tabsWithCredit.length > 0
-                ? tabsWithCredit.map((t) => `• **${t.name}**: you are owed **+${formatCurrency(t.balance)}**`).join("\n") + "\n\n"
-                : "• None.\n\n") +
-              (tabsSettled.length > 0
-                ? `⚪ **Settled Tabs**: ${tabsSettled.map((t) => t.name).join(", ")}\n\n`
-                : "")) +
+            (tabsWithDebt.length > 0
+              ? tabsWithDebt.map((t) => `• **${t.name}**: you owe **${formatCurrency(Math.abs(t.balance))}**`).join("\n") + "\n\n"
+              : "• None! You have no outstanding debts on any tab.\n\n") +
+            `🟢 **Tabs Where You Are Owed Money (${tabsWithCredit.length})**:\n` +
+            (tabsWithCredit.length > 0
+              ? tabsWithCredit.map((t) => `• **${t.name}**: you are owed **+${formatCurrency(t.balance)}**`).join("\n") + "\n\n"
+              : "• None.\n\n") +
+            (tabsSettled.length > 0
+              ? `⚪ **Settled Tabs**: ${tabsSettled.map((t) => t.name).join(", ")}\n\n`
+              : "")) +
           `💡 Tap any tab below to inspect individual member balances and debts!`;
 
         actionItems = tabs.map((t) => ({
@@ -821,13 +819,13 @@ export function MeshBuddy() {
         { label: "🏦 How to Cash Out", action: () => handleAskQuestion("how do i cash out?") },
       ];
     } else if (
-      q.includes("mode") || 
-      q.includes("demo") || 
-      q.includes("mock") || 
-      q.includes("clean") || 
-      q.includes("slate") || 
-      q.includes("blank") || 
-      q.includes("main app") || 
+      q.includes("mode") ||
+      q.includes("demo") ||
+      q.includes("mock") ||
+      q.includes("clean") ||
+      q.includes("slate") ||
+      q.includes("blank") ||
+      q.includes("main app") ||
       q.includes("which mode")
     ) {
       if (isDemoTab) {
@@ -953,16 +951,16 @@ export function MeshBuddy() {
         const screenLabel = currentTabId
           ? `the "${tabDisplayName}" group tab`
           : pathname === "/home"
-          ? "the Main Hub"
-          : pathname === "/demo"
-          ? "the Sandbox selector"
-          : pathname === "/settings"
-          ? "Settings & Passkeys"
-          : pathname?.includes("/expense/new")
-          ? "Add Expense screen"
-          : pathname?.includes("/members")
-          ? "Group Members screen"
-          : "MeshTab";
+            ? "the Main Hub"
+            : pathname === "/demo"
+              ? "the Sandbox selector"
+              : pathname === "/settings"
+                ? "Settings & Passkeys"
+                : pathname?.includes("/expense/new")
+                  ? "Add Expense screen"
+                  : pathname?.includes("/members")
+                    ? "Group Members screen"
+                    : "MeshTab";
 
         spokenPunchline = "I've pulled up verified actions for you on screen.";
         replyText =
@@ -1163,10 +1161,10 @@ export function MeshBuddy() {
                       {isDemoTab
                         ? "Demo Benchmark • Lisbon '24"
                         : isCustomTab
-                        ? `Main App • ${tabDisplayName}`
-                        : workspaceMode === "blank"
-                        ? "Main App • Clean Slate Workspace"
-                        : "Sample Trip Mode • Monad Guide"}
+                          ? `Main App • ${tabDisplayName}`
+                          : workspaceMode === "blank"
+                            ? "Main App • Clean Slate Workspace"
+                            : "Sample Trip Mode • Monad Guide"}
                     </p>
                   </div>
                 </div>
@@ -1206,11 +1204,10 @@ export function MeshBuddy() {
                     setDrawerTab("chat");
                     setIsConfiguring(false);
                   }}
-                  className={`flex-1 py-1.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
-                    drawerTab === "chat" && !isConfiguring
+                  className={`flex-1 py-1.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${drawerTab === "chat" && !isConfiguring
                       ? "bg-white dark:bg-white/10 text-indigo-600 dark:text-indigo-400 shadow-xs border border-slate-200/50 dark:border-white/10 font-bold"
                       : "text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
-                  }`}
+                    }`}
                 >
                   <Bot className="w-3.5 h-3.5" />
                   <span>Co-Pilot Chat</span>
@@ -1221,11 +1218,10 @@ export function MeshBuddy() {
                     setIsConfiguring(false);
                     setActiveArticle(null);
                   }}
-                  className={`flex-1 py-1.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
-                    drawerTab === "kb" && !isConfiguring
+                  className={`flex-1 py-1.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${drawerTab === "kb" && !isConfiguring
                       ? "bg-white dark:bg-white/10 text-indigo-600 dark:text-indigo-400 shadow-xs border border-slate-200/50 dark:border-white/10 font-bold"
                       : "text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"
-                  }`}
+                    }`}
                 >
                   <BookOpen className="w-3.5 h-3.5" />
                   <span>Knowledge Base</span>
@@ -1242,23 +1238,22 @@ export function MeshBuddy() {
                     {/* Mode & Context Environment Banner */}
                     <div className="px-4 py-2 border-b border-slate-200/70 dark:border-white/10 bg-slate-100/80 dark:bg-white/[0.03] flex items-center justify-between text-[11px] shrink-0">
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <span className={`w-2 h-2 rounded-full shrink-0 ${
-                          isDemoTab 
-                            ? "bg-amber-400 animate-pulse" 
-                            : isCustomTab 
-                            ? "bg-emerald-400" 
-                            : workspaceMode === "blank" 
-                            ? "bg-blue-400" 
-                            : "bg-purple-400"
-                        }`} />
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${isDemoTab
+                            ? "bg-amber-400 animate-pulse"
+                            : isCustomTab
+                              ? "bg-emerald-400"
+                              : workspaceMode === "blank"
+                                ? "bg-blue-400"
+                                : "bg-purple-400"
+                          }`} />
                         <span className="truncate font-semibold text-slate-700 dark:text-slate-200">
                           {isDemoTab
                             ? "Demo Mode: Lisbon '24 Trip"
                             : isCustomTab
-                            ? `Main App: ${tabDisplayName}`
-                            : workspaceMode === "blank"
-                            ? "Main App: Clean Slate Mode"
-                            : "Sample Trip Mode"}
+                              ? `Main App: ${tabDisplayName}`
+                              : workspaceMode === "blank"
+                                ? "Main App: Clean Slate Mode"
+                                : "Sample Trip Mode"}
                         </span>
                       </div>
                       <button
@@ -1279,9 +1274,8 @@ export function MeshBuddy() {
                           initial={{ opacity: 0, y: 8, scale: 0.98 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           transition={{ duration: 0.22, ease: "easeOut" }}
-                          className={`flex ${
-                            msg.sender === "user" ? "justify-end" : "justify-start items-start gap-2"
-                          }`}
+                          className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start items-start gap-2"
+                            }`}
                         >
                           {msg.sender === "buddy" && (
                             <div className="shrink-0 mt-0.5">
@@ -1291,11 +1285,10 @@ export function MeshBuddy() {
 
                           <div className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"} max-w-[85%]`}>
                             <div
-                              className={`p-3.5 rounded-2xl leading-relaxed whitespace-pre-line ${
-                                msg.sender === "user"
+                              className={`p-3.5 rounded-2xl leading-relaxed whitespace-pre-line ${msg.sender === "user"
                                   ? "bg-indigo-600 text-white rounded-br-xs shadow-sm"
                                   : "bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-white rounded-bl-xs shadow-sm border border-slate-200/50 dark:border-white/5"
-                              }`}
+                                }`}
                             >
                               <p>{msg.text}</p>
                             </div>
@@ -1505,11 +1498,10 @@ export function MeshBuddy() {
                             setSelectedCategory("all");
                             setActiveArticle(null);
                           }}
-                          className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-semibold transition-colors ${
-                            selectedCategory === "all"
+                          className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-semibold transition-colors ${selectedCategory === "all"
                               ? "bg-indigo-600 text-white"
                               : "bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-white/60 hover:bg-slate-200"
-                          }`}
+                            }`}
                         >
                           All ({KB_ARTICLES.length})
                         </button>
@@ -1520,11 +1512,10 @@ export function MeshBuddy() {
                               setSelectedCategory(cat.id);
                               setActiveArticle(null);
                             }}
-                            className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-semibold flex items-center gap-1 transition-colors ${
-                              selectedCategory === cat.id
+                            className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-semibold flex items-center gap-1 transition-colors ${selectedCategory === cat.id
                                 ? "bg-indigo-600 text-white"
                                 : "bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-white/60 hover:bg-slate-200"
-                            }`}
+                              }`}
                           >
                             <span>{cat.icon}</span>
                             <span>{cat.label}</span>
@@ -1564,10 +1555,10 @@ export function MeshBuddy() {
                                 {isDemoTab && activeArticle.contextAdvice.demo
                                   ? activeArticle.contextAdvice.demo
                                   : isCustomTab && activeArticle.contextAdvice.customTab
-                                  ? activeArticle.contextAdvice.customTab
-                                  : workspaceMode === "blank" && activeArticle.contextAdvice.cleanSlate
-                                  ? activeArticle.contextAdvice.cleanSlate
-                                  : activeArticle.summary}
+                                    ? activeArticle.contextAdvice.customTab
+                                    : workspaceMode === "blank" && activeArticle.contextAdvice.cleanSlate
+                                      ? activeArticle.contextAdvice.cleanSlate
+                                      : activeArticle.summary}
                               </div>
                             )}
 
@@ -1731,11 +1722,10 @@ export function MeshBuddy() {
                               }, 150);
                             }
                           }}
-                          className={`p-2.5 rounded-xl border text-center transition-all font-medium text-[11px] ${
-                            buddySettings.voice === v.id
+                          className={`p-2.5 rounded-xl border text-center transition-all font-medium text-[11px] ${buddySettings.voice === v.id
                               ? "border-indigo-600 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 font-bold"
                               : "border-slate-200 dark:border-white/10 bg-white dark:bg-white/5"
-                          }`}
+                            }`}
                         >
                           {v.label}
                         </button>

@@ -104,6 +104,7 @@ export function useDeveloperMode() {
 export interface TabSummary {
   id: string;
   name: string;
+  creator?: string;
   role: "Creator" | "Member";
   balance: number;
   memberCount: number;
@@ -112,8 +113,8 @@ export interface TabSummary {
 }
 
 export const DEFAULT_TABS: TabSummary[] = [
-  { id: "lisbon-24", name: "Lisbon Weekend", role: "Creator", balance: -18000, memberCount: 4, lastActivity: "2 hours ago" },
-  { id: "house-groceries", name: "House Groceries", role: "Member", balance: 4500, memberCount: 2, lastActivity: "Yesterday" },
+  { id: "lisbon-24", name: "Lisbon Weekend", creator: "Aisha", role: "Member", balance: -18000, memberCount: 4, lastActivity: "2 hours ago" },
+  { id: "house-groceries", name: "House Groceries", creator: "Alex", role: "Member", balance: 4500, memberCount: 2, lastActivity: "Yesterday" },
 ];
 
 export type WorkspaceMode = "sample" | "blank";
@@ -213,19 +214,29 @@ export function getStoredTabs(): TabSummary[] {
     if (stored) {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) {
+        const normalized = parsed.map((t: TabSummary) => {
+          if (t.id === "lisbon-24") {
+            return { ...t, role: "Member" as const, creator: "Aisha" };
+          }
+          if (t.id === "house-groceries") {
+            return { ...t, role: "Member" as const, creator: "Alex" };
+          }
+          return t;
+        });
+
         if (mode === "blank") {
           // Clean Slate: filter out mock demo tabs so user has a fresh workspace
-          return parsed.filter(t => t.id !== "lisbon-24" && t.id !== "house-groceries");
+          return normalized.filter(t => t.id !== "lisbon-24" && t.id !== "house-groceries");
         }
         // Sample Mode: GUARANTEE Lisbon benchmark is present
-        const hasLisbon = parsed.some(t => t.id === "lisbon-24");
+        const hasLisbon = normalized.some(t => t.id === "lisbon-24");
         if (!hasLisbon) {
-          const nonSample = parsed.filter(t => t.id !== "lisbon-24" && t.id !== "house-groceries");
+          const nonSample = normalized.filter(t => t.id !== "lisbon-24" && t.id !== "house-groceries");
           const merged = [...DEFAULT_TABS, ...nonSample];
           localStorage.setItem("meshTab_tabs", JSON.stringify(merged));
           return merged;
         }
-        return parsed;
+        return normalized;
       }
     }
   } catch (e) {}

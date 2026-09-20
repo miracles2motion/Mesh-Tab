@@ -112,7 +112,11 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
           <div className="w-6 h-6 rounded-full bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 flex items-center justify-center text-xs font-bold">
             {details.payer[0]}
           </div>
-          <span className="text-slate-700 dark:text-white/80 text-sm">Paid by <span className="font-semibold text-slate-900 dark:text-white">{details.payer}</span></span>
+          <span className="text-slate-700 dark:text-white/80 text-sm">
+            Paid by <span className="font-semibold text-slate-900 dark:text-white">
+              {currentUserName && details.payer.toLowerCase() === currentUserName.toLowerCase() ? `You (${details.payer})` : details.payer}
+            </span>
+          </span>
         </div>
       </div>
 
@@ -126,7 +130,14 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
                 <div className="w-10 h-10 rounded-full bg-indigo-500/10 dark:bg-white/10 flex items-center justify-center font-bold text-sm text-indigo-600 dark:text-white/70">
                   {split.name[0]}
                 </div>
-                <span className="font-semibold text-slate-900 dark:text-white/90">{split.name === currentUserName ? "You" : split.name}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-semibold text-slate-900 dark:text-white/90">{split.name}</span>
+                  {currentUserName && split.name.toLowerCase() === currentUserName.toLowerCase() && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                      You
+                    </span>
+                  )}
+                </div>
               </div>
               
               <div className="flex items-center gap-4">
@@ -134,7 +145,7 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
                 {split.name !== details.payer ? (
                   <div className="flex flex-col items-end text-[10px] text-rose-600 dark:text-rose-400 font-bold">
                     <span>Owes</span>
-                    <span>{details.payer}</span>
+                    <span>{currentUserName && details.payer.toLowerCase() === currentUserName.toLowerCase() ? "You" : details.payer}</span>
                   </div>
                 ) : (
                   <div className="flex flex-col items-end text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">

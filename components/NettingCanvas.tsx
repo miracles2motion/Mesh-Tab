@@ -23,6 +23,8 @@ interface NettingCanvasProps {
   members?: MemberData[];
   grossVolume?: number; // in cents
   expenseCount?: number;
+  currentUserName?: string;
+  creatorName?: string;
 }
 
 interface GraphNode {
@@ -54,7 +56,9 @@ export function NettingCanvas({
   tabId = "lisbon-24", 
   members = [], 
   grossVolume = 120000, 
-  expenseCount = 3 
+  expenseCount = 3,
+  currentUserName,
+  creatorName 
 }: NettingCanvasProps) {
   const isCleanSlate = expenseCount === 0 && grossVolume === 0;
 
@@ -666,12 +670,16 @@ export function NettingCanvas({
                   x="0"
                   y={nodeRadius + (nodes.length <= 4 ? 14 : 12)}
                   textAnchor="middle"
-                  fill="#f8fafc"
+                  fill={currentUserName && node.name.toLowerCase() === currentUserName.toLowerCase() ? "#a5b4fc" : "#f8fafc"}
                   fontSize={nodes.length <= 4 ? "11" : "9.5"}
-                  fontWeight="600"
+                  fontWeight="bold"
                   fontFamily="sans-serif"
                 >
-                  {node.name}
+                  {currentUserName && node.name.toLowerCase() === currentUserName.toLowerCase() 
+                    ? `${node.name} (You)` 
+                    : creatorName && node.name.toLowerCase() === creatorName.toLowerCase()
+                    ? `${node.name} ★`
+                    : node.name}
                 </text>
 
                 {/* Balance Subtitle Below Name */}
