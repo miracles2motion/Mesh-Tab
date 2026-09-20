@@ -31,24 +31,27 @@ function DashboardContent() {
   const currentUser = profile.name || "David";
   const { members: activeMembers } = useStoredTabMembers(rawTabId, currentUser);
 
-  const creatorName = rawTabId === "lisbon-24" 
+  const isSampleLisbon = workspaceMode === "sample" && rawTabId === "lisbon-24";
+  const isSampleGroceries = workspaceMode === "sample" && rawTabId === "house-groceries";
+
+  const creatorName = isSampleLisbon 
     ? "Aisha" 
-    : rawTabId === "house-groceries" 
+    : isSampleGroceries 
     ? "Alex" 
     : (activeMembers.find(m => m.role === "admin")?.name || currentUser);
   const isCurrentUserCreator = currentUser.toLowerCase() === creatorName.toLowerCase();
 
   const currentTab = storedTabs.find(t => t.id === rawTabId) || {
     id: rawTabId,
-    name: rawTabId === "house-groceries" 
+    name: isSampleGroceries 
       ? "House Groceries" 
-      : rawTabId === "lisbon-24"
+      : isSampleLisbon
       ? "Lisbon Weekend"
       : rawTabId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-    balance: rawTabId === "lisbon-24" ? -18000 : 0,
+    balance: isSampleLisbon ? -18000 : 0,
     role: isCurrentUserCreator ? ("Creator" as const) : ("Member" as const),
     creator: creatorName,
-    memberCount: activeMembers.length,
+    memberCount: activeMembers.length > 0 ? activeMembers.length : 1,
     lastActivity: "Just now"
   };
 

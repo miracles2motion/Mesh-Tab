@@ -328,9 +328,10 @@ export const DEFAULT_LISBON_MEMBERS: TabMember[] = [
 
 export function getStoredTabMembers(tabId: string, currentUserName?: string): TabMember[] {
   const activeUser = currentUserName || getStoredUser().name;
+  const mode = getWorkspaceMode();
   
   if (typeof window === "undefined") {
-    if (tabId === "lisbon-24") {
+    if (mode === "sample" && tabId === "lisbon-24") {
       return [
         ...DEFAULT_LISBON_MEMBERS,
         { name: activeUser, balance: -18000, type: "debtor", role: "member" }
@@ -339,22 +340,24 @@ export function getStoredTabMembers(tabId: string, currentUserName?: string): Ta
     return [{ name: activeUser, balance: 0, type: "settled", role: "admin" }];
   }
 
+  // Use workspace-isolated key prefix for clean slate vs sample mode
+  const storageKey = mode === "blank" ? `meshTab_clean_members_${tabId}` : `meshTab_members_${tabId}`;
+
   try {
-    const raw = localStorage.getItem(`meshTab_members_${tabId}`);
+    const raw = localStorage.getItem(storageKey);
     if (raw) {
       const parsed: TabMember[] = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
         let members = parsed;
 
-        // In Lisbon benchmark: ensure activeUser is mapped to the 4th debtor slot
-        if (tabId === "lisbon-24") {
+        // In Lisbon benchmark (sample mode only): ensure activeUser is mapped to the 4th debtor slot
+        if (mode === "sample" && tabId === "lisbon-24") {
           const hasActiveUser = members.some(m => m.name.toLowerCase() === activeUser.toLowerCase());
           if (!hasActiveUser) {
-            // Find David or the non-core member and update name to activeUser
             const debtorIdx = members.findIndex(m => m.name === "David" || (m.name !== "Aisha" && m.name !== "Kemi" && m.name !== "Ben"));
             if (debtorIdx >= 0) {
               members = members.map((m, idx) => idx === debtorIdx ? { ...m, name: activeUser } : m);
-              localStorage.setItem(`meshTab_members_${tabId}`, JSON.stringify(members));
+              localStorage.setItem(storageKey, JSON.stringify(members));
             }
           }
         }
@@ -373,38 +376,43 @@ export function getStoredTabMembers(tabId: string, currentUserName?: string): Ta
     }
   } catch (e) {}
 
-  if (tabId === "lisbon-24") {
-    const defaultList: TabMember[] = [
-      ...DEFAULT_LISBON_MEMBERS,
-      { name: activeUser, balance: -18000, type: "debtor", role: "member" }
-    ];
-    localStorage.setItem(`meshTab_members_${tabId}`, JSON.stringify(defaultList));
-    return defaultList;
+  // Sample mode defaults
+  if (mode === "sample") {
+    if (tabId === "lisbon-24") {
+      const defaultList: TabMember[] = [
+        ...DEFAULT_LISBON_MEMBERS,
+        { name: activeUser, balance: -18000, type: "debtor", role: "member" }
+      ];
+      localStorage.setItem(storageKey, JSON.stringify(defaultList));
+      return defaultList;
+    }
+
+    if (tabId === "house-groceries") {
+      const defaultList: TabMember[] = [
+        { name: "Alex", balance: -4500, type: "debtor", role: "admin" },
+        { name: activeUser, balance: 4500, type: "creditor", role: "member" }
+      ];
+      localStorage.setItem(storageKey, JSON.stringify(defaultList));
+      return defaultList;
+    }
   }
 
-  if (tabId === "house-groceries") {
-    const defaultList: TabMember[] = [
-      { name: "Alex", balance: -4500, type: "debtor", role: "admin" },
-      { name: activeUser, balance: 4500, type: "creditor", role: "member" }
-    ];
-    localStorage.setItem(`meshTab_members_${tabId}`, JSON.stringify(defaultList));
-    return defaultList;
-  }
-
-  // Brand new clean slate / custom tab
+  // Clean Slate Mode: absolutely 0 sample demo contamination
   const initialMembers: TabMember[] = [
     { name: activeUser, balance: 0, type: "settled", role: "admin" }
   ];
-  localStorage.setItem(`meshTab_members_${tabId}`, JSON.stringify(initialMembers));
+  localStorage.setItem(storageKey, JSON.stringify(initialMembers));
   return initialMembers;
 }
 
 export function saveStoredTabMembers(tabId: string, members: TabMember[]) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(`meshTab_members_${tabId}`, JSON.stringify(members));
+  const mode = getWorkspaceMode();
+  const storageKey = mode === "blank" ? `meshTab_clean_members_${tabId}` : `meshTab_members_${tabId}`;
+  localStorage.setItem(storageKey, JSON.stringify(members));
 
   // Sync member count in stored tabs
-  const key = getTabsStorageKey();
+  const key = getTabsStorageKey(mode);
   const tabs = getStoredTabs();
   const updatedTabs = tabs.map(t => {
     if (t.id === tabId) {
@@ -461,22 +469,31 @@ export const DEFAULT_FEED: Record<string, StoredExpense[]> = {
 };
 
 export function getStoredExpenses(tabId: string): StoredExpense[] {
-  if (typeof window === "undefined") return DEFAULT_FEED[tabId] || [];
+  const mode = getWorkspaceMode();
+  if (typeof window === "undefined") {
+    return mode === "blank" ? [] : (DEFAULT_FEED[tabId] || []);
+  }
+
+  const storageKey = mode === "blank" ? `meshTab_clean_expenses_${tabId}` : `meshTab_expenses_${tabId}`;
   try {
-    const raw = localStorage.getItem(`meshTab_expenses_${tabId}`);
+    const raw = localStorage.getItem(storageKey);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     }
   } catch (e) {}
+
+  if (mode === "blank") return [];
   return DEFAULT_FEED[tabId] || [];
 }
 
 export function saveStoredExpense(tabId: string, expense: StoredExpense) {
   if (typeof window === "undefined") return;
+  const mode = getWorkspaceMode();
+  const storageKey = mode === "blank" ? `meshTab_clean_expenses_${tabId}` : `meshTab_expenses_${tabId}`;
   const current = getStoredExpenses(tabId);
   const updated = [expense, ...current];
-  localStorage.setItem(`meshTab_expenses_${tabId}`, JSON.stringify(updated));
+  localStorage.setItem(storageKey, JSON.stringify(updated));
 
   // Dynamically recalculate tab member balances if custom tab
   if (tabId !== "lisbon-24") {

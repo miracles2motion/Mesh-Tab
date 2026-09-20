@@ -2,7 +2,7 @@
 
 import { X, Receipt, Clock, User, ArrowRight } from "lucide-react";
 import { formatCurrency } from "../../lib/utils";
-import { useUserProfile } from "../../lib/user";
+import { useUserProfile, getWorkspaceMode, getStoredTabMembers } from "../../lib/user";
 
 interface ExpenseDetailsProps {
   onClose?: () => void;
@@ -12,35 +12,38 @@ interface ExpenseDetailsProps {
 export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
   const profile = useUserProfile();
   const currentUserName = profile.name || "David";
+  const mode = getWorkspaceMode();
 
   // 1. Look up if this is a custom-created expense in localStorage
   let foundCustomExpense: { desc: string; amount: number; payer: string; time: string } | null = null;
-  let tabId = "lisbon-24";
+  let tabId = mode === "blank" ? "custom-tab" : "lisbon-24";
   if (typeof window !== "undefined") {
     try {
-      const keys = Object.keys(localStorage).filter(k => k.startsWith("meshTab_expenses_"));
+      const keys = Object.keys(localStorage).filter(k => 
+        mode === "blank" ? k.startsWith("meshTab_clean_expenses_") : k.startsWith("meshTab_expenses_")
+      );
       for (const k of keys) {
         const parsed = JSON.parse(localStorage.getItem(k) || "[]");
         const match = parsed.find((item: any) => String(item.id) === String(expenseId));
         if (match) {
           foundCustomExpense = match;
-          tabId = k.replace("meshTab_expenses_", "");
+          tabId = k.replace(mode === "blank" ? "meshTab_clean_expenses_" : "meshTab_expenses_", "");
           break;
         }
       }
     } catch {}
   }
 
-  const isMock1 = expenseId === "1";
-  const isMock2 = expenseId === "2";
-  const isMock3 = expenseId === "3";
+  const isMock1 = mode === "sample" && expenseId === "1";
+  const isMock2 = mode === "sample" && expenseId === "2";
+  const isMock3 = mode === "sample" && expenseId === "3";
 
   const desc = foundCustomExpense?.desc || (isMock1 ? "Villa booking" : isMock2 ? "Dinners & wine" : isMock3 ? "Excursions" : "Shared Group Expense");
-  const amount = foundCustomExpense?.amount || (isMock1 ? 60000 : isMock2 ? 26000 : isMock3 ? 22000 : 15000);
+  const amount = foundCustomExpense?.amount || (isMock1 ? 60000 : isMock2 ? 26000 : isMock3 ? 22000 : 0);
   const payer = foundCustomExpense?.payer || (isMock1 ? "Aisha" : isMock2 ? "Kemi" : isMock3 ? "Ben" : currentUserName);
-  const time = foundCustomExpense?.time || (isMock1 ? "October 12, 2024 at 10:42 AM" : isMock2 ? "October 11, 2024 at 8:15 PM" : "October 10, 2024 at 2:30 PM");
+  const time = foundCustomExpense?.time || (isMock1 ? "October 12, 2024 at 10:42 AM" : isMock2 ? "October 11, 2024 at 8:15 PM" : "Just now");
 
-  const isLisbon = tabId === "lisbon-24" || isMock1 || isMock2 || isMock3;
+  const isLisbon = mode === "sample" && (tabId === "lisbon-24" || isMock1 || isMock2 || isMock3);
   let dynamicSplits: { name: string; amount: number }[] = [];
 
   if (isLisbon) {
@@ -52,21 +55,11 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
       { name: currentUserName, amount: splitAmount }
     ];
   } else {
-    let memberNames: string[] = [];
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem(`meshTab_members_${tabId}`);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          memberNames = parsed.map((m: any) => m.name);
-        }
-      } catch {}
-    }
-    if (memberNames.length === 0) {
-      memberNames = Array.from(new Set([payer, currentUserName]));
-    }
-    const splitAmount = Math.round(amount / memberNames.length);
-    dynamicSplits = memberNames.map(name => ({ name, amount: splitAmount }));
+    const tabMembers = getStoredTabMembers(tabId, currentUserName);
+    const memberNames = tabMembers.map(m => m.name);
+    const names = memberNames.length > 0 ? memberNames : [payer];
+    const splitAmount = names.length > 0 ? Math.round(amount / names.length) : amount;
+    dynamicSplits = names.map(name => ({ name, amount: splitAmount }));
   }
 
   const details = {

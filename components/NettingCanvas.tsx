@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { sounds } from "../lib/sounds";
 import { fireSettlementConfetti } from "../lib/confetti";
 import { formatCurrency } from "../lib/utils";
-import { getStoredUser, DEFAULT_USER_NAME } from "../lib/user";
+import { getStoredUser, DEFAULT_USER_NAME, getWorkspaceMode } from "../lib/user";
 import { addNotification } from "../lib/notifications";
 import Link from "next/link";
 import Image from "next/image";
@@ -55,27 +55,31 @@ interface DirectedEdge {
 export function NettingCanvas({ 
   tabId = "lisbon-24", 
   members = [], 
-  grossVolume = 120000, 
-  expenseCount = 3,
+  grossVolume = 0, 
+  expenseCount = 0,
   currentUserName,
   creatorName 
 }: NettingCanvasProps) {
-  const isCleanSlate = expenseCount === 0 && grossVolume === 0;
+  const mode = getWorkspaceMode();
+  const isCleanSlate = mode === "blank" || (expenseCount === 0 && grossVolume === 0);
 
   // 1. Determine active members and their real balances
   const effectiveMembers = useMemo(() => {
     if (members && members.length > 0) {
       return members;
     }
-    // Default benchmark roster (Lisbon '24)
-    const activeName = getStoredUser().name || DEFAULT_USER_NAME;
-    return [
-      { name: "Aisha", balance: 30000 },
-      { name: "Ben", balance: -8000 },
-      { name: activeName, balance: -18000 },
-      { name: "Kemi", balance: -4000 }
-    ];
-  }, [members]);
+    const activeName = currentUserName || getStoredUser().name || DEFAULT_USER_NAME;
+    if (mode === "sample" && tabId === "lisbon-24") {
+      // Default benchmark roster (Lisbon '24)
+      return [
+        { name: "Aisha", balance: 30000 },
+        { name: "Ben", balance: -8000 },
+        { name: activeName, balance: -18000 },
+        { name: "Kemi", balance: -4000 }
+      ];
+    }
+    return [{ name: activeName, balance: 0, role: "admin" }];
+  }, [members, mode, tabId, currentUserName]);
 
   // 2. Position nodes in a 540x320 unified SVG coordinate space
   const { nodes, creditors, debtors, hasActiveDebts, totalActiveDebt } = useMemo(() => {
