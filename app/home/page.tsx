@@ -42,7 +42,11 @@ export default function GlobalHub() {
 
   // Sync each tab's balance from its real member ledger (so settling inside a tab instantly updates Home)
   const currentUserName = profile.name || "David";
-  const syncedTabs = mockTabs.map(tab => {
+  const activeTabsList = workspaceMode === "blank" 
+    ? mockTabs.filter(t => t.id !== "lisbon-24" && t.id !== "house-groceries") 
+    : mockTabs;
+
+  const syncedTabs = activeTabsList.map(tab => {
     const members = getStoredTabMembers(tab.id, currentUserName);
     const userMember = members.find(m => m.name.toLowerCase() === currentUserName.toLowerCase());
     return {

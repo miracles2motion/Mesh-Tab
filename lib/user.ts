@@ -120,14 +120,14 @@ export const DEFAULT_TABS: TabSummary[] = [
 export type WorkspaceMode = "sample" | "blank";
 
 export function getWorkspaceMode(): WorkspaceMode {
-  if (typeof window === "undefined") return "sample";
+  if (typeof window === "undefined") return "blank";
   const mode = localStorage.getItem("meshTab_workspaceMode");
-  return mode === "blank" ? "blank" : "sample";
+  return mode === "sample" ? "sample" : "blank";
 }
 
 function getTabsStorageKey(mode?: WorkspaceMode): string {
   const activeMode = mode || getWorkspaceMode();
-  return activeMode === "blank" ? "meshTab_clean_tabs" : "meshTab_sample_tabs";
+  return activeMode === "sample" ? "meshTab_sample_tabs" : "meshTab_clean_tabs";
 }
 
 export function setWorkspaceMode(mode: WorkspaceMode) {
