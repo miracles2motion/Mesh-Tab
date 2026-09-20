@@ -2,7 +2,7 @@
 
 import { X, Receipt, Clock, User, ArrowRight } from "lucide-react";
 import { formatCurrency } from "../../lib/utils";
-import { useUserProfile, getWorkspaceMode, getStoredTabMembers } from "../../lib/user";
+import { useUserProfile, getWorkspaceMode, getStoredTabMembers, StoredExpense } from "../../lib/user";
 
 interface ExpenseDetailsProps {
   onClose?: () => void;
@@ -15,7 +15,7 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
   const mode = getWorkspaceMode();
 
   // 1. Look up if this is a custom-created expense in localStorage
-  let foundCustomExpense: { desc: string; amount: number; payer: string; time: string } | null = null;
+  let foundCustomExpense: StoredExpense | null = null;
   let tabId = mode === "blank" ? "custom-tab" : "lisbon-24";
   if (typeof window !== "undefined") {
     try {
