@@ -18,8 +18,8 @@ export function ReceiptView({
 }) {
   const [copied, setCopied] = useState(false);
   
-  // If amount is 0 and recipient is Aisha (Lisbon benchmark), default to benchmark $180.00
-  const displayAmount = amount > 0 ? amount : (recipient === "Aisha" ? 18000 : 0);
+  // Always use the exact amount passed in (in cents)
+  const displayAmount = amount;
   const formatCurrency = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
   const handleShare = () => {

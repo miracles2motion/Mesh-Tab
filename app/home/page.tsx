@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode, Settings, Search, Filter, Crown, CheckCircle2, TrendingDown, TrendingUp, ArrowDownToLine, Coins, Sparkles, Award, RotateCcw } from "lucide-react";
+import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode, Settings, Search, Filter, Crown, CheckCircle2, TrendingDown, TrendingUp, ArrowDownToLine, Coins, Sparkles, Award } from "lucide-react";
 import { useState } from "react";
 import { TransactionOverlay, TransactionState } from "../../components/ui/transaction-overlay";
 import { formatCurrency } from "../../lib/utils";
@@ -22,7 +22,7 @@ export default function GlobalHub() {
   const profile = useUserProfile();
   const { tabs: mockTabs, saveTab } = useStoredTabs();
   const { balance: virtualBalance } = useVirtualBalance();
-  const { mode: workspaceMode, setMode: setWorkspaceMode, resetLisbonDemo } = useWorkspaceMode();
+  const { mode: workspaceMode } = useWorkspaceMode();
   const { settledBalance } = useSettledPayoutBalance();
   const { unreadCount } = useNotifications();
 
@@ -270,68 +270,10 @@ export default function GlobalHub() {
         {/* Active Tabs with Search & Filter Chips */}
         <div>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
               <h2 className="text-xl font-bold flex items-center gap-2 text-slate-900 dark:text-white">
                 <Users className="w-5 h-5 text-slate-400 dark:text-white/50" /> Active Tabs
               </h2>
-
-              {/* Workspace Sandbox Mode Toggle */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <div className="flex p-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setWorkspaceMode("sample");
-                      sounds.playClick();
-                      toast.info("Switched to Sample Trip Mode", {
-                        description: "Loaded Lisbon '24 and Lake Tahoe demo tabs."
-                      });
-                    }}
-                    className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                      workspaceMode === "sample"
-                        ? "bg-white dark:bg-white/15 text-indigo-600 dark:text-white shadow-sm"
-                        : "text-slate-500 hover:text-slate-900 dark:text-white/50 dark:hover:text-white"
-                    }`}
-                  >
-                    🏖️ Sample Trip
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setWorkspaceMode("blank");
-                      sounds.playClick();
-                      toast.info("Switched to Clean Slate Mode", {
-                        description: "Workspace cleared for custom tab testing."
-                      });
-                    }}
-                    className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                      workspaceMode === "blank"
-                        ? "bg-white dark:bg-white/15 text-indigo-600 dark:text-white shadow-sm"
-                        : "text-slate-500 hover:text-slate-900 dark:text-white/50 dark:hover:text-white"
-                    }`}
-                  >
-                    ✨ Clean Slate
-                  </button>
-                </div>
-
-                {workspaceMode === "sample" && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      resetLisbonDemo();
-                      sounds.playSuccessChime();
-                      toast.success("Lisbon Demo Reset", {
-                        description: "Benchmark restored to 4 members, $1,200 expenses, and -$180.00 debt."
-                      });
-                    }}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors cursor-pointer shadow-xs"
-                    title="Reset Lisbon trip to initial benchmark state"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Reset Lisbon Demo</span>
-                  </button>
-                )}
-              </div>
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">

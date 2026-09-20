@@ -324,12 +324,11 @@ export function MeshBuddy() {
           { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet }
         ];
       } else if (workspaceMode === "blank") {
-        welcomeText = `Hey ${profile.name || "there"}! I'm ${buddySettings.name}. You're in Clean Slate mode (Main App with a fresh workspace). Ready to create your first tab?`;
+        welcomeText = `Hey ${profile.name || "there"}! I'm ${buddySettings.name}. You're in Clean Slate mode with a fresh workspace. Ready to create your first tab?`;
         welcomeActions = [
           { label: "➕ Create New Tab", action: () => router.push("/tab/new") },
           { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet },
-          { label: "🏖️ Restore Lisbon Demo", action: handleToggleWorkspace },
-          { label: "🎮 Open Demo Sandbox", action: () => router.push(pathname ? `/demo?from=${encodeURIComponent(pathname)}` : "/demo") }
+          { label: "❓ How to Split Bills?", action: () => handleAskQuestion("How do I create and split a bill?") }
         ];
       } else {
         welcomeText = `Hey ${profile.name || "there"}! I'm ${buddySettings.name}. You're in Sample Trip Mode. Tap Lisbon Weekend to test netting, or explore your settings.`;
@@ -549,7 +548,7 @@ export function MeshBuddy() {
         actionItems = [
           totalTabs > 0 ? { label: `🏖️ Open ${tabs[0].name}`, action: () => router.push(`/tab/${tabs[0].id}`) } : { label: "➕ Create New Tab", action: () => router.push("/tab/new") },
           { label: "🚰 Claim Faucet (+$500)", action: handleClaimFaucet },
-          { label: workspaceMode === "blank" ? "🏖️ Restore Lisbon Demo" : "🧹 Switch to Clean Slate", action: handleToggleWorkspace },
+          ...(workspaceMode === "sample" ? [{ label: "🧹 Switch to Clean Slate", action: handleToggleWorkspace }] : [])
         ];
       } else if (pathname === "/demo") {
         spokenPunchline = "You are in the demo sandbox selector.";
