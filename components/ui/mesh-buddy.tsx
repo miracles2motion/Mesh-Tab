@@ -121,6 +121,11 @@ export function MeshBuddy() {
   const [isThinking, setIsThinking] = useState(false);
   const [isRippling, setIsRippling] = useState(false);
   const [buddyMood, setBuddyMood] = useState<BuddyMood>("happy");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Knowledge Base view state
   const [selectedCategory, setSelectedCategory] = useState<KBCategoryId | "all">("all");
@@ -1029,7 +1034,7 @@ export function MeshBuddy() {
       <div className="fixed bottom-24 right-5 z-40 md:bottom-8 md:right-8 flex flex-col items-end">
         {/* Subtle Idle Speech Bubble (20s reading window, pauses on hover) */}
         <AnimatePresence>
-          {speechBubble && !isOpen && (
+          {mounted && speechBubble && !isOpen && (
             <motion.div
               initial={{ opacity: 0, y: 12, scale: 0.92 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}

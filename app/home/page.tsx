@@ -152,28 +152,44 @@ export default function GlobalHub() {
             </button>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{greeting}, {profile.name} {emoji}</h1>
-            {mounted && workspaceMode === "sample" && (
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/20" title="Exploring Lisbon Trip Demo as David">
-                🏖️ Lisbon Demo Persona
-              </span>
+            {!mounted ? (
+              <div className="h-9 w-52 bg-slate-200 dark:bg-white/10 rounded-xl animate-pulse" />
+            ) : (
+              <>
+                <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{greeting}, {profile.name} {emoji}</h1>
+                {workspaceMode === "sample" && (
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/20" title="Exploring Lisbon Trip Demo as David">
+                    🏖️ Lisbon Demo Persona
+                  </span>
+                )}
+              </>
             )}
           </div>
           <p className="text-slate-500 dark:text-white/60 mt-0.5 text-sm">
-            {mounted && workspaceMode === "sample" ? "Exploring Lisbon '24 benchmark data. Ready to settle up or test netting?" : "Your personal shared tabs and real settlement ledger."}
+            {!mounted ? (
+              <span className="inline-block h-4 w-72 bg-slate-200 dark:bg-white/10 rounded-md animate-pulse" />
+            ) : workspaceMode === "sample" ? (
+              "Exploring Lisbon '24 benchmark data. Ready to settle up or test netting?"
+            ) : (
+              "Your personal shared tabs and real settlement ledger."
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
-          <button
-            onClick={() => setShowFaucetModal(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold text-xs hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors shadow-sm"
-            title="Sandbox Virtual Faucet"
-          >
-            <Coins className="w-3.5 h-3.5" />
-            <span className="tabular-nums">
-              <AnimatedCounter value={virtualBalance / 100} prefix="$" decimals={2} />
-            </span>
-          </button>
+          {!mounted ? (
+            <div className="h-8 w-24 bg-slate-200 dark:bg-white/10 rounded-full animate-pulse" />
+          ) : (
+            <button
+              onClick={() => setShowFaucetModal(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold text-xs hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors shadow-sm"
+              title="Sandbox Virtual Faucet"
+            >
+              <Coins className="w-3.5 h-3.5" />
+              <span className="tabular-nums">
+                <AnimatedCounter value={virtualBalance / 100} prefix="$" decimals={2} />
+              </span>
+            </button>
+          )}
           <ThemeToggle />
           <Link 
             href="/notifications?from=/home" 
@@ -194,13 +210,17 @@ export default function GlobalHub() {
           >
             <Settings className="w-5 h-5" />
           </Link>
-          <Link 
-            href="/settings?from=/home" 
-            className={`w-10 h-10 md:w-12 md:h-12 rounded-full ${profile.avatarColor} text-white flex items-center justify-center shadow-md hover:scale-105 transition-transform text-lg font-bold`}
-            title={`Profile (${profile.name})`}
-          >
-            {profile.name ? profile.name[0].toUpperCase() : "U"}
-          </Link>
+          {!mounted ? (
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-slate-200 dark:bg-white/10 animate-pulse" />
+          ) : (
+            <Link 
+              href="/settings?from=/home" 
+              className={`w-10 h-10 md:w-12 md:h-12 rounded-full ${profile.avatarColor} text-white flex items-center justify-center shadow-md hover:scale-105 transition-transform text-lg font-bold`}
+              title={`Profile (${profile.name})`}
+            >
+              {profile.name ? profile.name[0].toUpperCase() : "U"}
+            </Link>
+          )}
         </div>
       </header>
 
