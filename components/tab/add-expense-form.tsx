@@ -166,20 +166,24 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
 
   const fallbackVoiceDemo = () => {
     setIsAiProcessing(true);
-    setAiNotice("Transcribing audio: 'I paid $120 for the airport vans for everyone'...");
+    const isCleanSlate = workspaceMode === "blank";
+    const demoDesc = isCleanSlate ? "Group Dinner & Supplies" : "Lisbon Airport Vans";
+    const demoAmount = isCleanSlate ? "45.00" : "120.00";
+
+    setAiNotice(`Voice demo preview: "${demoDesc} - $${demoAmount}"...`);
     setTimeout(() => {
-      setDesc("Lisbon Airport Vans");
-      setAmount("120.00");
+      setDesc(demoDesc);
+      setAmount(demoAmount);
       setPaidBy(activeUser);
       setSplitType("equal");
       setIsAiProcessing(false);
       setShowDraft(true);
       sounds.playSuccessChime();
-      toast.success("Voice Demo Loaded", {
-        description: "Extracted $120.00 for Lisbon Airport Vans."
+      toast.success("Voice Simulation Parsed", {
+        description: `Extracted $${demoAmount} for ${demoDesc}.`
       });
-      setAiNotice("Extracted: Lisbon Airport Vans • $120.00 (Split equally)");
-    }, 1500);
+      setAiNotice(`Parsed: ${demoDesc} • $${demoAmount} (Split equally)`);
+    }, 1200);
   };
 
   useEffect(() => {

@@ -205,9 +205,9 @@ function DashboardContent() {
                   <Crown className="w-3 h-3 text-amber-500" /> Host: {creatorName}
                 </span>
               )}
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 shrink-0">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 shrink-0" title="Simulated Monad sub-second indexer response">
                 <Activity className="w-3.5 h-3.5 animate-pulse" />
-                <span>Real-time Sync • 0.3s</span>
+                <span>Sandbox Sync • 0.3s</span>
               </div>
               {workspaceMode === "sample" && rawTabId === "lisbon-24" && (
                 <Link

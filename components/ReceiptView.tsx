@@ -89,9 +89,12 @@ export function ReceiptView({
                 <span className="text-indigo-600 dark:text-indigo-400 font-mono font-semibold">#4891029</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-white/10">
-                <span className="text-slate-500 dark:text-white/50">Payment ID</span>
-                <span className="text-indigo-600 dark:text-indigo-400 font-mono flex items-center gap-1 font-semibold">
-                  #8f29a1 <ExternalLink className="w-3 h-3" />
+                <div className="flex flex-col">
+                  <span className="text-slate-500 dark:text-white/50">Payment ID</span>
+                  <span className="text-[10px] text-slate-400 dark:text-white/40">Simulated Sandbox Receipt</span>
+                </div>
+                <span className="text-indigo-600 dark:text-indigo-400 font-mono flex items-center gap-1 font-semibold text-xs sm:text-sm bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-500/20" title="Explorer link activates upon Monad testnet deployment">
+                  #8f29a1 <span className="text-[10px] uppercase font-bold text-indigo-500">Sandbox</span>
                 </span>
               </div>
             </div>
