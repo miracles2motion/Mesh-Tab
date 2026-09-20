@@ -44,13 +44,44 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
 
   const [amount, setAmount] = useState("");
   const [desc, setDesc] = useState("");
-  const [splitType, setSplitType] = useState<'equal' | 'exact' | 'percent'>('equal');
+  const [splitType, setSplitType] = useState<'equal' | 'exact'>('equal');
+  const [exactAmounts, setExactAmounts] = useState<Record<string, string>>({});
   const [txState, setTxState] = useState<TransactionState>("idle");
   
   // UI states for splitting
   const [paidBy, setPaidBy] = useState(activeUser);
   const [splitBetween, setSplitBetween] = useState<string[]>(normalizedMembers);
   const [showPaidByDropdown, setShowPaidByDropdown] = useState(false);
+
+  // Compute sum of exact amounts in cents
+  const totalBillCents = Math.round((parseFloat(amount) || 0) * 100);
+  const assignedExactCents = Object.entries(exactAmounts).reduce((acc, [member, val]) => {
+    if (!splitBetween.includes(member)) return acc;
+    const cents = Math.round((parseFloat(val) || 0) * 100);
+    return acc + (isNaN(cents) ? 0 : cents);
+  }, 0);
+  const remainingCents = totalBillCents - assignedExactCents;
+  const isExactValid = splitType === 'equal' || (totalBillCents > 0 && remainingCents === 0);
+
+  const handleExactAmountChange = (member: string, value: string) => {
+    // Only allow numbers and up to 2 decimal places
+    if (value === "" || /^\d*(\.\d{0,2})?$/.test(value)) {
+      setExactAmounts(prev => ({
+        ...prev,
+        [member]: value
+      }));
+    }
+  };
+
+  const handleQuickDistributeRemainder = (member: string) => {
+    if (remainingCents <= 0) return;
+    const currentVal = Math.round((parseFloat(exactAmounts[member] || "0") || 0) * 100);
+    const nextVal = (currentVal + remainingCents) / 100;
+    setExactAmounts(prev => ({
+      ...prev,
+      [member]: nextVal.toFixed(2)
+    }));
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -144,7 +175,7 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
       setIsAiProcessing(false);
       setShowDraft(true);
       sounds.playSuccessChime();
-      toast.success("Voice Expense Parsed", {
+      toast.success("Voice Demo Loaded", {
         description: "Extracted $120.00 for Lisbon Airport Vans."
       });
       setAiNotice("Extracted: Lisbon Airport Vans • $120.00 (Split equally)");
@@ -166,6 +197,7 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
     if (splitBetween.includes(member)) {
       if (splitBetween.length === 1) return; // Prevent deselecting everyone
       setSplitBetween(splitBetween.filter(m => m !== member));
+      setExactAmounts(prev => ({ ...prev, [member]: "0.00" }));
     } else {
       setSplitBetween([...splitBetween, member]);
     }
@@ -174,7 +206,43 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || !desc) return;
+    const parsedAmt = parseFloat(amount);
+    if (isNaN(parsedAmt) || parsedAmt <= 0) {
+      toast.error("Invalid Amount", { description: "Please enter a valid expense amount greater than $0." });
+      return;
+    }
+
+    if (splitType === "exact" && remainingCents !== 0) {
+      toast.error("Exact Amounts Must Match Total", {
+        description: remainingCents > 0 
+          ? `You still have $${(remainingCents / 100).toFixed(2)} unassigned.`
+          : `Total assigned exceeds expense by $${(Math.abs(remainingCents) / 100).toFixed(2)}.`
+      });
+      return;
+    }
     
+    // Prepare splits map
+    const splitsMap: Record<string, number> = {};
+    if (splitType === "exact") {
+      normalizedMembers.forEach(m => {
+        if (splitBetween.includes(m)) {
+          const valCents = Math.round((parseFloat(exactAmounts[m] || "0") || 0) * 100);
+          splitsMap[m] = Math.max(0, valCents);
+        } else {
+          splitsMap[m] = 0;
+        }
+      });
+    } else {
+      // Equal split between selected members
+      splitBetween.forEach(m => {
+        splitsMap[m] = Math.round(totalBillCents / splitBetween.length);
+      });
+      // Unticked members owe $0
+      normalizedMembers.filter(m => !splitBetween.includes(m)).forEach(m => {
+        splitsMap[m] = 0;
+      });
+    }
+
     // 1. Mock Passkey Prompt (Browser Native equivalent)
     setTxState("authenticating");
     await new Promise(r => setTimeout(r, 1500));
@@ -187,16 +255,18 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
     saveStoredExpense(tabId, {
       id: String(Date.now()),
       payer: paidBy,
-      amount: Math.round(parseFloat(amount) * 100),
+      amount: totalBillCents,
       desc: desc.trim(),
-      time: "Just now"
+      time: "Just now",
+      splitType,
+      splits: splitsMap
     });
 
     // 4. Success
     setTxState("success");
     sounds.playSuccessChime();
     toast.success("Expense Logged to Ledger", {
-      description: `$${amount} logged for "${desc.trim()}". Zero network fees sponsored.`
+      description: `$${amount} logged for "${desc.trim()}". ${splitType === 'exact' ? 'Exact split recorded.' : 'Split equally.'}`
     });
     await new Promise(r => setTimeout(r, 1000));
     
@@ -460,30 +530,109 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
           {/* Split Between */}
           <div className="space-y-2 pt-2">
              <div className="flex items-center justify-between ml-1 mb-2">
-               <label className="text-sm font-semibold text-slate-700 dark:text-white/80">Split Between</label>
-               <span className="text-xs text-slate-500 dark:text-white/40">{splitBetween.length} selected</span>
+               <label className="text-sm font-semibold text-slate-700 dark:text-white/80">
+                 {splitType === "exact" ? "Assign Exact Amounts" : "Split Between"}
+               </label>
+               <span className="text-xs text-slate-500 dark:text-white/40">
+                 {splitBetween.length} selected
+               </span>
              </div>
+
+             {/* Exact Balance Status Banner */}
+             {splitType === "exact" && (
+               <div className={`p-3 rounded-2xl border text-xs flex items-center justify-between transition-colors ${
+                 remainingCents === 0 && totalBillCents > 0
+                   ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+                   : remainingCents > 0
+                     ? "bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-300"
+                     : "bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300"
+               }`}>
+                 <div className="space-y-0.5">
+                   <div className="font-bold flex items-center gap-1.5">
+                     <span>Total: ${(totalBillCents / 100).toFixed(2)}</span>
+                     <span>•</span>
+                     <span>Assigned: ${(assignedExactCents / 100).toFixed(2)}</span>
+                   </div>
+                   <div className="text-[11px] opacity-90">
+                     {remainingCents === 0 && totalBillCents > 0
+                       ? "✓ Exact amounts perfectly balanced ($0 remaining)."
+                       : remainingCents > 0
+                         ? `$${(remainingCents / 100).toFixed(2)} left to allocate.`
+                         : `Assigned exceeds total by $${(Math.abs(remainingCents) / 100).toFixed(2)}.`}
+                   </div>
+                 </div>
+               </div>
+             )}
              
              <div className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-2 space-y-1">
                {normalizedMembers.map(member => {
                  const isSelected = splitBetween.includes(member);
+                 const currentVal = exactAmounts[member] || "";
                  return (
                    <div 
                      key={member}
-                     onClick={() => toggleSplitMember(member)}
-                     className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer transition-colors group"
+                     className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 transition-colors group gap-3"
                    >
-                     <div className="flex items-center gap-3">
-                       <div className="w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 flex items-center justify-center font-bold text-sm">
+                     {/* Left: Avatar & Name toggle */}
+                     <div 
+                       onClick={() => toggleSplitMember(member)}
+                       className="flex items-center gap-3 cursor-pointer select-none flex-1 min-w-0"
+                     >
+                       <div className="w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 flex items-center justify-center font-bold text-sm shrink-0">
                          {member[0]}
                        </div>
-                       <span className={`font-semibold text-sm ${isSelected ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-white/40'}`}>
-                         {member === activeUser ? "You" : member}
-                       </span>
+                       <div className="truncate">
+                         <span className={`font-semibold text-sm block truncate ${isSelected ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-white/40'}`}>
+                           {member === activeUser ? "You" : member}
+                         </span>
+                         {splitType === "exact" && (
+                           <span className="text-[10px] text-slate-400 dark:text-white/40 block">
+                             {isSelected ? (parseFloat(currentVal) === 0 || !currentVal ? "No share ($0.00)" : "Custom share") : "Excluded ($0.00)"}
+                           </span>
+                         )}
+                       </div>
                      </div>
-                     <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors ${isSelected ? 'bg-emerald-500 border-emerald-500 text-black' : 'border-slate-300 dark:border-white/20'}`}>
-                       {isSelected && <Check className="w-3 h-3 text-white" />}
-                     </div>
+
+                     {/* Right: Checkmark for Equal, or Numeric Input for Exact */}
+                     {splitType === "equal" ? (
+                       <div 
+                         onClick={() => toggleSplitMember(member)}
+                         className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors cursor-pointer shrink-0 ${isSelected ? 'bg-emerald-500 border-emerald-500 text-black' : 'border-slate-300 dark:border-white/20'}`}
+                       >
+                         {isSelected && <Check className="w-3 h-3 text-white" />}
+                       </div>
+                     ) : (
+                       <div className="flex items-center gap-2 shrink-0">
+                         {isSelected && remainingCents > 0 && (
+                           <button
+                             type="button"
+                             onClick={() => handleQuickDistributeRemainder(member)}
+                             className="text-[10px] px-2 py-1 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-bold transition-colors cursor-pointer"
+                             title="Assign remaining balance to this person"
+                           >
+                             +${(remainingCents / 100).toFixed(2)}
+                           </button>
+                         )}
+                         <div className="relative w-24">
+                           <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 dark:text-white/40 select-none">
+                             $
+                           </span>
+                           <input
+                             type="text"
+                             inputMode="decimal"
+                             placeholder="0.00"
+                             value={isSelected ? currentVal : "0.00"}
+                             disabled={!isSelected}
+                             onChange={(e) => handleExactAmountChange(member, e.target.value)}
+                             className={`w-full pl-6 pr-2 py-1.5 text-right font-mono text-xs font-bold rounded-xl border transition-all ${
+                               !isSelected
+                                 ? "bg-slate-100 dark:bg-white/5 border-transparent text-slate-400 dark:text-white/30 cursor-not-allowed"
+                                 : "bg-white dark:bg-black/50 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                             }`}
+                           />
+                         </div>
+                       </div>
+                     )}
                    </div>
                  );
                })}
@@ -497,9 +646,13 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
             variant="primary" 
             size="lg" 
             className="w-full relative overflow-hidden"
-            disabled={txState !== "idle"}
+            disabled={txState !== "idle" || !isExactValid}
           >
-            Log Expense
+            {splitType === "exact" && remainingCents !== 0
+              ? remainingCents > 0
+                ? `Allocate Remaining $${(remainingCents / 100).toFixed(2)}`
+                : `Exceeds Total by $${(Math.abs(remainingCents) / 100).toFixed(2)}`
+              : "Log Expense"}
           </Button>
           
           <div className="mt-4 flex items-center justify-center gap-2 text-slate-500 dark:text-white/50 text-xs font-medium">

@@ -460,13 +460,15 @@ export interface StoredExpense {
   amount: number; // in cents
   desc: string;
   time: string;
+  splitType?: "equal" | "exact";
+  splits?: Record<string, number>; // memberName -> amount in cents
 }
 
 export const DEFAULT_FEED: Record<string, StoredExpense[]> = {
   "lisbon-24": [
-    { id: "1", payer: "Aisha", amount: 60000, desc: "Villa booking", time: "Just now" },
-    { id: "2", payer: "Kemi", amount: 26000, desc: "Dinners & wine", time: "5h ago" },
-    { id: "3", payer: "Ben", amount: 22000, desc: "Excursions", time: "1d ago" },
+    { id: "1", payer: "Aisha", amount: 60000, desc: "Villa booking", time: "Just now", splitType: "equal" },
+    { id: "2", payer: "Kemi", amount: 26000, desc: "Dinners & wine", time: "5h ago", splitType: "equal" },
+    { id: "3", payer: "Ben", amount: 22000, desc: "Excursions", time: "1d ago", splitType: "equal" },
   ]
 };
 
@@ -502,11 +504,33 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense) {
     try {
       const members = getStoredTabMembers(tabId);
       if (members.length > 0) {
-        const splitCount = members.length;
-        const splitAmount = Math.round(expense.amount / splitCount);
+        const isExact = expense.splitType === "exact" && expense.splits && Object.keys(expense.splits).length > 0;
+        
+        let splitCount = members.length;
+        let defaultEqualSplit = Math.round(expense.amount / splitCount);
+
+        // If equal split and specific members were chosen, split across only those members
+        if (!isExact && expense.splits && Object.keys(expense.splits).length > 0) {
+          const selectedMembers = Object.keys(expense.splits);
+          if (selectedMembers.length > 0) {
+            splitCount = selectedMembers.length;
+            defaultEqualSplit = Math.round(expense.amount / splitCount);
+          }
+        }
 
         const updatedMembers = members.map(m => {
-          let delta = -splitAmount;
+          let memberOwes = 0;
+          if (isExact) {
+            // Member owes exactly what was allocated to them (could be $0)
+            memberOwes = expense.splits?.[m.name] ?? 0;
+          } else if (expense.splits) {
+            // Selected members pay equal share; unticked members owe $0
+            memberOwes = expense.splits[m.name] !== undefined ? defaultEqualSplit : 0;
+          } else {
+            memberOwes = defaultEqualSplit;
+          }
+
+          let delta = -memberOwes;
           if (m.name.toLowerCase() === expense.payer.toLowerCase()) {
             delta += expense.amount;
           }

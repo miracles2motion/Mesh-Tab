@@ -45,8 +45,15 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
 
   const isLisbon = mode === "sample" && (tabId === "lisbon-24" || isMock1 || isMock2 || isMock3);
   let dynamicSplits: { name: string; amount: number }[] = [];
+  const splitType = foundCustomExpense?.splitType || "equal";
 
-  if (isLisbon) {
+  if (foundCustomExpense?.splits && Object.keys(foundCustomExpense.splits).length > 0) {
+    // Exact or custom split stored directly on expense
+    dynamicSplits = Object.entries(foundCustomExpense.splits).map(([name, splitAmt]) => ({
+      name,
+      amount: splitAmt
+    }));
+  } else if (isLisbon) {
     const splitAmount = Math.round(amount / 4);
     dynamicSplits = [
       { name: "Aisha", amount: splitAmount },
@@ -67,6 +74,7 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
     amount,
     payer,
     time,
+    splitType,
     splits: dynamicSplits
   };
 
@@ -115,7 +123,12 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
 
       {/* Splits Breakdown */}
       <div className="flex-1">
-        <h3 className="text-slate-700 dark:text-white/80 font-semibold mb-4 px-2 text-sm">Split Details (Equal)</h3>
+        <div className="flex items-center justify-between mb-4 px-2">
+          <h3 className="text-slate-700 dark:text-white/80 font-semibold text-sm">Split Breakdown</h3>
+          <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-white/60 font-medium">
+            {details.splitType === "exact" ? "Exact Amounts" : "Equal Split"}
+          </span>
+        </div>
         <div className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-2 space-y-1">
           {details.splits.map((split, i) => (
             <div key={i} className="flex items-center justify-between p-4 hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-colors">
@@ -134,8 +147,15 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
               </div>
               
               <div className="flex items-center gap-4">
-                <span className="font-bold text-slate-900 dark:text-white tabular-nums">{formatCurrency(split.amount)}</span>
-                {split.name !== details.payer ? (
+                <span className={`font-bold tabular-nums ${split.amount === 0 ? "text-slate-400 dark:text-white/40" : "text-slate-900 dark:text-white"}`}>
+                  {formatCurrency(split.amount)}
+                </span>
+                {split.amount === 0 ? (
+                  <div className="flex flex-col items-end text-[10px] text-slate-400 dark:text-white/40 font-semibold">
+                    <span>No Share</span>
+                    <span>$0.00</span>
+                  </div>
+                ) : split.name !== details.payer ? (
                   <div className="flex flex-col items-end text-[10px] text-rose-600 dark:text-rose-400 font-bold">
                     <span>Owes</span>
                     <span>{currentUserName && details.payer.toLowerCase() === currentUserName.toLowerCase() ? "You" : details.payer}</span>
@@ -143,6 +163,7 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
                 ) : (
                   <div className="flex flex-col items-end text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
                     <span>Paid</span>
+                    <span>Direct</span>
                   </div>
                 )}
               </div>
