@@ -35,7 +35,7 @@ function DemoContent() {
     toast.success("Loaded Lisbon Trip Demo", {
       description: "Pre-loaded with 4 members, $1,200 expenses, and un-netted debts."
     });
-    router.push("/tab/lisbon-24");
+    router.push("/home");
   };
 
   const handleSelectBlank = () => {

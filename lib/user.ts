@@ -125,28 +125,32 @@ export function getWorkspaceMode(): WorkspaceMode {
   return mode === "blank" ? "blank" : "sample";
 }
 
+function getTabsStorageKey(mode?: WorkspaceMode): string {
+  const activeMode = mode || getWorkspaceMode();
+  return activeMode === "blank" ? "meshTab_clean_tabs" : "meshTab_sample_tabs";
+}
+
 export function setWorkspaceMode(mode: WorkspaceMode) {
   if (typeof window === "undefined") return;
   localStorage.setItem("meshTab_workspaceMode", mode);
   resetNotificationsToMode(mode);
   
   if (mode === "sample") {
-    // When switching to sample trip mode, ensure the Lisbon benchmark tabs exist
+    // When switching to sample trip mode, ensure the Lisbon benchmark tabs exist in the sample namespace
     try {
-      const raw = localStorage.getItem("meshTab_tabs");
+      const raw = localStorage.getItem("meshTab_sample_tabs");
       let current: TabSummary[] = [];
       if (raw) current = JSON.parse(raw);
       if (Array.isArray(current)) {
         const hasLisbon = current.some(t => t.id === "lisbon-24");
         if (!hasLisbon) {
-          const nonSample = current.filter(t => t.id !== "lisbon-24" && t.id !== "house-groceries");
-          localStorage.setItem("meshTab_tabs", JSON.stringify([...DEFAULT_TABS, ...nonSample]));
+          localStorage.setItem("meshTab_sample_tabs", JSON.stringify(DEFAULT_TABS));
         }
       } else {
-        localStorage.setItem("meshTab_tabs", JSON.stringify(DEFAULT_TABS));
+        localStorage.setItem("meshTab_sample_tabs", JSON.stringify(DEFAULT_TABS));
       }
     } catch (e) {
-      localStorage.setItem("meshTab_tabs", JSON.stringify(DEFAULT_TABS));
+      localStorage.setItem("meshTab_sample_tabs", JSON.stringify(DEFAULT_TABS));
     }
   }
 
@@ -168,15 +172,15 @@ export function resetLisbonDemo() {
   // 2. Clear added/settled expenses for Lisbon to restore initial benchmark
   localStorage.removeItem("meshTab_expenses_lisbon-24");
 
-  // 3. Ensure Lisbon tab is active with -$180.00 debt
+  // 3. Ensure Lisbon benchmark tabs are active with -$180.00 debt in the sample namespace
   try {
-    const raw = localStorage.getItem("meshTab_tabs");
+    const raw = localStorage.getItem("meshTab_sample_tabs");
     let current: TabSummary[] = [];
     if (raw) current = JSON.parse(raw);
-    const nonLisbon = Array.isArray(current) ? current.filter(t => t.id !== "lisbon-24") : [];
-    localStorage.setItem("meshTab_tabs", JSON.stringify([DEFAULT_TABS[0], ...nonLisbon]));
+    const nonLisbon = Array.isArray(current) ? current.filter(t => t.id !== "lisbon-24") : [DEFAULT_TABS[1]];
+    localStorage.setItem("meshTab_sample_tabs", JSON.stringify([DEFAULT_TABS[0], ...nonLisbon]));
   } catch (e) {
-    localStorage.setItem("meshTab_tabs", JSON.stringify(DEFAULT_TABS));
+    localStorage.setItem("meshTab_sample_tabs", JSON.stringify(DEFAULT_TABS));
   }
 
   // 4. Force mode to sample and reset notifications to sample
@@ -207,10 +211,12 @@ export function useWorkspaceMode() {
 }
 
 export function getStoredTabs(): TabSummary[] {
-  if (typeof window === "undefined") return DEFAULT_TABS;
   const mode = getWorkspaceMode();
+  if (typeof window === "undefined") return mode === "blank" ? [] : DEFAULT_TABS;
+  
+  const key = getTabsStorageKey(mode);
   try {
-    const stored = localStorage.getItem("meshTab_tabs");
+    const stored = localStorage.getItem(key);
     if (stored) {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed)) {
@@ -225,26 +231,34 @@ export function getStoredTabs(): TabSummary[] {
         });
 
         if (mode === "blank") {
-          // Clean Slate: filter out mock demo tabs so user has a fresh workspace
+          // Clean Slate: guaranteed no sample demo tabs ever leak into clean slate
           return normalized.filter(t => t.id !== "lisbon-24" && t.id !== "house-groceries");
         }
-        // Sample Mode: GUARANTEE Lisbon benchmark is present
+        
+        // Sample Mode: ensure Lisbon benchmark is present
         const hasLisbon = normalized.some(t => t.id === "lisbon-24");
         if (!hasLisbon) {
-          const nonSample = normalized.filter(t => t.id !== "lisbon-24" && t.id !== "house-groceries");
-          const merged = [...DEFAULT_TABS, ...nonSample];
-          localStorage.setItem("meshTab_tabs", JSON.stringify(merged));
+          const merged = [...DEFAULT_TABS, ...normalized.filter(t => t.id !== "lisbon-24" && t.id !== "house-groceries")];
+          localStorage.setItem(key, JSON.stringify(merged));
           return merged;
         }
         return normalized;
       }
     }
   } catch (e) {}
-  return mode === "blank" ? [] : DEFAULT_TABS;
+
+  if (mode === "sample") {
+    // Initialize sample tabs
+    localStorage.setItem(key, JSON.stringify(DEFAULT_TABS));
+    return DEFAULT_TABS;
+  }
+  return [];
 }
 
 export function saveNewTab(tab: TabSummary) {
   if (typeof window === "undefined") return;
+  const mode = getWorkspaceMode();
+  const key = getTabsStorageKey(mode);
   const current = getStoredTabs();
   const existingIdx = current.findIndex(t => t.id === tab.id);
   let updated: TabSummary[];
@@ -254,7 +268,7 @@ export function saveNewTab(tab: TabSummary) {
   } else {
     updated = [tab, ...current];
   }
-  localStorage.setItem("meshTab_tabs", JSON.stringify(updated));
+  localStorage.setItem(key, JSON.stringify(updated));
   window.dispatchEvent(new Event("meshTab-tabs-update"));
 
   try {
@@ -281,10 +295,12 @@ export function useStoredTabs() {
     sync();
 
     window.addEventListener("meshTab-tabs-update", sync);
+    window.addEventListener("meshTab-workspace-update", sync);
     window.addEventListener("storage", sync);
 
     return () => {
       window.removeEventListener("meshTab-tabs-update", sync);
+      window.removeEventListener("meshTab-workspace-update", sync);
       window.removeEventListener("storage", sync);
     };
   }, []);
@@ -384,6 +400,7 @@ export function saveStoredTabMembers(tabId: string, members: TabMember[]) {
   localStorage.setItem(`meshTab_members_${tabId}`, JSON.stringify(members));
 
   // Sync member count in stored tabs
+  const key = getTabsStorageKey();
   const tabs = getStoredTabs();
   const updatedTabs = tabs.map(t => {
     if (t.id === tabId) {
@@ -391,7 +408,7 @@ export function saveStoredTabMembers(tabId: string, members: TabMember[]) {
     }
     return t;
   });
-  localStorage.setItem("meshTab_tabs", JSON.stringify(updatedTabs));
+  localStorage.setItem(key, JSON.stringify(updatedTabs));
 
   window.dispatchEvent(new Event("meshTab-members-update"));
   window.dispatchEvent(new Event("meshTab-tabs-update"));
@@ -486,6 +503,7 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense) {
         const profile = getStoredUser();
         const userMember = updatedMembers.find(m => m.name.toLowerCase() === profile.name.toLowerCase());
         if (userMember) {
+          const key = getTabsStorageKey();
           const tabs = getStoredTabs();
           const nextTabs = tabs.map(t => {
             if (t.id === tabId) {
@@ -493,7 +511,7 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense) {
             }
             return t;
           });
-          localStorage.setItem("meshTab_tabs", JSON.stringify(nextTabs));
+          localStorage.setItem(key, JSON.stringify(nextTabs));
           window.dispatchEvent(new Event("meshTab-tabs-update"));
         }
       }
@@ -552,6 +570,7 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
   if (typeof window === "undefined") return;
   
   // 1. Update tab balance in stored tabs
+  const key = getTabsStorageKey();
   const tabs = getStoredTabs();
   const updatedTabs = tabs.map(t => {
     if (t.id === tabId) {
@@ -559,7 +578,7 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
     }
     return t;
   });
-  localStorage.setItem("meshTab_tabs", JSON.stringify(updatedTabs));
+  localStorage.setItem(key, JSON.stringify(updatedTabs));
   window.dispatchEvent(new Event("meshTab-tabs-update"));
 
   // 2. Update member balances for this tab

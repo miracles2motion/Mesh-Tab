@@ -100,18 +100,22 @@ export const BLANK_NOTIFICATIONS: AppNotification[] = [
   }
 ];
 
+function getNotificationsStorageKey(mode?: "sample" | "blank"): string {
+  const activeMode = mode || getWorkspaceMode();
+  return activeMode === "blank" ? "meshTab_clean_notifications" : "meshTab_sample_notifications";
+}
+
 export function getStoredNotifications(): AppNotification[] {
-  if (typeof window === "undefined") return SAMPLE_NOTIFICATIONS;
   const mode = getWorkspaceMode();
+  if (typeof window === "undefined") return mode === "blank" ? BLANK_NOTIFICATIONS : SAMPLE_NOTIFICATIONS;
+  const key = getNotificationsStorageKey(mode);
   try {
-    const raw = localStorage.getItem("meshTab_notifications");
+    const raw = localStorage.getItem(key);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
+      if (Array.isArray(parsed) && parsed.length > 0) {
         if (mode === "blank") {
-          // Clean Slate: filter out Lisbon sample notifications
-          const nonSample = parsed.filter((n) => n.tabId !== "lisbon-24" && n.tabId !== "house-groceries");
-          return nonSample.length > 0 ? nonSample : BLANK_NOTIFICATIONS;
+          return parsed.filter((n) => n.tabId !== "lisbon-24" && n.tabId !== "house-groceries");
         }
         return parsed;
       }
@@ -121,10 +125,11 @@ export function getStoredNotifications(): AppNotification[] {
   return mode === "blank" ? BLANK_NOTIFICATIONS : SAMPLE_NOTIFICATIONS;
 }
 
-export function saveStoredNotifications(notifs: AppNotification[]) {
+export function saveStoredNotifications(notifs: AppNotification[], mode?: "sample" | "blank") {
   if (typeof window === "undefined") return;
+  const key = getNotificationsStorageKey(mode);
   try {
-    localStorage.setItem("meshTab_notifications", JSON.stringify(notifs.slice(0, 50)));
+    localStorage.setItem(key, JSON.stringify(notifs.slice(0, 50)));
     window.dispatchEvent(new Event("meshTab-notifications-update"));
   } catch (e) {}
 }
@@ -164,13 +169,13 @@ export function markAllNotificationsAsRead() {
 export function clearAllNotifications() {
   if (typeof window === "undefined") return;
   const mode = getWorkspaceMode();
-  saveStoredNotifications(mode === "blank" ? [] : []);
+  saveStoredNotifications([], mode);
 }
 
 export function resetNotificationsToMode(mode: "sample" | "blank") {
   if (typeof window === "undefined") return;
   const notifs = mode === "sample" ? SAMPLE_NOTIFICATIONS : BLANK_NOTIFICATIONS;
-  saveStoredNotifications(notifs);
+  saveStoredNotifications(notifs, mode);
 }
 
 export function useNotifications() {
