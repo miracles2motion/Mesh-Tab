@@ -431,25 +431,15 @@ export default function GlobalHub() {
                     </div>
                     <h3 className="text-base font-bold text-slate-900 dark:text-white">Clean Slate Workspace</h3>
                     <p className="text-xs text-slate-500 dark:text-white/60 max-w-sm mx-auto mt-1 mb-6">
-                      Pristine empty workspace with zero mock tabs. Create your own group tab from scratch or restore the Lisbon benchmark demo.
+                      Pristine workspace with zero pre-loaded tabs. Tap Create Tab to start a fresh shared group.
                     </p>
-                    <div className="flex items-center justify-center gap-3 flex-wrap">
+                    <div className="flex items-center justify-center">
                       <Link
                         href="/tab/new"
-                        className="px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-black font-bold text-xs flex items-center gap-1.5 shadow-sm"
+                        className="px-6 py-3 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-black font-bold text-xs flex items-center gap-2 shadow-sm hover:scale-[1.02] active:scale-95 transition-all"
                       >
                         <Plus className="w-4 h-4" /> Create Custom Tab
                       </Link>
-                      <button
-                        onClick={() => {
-                          setWorkspaceMode("sample");
-                          sounds.playSuccessChime();
-                          toast.success("Loaded Lisbon Demo Trip");
-                        }}
-                        className="px-4 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 font-bold text-xs flex items-center gap-1.5 hover:bg-indigo-100 cursor-pointer"
-                      >
-                        🏖️ Load Lisbon '24 Demo
-                      </button>
                     </div>
                   </>
                 ) : (

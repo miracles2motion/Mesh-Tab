@@ -178,8 +178,8 @@ export function MeshBuddy() {
       tip = "Interactive Sandbox: Choose between the pre-loaded Lisbon '24 trip to explore netting, or start with a Clean Slate to test a fresh tab!";
     } else if (pathname === "/home") {
       tip = workspaceMode === "blank"
-        ? "Clean Slate Active (Main App): Tap + to create your first tab, or ask me to restore the Lisbon demo."
-        : "Sample Trip Mode: Tap Lisbon Weekend to test netting, or tap Change Mode to test a clean slate.";
+        ? "Clean Slate Active: Tap + to create your first shared group tab."
+        : "Sample Trip Mode: Explore Lisbon Weekend with pre-loaded group netting.";
     } else if (pathname === "/tab/new") {
       tip = "Give your new group tab a name and currency. You'll be able to invite friends via passkeys right after!";
     } else if (pathname?.includes("/expense/new")) {
@@ -841,10 +841,9 @@ export function MeshBuddy() {
           { label: "👥 Manage Members", action: () => router.push(`/tab/${currentTabId}/members`) }
         ];
       } else if (workspaceMode === "blank") {
-        replyText = "You are currently in the Main App using Clean Slate Mode (Fresh Workspace). All sample mock tabs are cleared so you can test creating custom tabs and inviting members from scratch. You can restore the Lisbon demo anytime!";
+        replyText = "You are in Clean Slate Mode. Your workspace is completely clean with zero mock tabs so you can create custom shared tabs and invite members from scratch.";
         actionItems = [
-          { label: "➕ Create New Tab", action: () => router.push("/tab/new") },
-          { label: "🏖️ Restore Lisbon Demo", action: handleToggleWorkspace }
+          { label: "➕ Create New Tab", action: () => router.push("/tab/new") }
         ];
       } else {
         replyText = "You are currently in Sample Trip Mode. The Lisbon '24 benchmark is loaded so anyone can explore netting and off-ramps with pre-populated data. You can switch to Clean Slate to test a fresh setup.";
