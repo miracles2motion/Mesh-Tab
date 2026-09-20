@@ -209,18 +209,16 @@ function DashboardContent() {
                 <Activity className="w-3.5 h-3.5 animate-pulse" />
                 <span>Real-time Sync • 0.3s</span>
               </div>
-              <Link
-                href={`/demo?from=/tab/${rawTabId}`}
-                className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border transition-all shrink-0 ${
-                  workspaceMode === "sample"
-                    ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/20 hover:bg-indigo-100"
-                    : "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20 hover:bg-emerald-100"
-                }`}
-                title="Switch Sandbox Mode"
-              >
-                <Sparkles className="w-3 h-3" />
-                <span>{workspaceMode === "sample" ? "Lisbon Demo" : "Clean Slate"}</span>
-              </Link>
+              {workspaceMode === "sample" && rawTabId === "lisbon-24" && (
+                <Link
+                  href={`/demo?from=/tab/${rawTabId}`}
+                  className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border transition-all shrink-0 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/20 hover:bg-indigo-100"
+                  title="Switch Sandbox Mode"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>Lisbon Demo</span>
+                </Link>
+              )}
               {showAddress && (
                 <div className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-200 dark:border-indigo-500/20 shrink-0">
                   0x7F5...3b9A

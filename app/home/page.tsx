@@ -342,7 +342,7 @@ export default function GlobalHub() {
                             <span>Creator (You)</span>
                           </>
                         ) : (
-                          <span>Member (Host: {tab.creator || (tab.id === 'lisbon-24' ? 'Aisha' : tab.id === 'house-groceries' ? 'Alex' : 'Organizer')})</span>
+                          <span>Member (Host: {tab.creator || "Organizer"})</span>
                         )}
                       </span>
                     </div>

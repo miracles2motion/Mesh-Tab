@@ -138,7 +138,7 @@ function NotificationsContent() {
               )}
             </div>
             <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5">
-              {workspaceMode === "blank" ? "Clean Slate (Live real-time feed)" : "Sample Trip Mode (Lisbon & Demo updates)"}
+              {workspaceMode === "blank" ? "Activity and settlement updates across your tabs." : "Sample Trip Mode (Lisbon & Demo updates)"}
             </p>
           </div>
         </div>

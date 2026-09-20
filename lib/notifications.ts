@@ -91,8 +91,8 @@ export const BLANK_NOTIFICATIONS: AppNotification[] = [
   {
     id: "notif-blank-1",
     type: "tab_created",
-    title: "Clean Slate Active",
-    desc: "Your workspace is ready. Tap + to create your first shared group tab.",
+    title: "Welcome to MeshTab",
+    desc: "Your shared expense space is ready. Tap + to create your first tab and invite friends.",
     actor: "MeshTab",
     timestamp: Date.now() - 60 * 1000,
     unread: true,

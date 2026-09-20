@@ -517,7 +517,8 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense) {
             type: nextType
           };
         });
-        localStorage.setItem(`meshTab_members_${tabId}`, JSON.stringify(updatedMembers));
+        const membersKey = mode === "blank" ? `meshTab_clean_members_${tabId}` : `meshTab_members_${tabId}`;
+        localStorage.setItem(membersKey, JSON.stringify(updatedMembers));
         window.dispatchEvent(new Event("meshTab-members-update"));
 
         // Update user balance in tab summary
@@ -628,7 +629,9 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
       return m;
     });
 
-    localStorage.setItem(`meshTab_members_${tabId}`, JSON.stringify(updatedMembers));
+    const mode = getWorkspaceMode();
+    const membersKey = mode === "blank" ? `meshTab_clean_members_${tabId}` : `meshTab_members_${tabId}`;
+    localStorage.setItem(membersKey, JSON.stringify(updatedMembers));
     window.dispatchEvent(new Event("meshTab-members-update"));
   } catch (e) {}
 
