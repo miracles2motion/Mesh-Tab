@@ -112,10 +112,12 @@ export interface TabSummary {
   currency?: string;
 }
 
-export const DEFAULT_TABS: TabSummary[] = [
+export const SAMPLE_BENCHMARK_TABS: TabSummary[] = [
   { id: "lisbon-24", name: "Lisbon Weekend", creator: "Aisha", role: "Member", balance: -18000, memberCount: 4, lastActivity: "2 hours ago" },
   { id: "house-groceries", name: "House Groceries", creator: "Alex", role: "Member", balance: 4500, memberCount: 2, lastActivity: "Yesterday" },
 ];
+
+export const DEFAULT_TABS: TabSummary[] = [];
 
 export type WorkspaceMode = "sample" | "blank";
 
@@ -144,13 +146,13 @@ export function setWorkspaceMode(mode: WorkspaceMode) {
       if (Array.isArray(current)) {
         const hasLisbon = current.some(t => t.id === "lisbon-24");
         if (!hasLisbon) {
-          localStorage.setItem("meshTab_sample_tabs", JSON.stringify(DEFAULT_TABS));
+          localStorage.setItem("meshTab_sample_tabs", JSON.stringify(SAMPLE_BENCHMARK_TABS));
         }
       } else {
-        localStorage.setItem("meshTab_sample_tabs", JSON.stringify(DEFAULT_TABS));
+        localStorage.setItem("meshTab_sample_tabs", JSON.stringify(SAMPLE_BENCHMARK_TABS));
       }
     } catch (e) {
-      localStorage.setItem("meshTab_sample_tabs", JSON.stringify(DEFAULT_TABS));
+      localStorage.setItem("meshTab_sample_tabs", JSON.stringify(SAMPLE_BENCHMARK_TABS));
     }
   }
 
@@ -177,10 +179,10 @@ export function resetLisbonDemo() {
     const raw = localStorage.getItem("meshTab_sample_tabs");
     let current: TabSummary[] = [];
     if (raw) current = JSON.parse(raw);
-    const nonLisbon = Array.isArray(current) ? current.filter(t => t.id !== "lisbon-24") : [DEFAULT_TABS[1]];
-    localStorage.setItem("meshTab_sample_tabs", JSON.stringify([DEFAULT_TABS[0], ...nonLisbon]));
+    const nonLisbon = Array.isArray(current) ? current.filter(t => t.id !== "lisbon-24") : [SAMPLE_BENCHMARK_TABS[1]];
+    localStorage.setItem("meshTab_sample_tabs", JSON.stringify([SAMPLE_BENCHMARK_TABS[0], ...nonLisbon]));
   } catch (e) {
-    localStorage.setItem("meshTab_sample_tabs", JSON.stringify(DEFAULT_TABS));
+    localStorage.setItem("meshTab_sample_tabs", JSON.stringify(SAMPLE_BENCHMARK_TABS));
   }
 
   // 4. Reset settled payout balance to benchmark clean state ($0)
@@ -216,7 +218,7 @@ export function useWorkspaceMode() {
 
 export function getStoredTabs(): TabSummary[] {
   const mode = getWorkspaceMode();
-  if (typeof window === "undefined") return mode === "blank" ? [] : DEFAULT_TABS;
+  if (typeof window === "undefined") return [];
   
   const key = getTabsStorageKey(mode);
   try {
@@ -242,7 +244,7 @@ export function getStoredTabs(): TabSummary[] {
         // Sample Mode: ensure Lisbon benchmark is present
         const hasLisbon = normalized.some(t => t.id === "lisbon-24");
         if (!hasLisbon) {
-          const merged = [...DEFAULT_TABS, ...normalized.filter(t => t.id !== "lisbon-24" && t.id !== "house-groceries")];
+          const merged = [...SAMPLE_BENCHMARK_TABS, ...normalized.filter(t => t.id !== "lisbon-24" && t.id !== "house-groceries")];
           localStorage.setItem(key, JSON.stringify(merged));
           return merged;
         }
@@ -253,8 +255,8 @@ export function getStoredTabs(): TabSummary[] {
 
   if (mode === "sample") {
     // Initialize sample tabs
-    localStorage.setItem(key, JSON.stringify(DEFAULT_TABS));
-    return DEFAULT_TABS;
+    localStorage.setItem(key, JSON.stringify(SAMPLE_BENCHMARK_TABS));
+    return SAMPLE_BENCHMARK_TABS;
   }
   return [];
 }

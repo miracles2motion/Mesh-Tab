@@ -40,21 +40,25 @@ export default function GlobalHub() {
     setMounted(true);
   }, []);
 
-  // Sync each tab's balance from its real member ledger (so settling inside a tab instantly updates Home)
+  // Only compute tabs after mounting to ensure pristine zero-flash guarantee
   const currentUserName = profile.name || "David";
-  const activeTabsList = workspaceMode === "blank" 
-    ? mockTabs.filter(t => t.id !== "lisbon-24" && t.id !== "house-groceries") 
-    : mockTabs;
+  const activeTabsList = !mounted
+    ? []
+    : workspaceMode === "blank" 
+      ? mockTabs.filter(t => t.id !== "lisbon-24" && t.id !== "house-groceries") 
+      : mockTabs;
 
-  const syncedTabs = activeTabsList.map(tab => {
-    const members = getStoredTabMembers(tab.id, currentUserName);
-    const userMember = members.find(m => m.name.toLowerCase() === currentUserName.toLowerCase());
-    return {
-      ...tab,
-      balance: userMember !== undefined ? userMember.balance : tab.balance,
-      memberCount: members.length > 0 ? members.length : tab.memberCount
-    };
-  });
+  const syncedTabs = !mounted
+    ? []
+    : activeTabsList.map(tab => {
+        const members = getStoredTabMembers(tab.id, currentUserName);
+        const userMember = members.find(m => m.name.toLowerCase() === currentUserName.toLowerCase());
+        return {
+          ...tab,
+          balance: userMember !== undefined ? userMember.balance : tab.balance,
+          memberCount: members.length > 0 ? members.length : tab.memberCount
+        };
+      });
 
   const netBalance = syncedTabs.reduce((acc, tab) => acc + tab.balance, 0);
   const totalYouOwe = syncedTabs.filter(t => t.balance < 0).reduce((acc, t) => acc + Math.abs(t.balance), 0);
@@ -405,7 +409,7 @@ export default function GlobalHub() {
               </Link>
             )))}
 
-            {filteredTabs.length === 0 && (
+            {mounted && filteredTabs.length === 0 && (
               <div className="col-span-full py-12 px-6 text-center bg-white dark:bg-white/5 border border-dashed border-slate-200 dark:border-white/10 rounded-3xl">
                 {workspaceMode === "blank" ? (
                   <>
