@@ -192,8 +192,16 @@ export function useTabSync(tabId: string) {
       pullFromRedis();
     };
 
+    const handleOnline = () => {
+      markUserActive();
+      // Push any offline-created expenses/members, then pull remote updates
+      pushTabStateToRedis(tabId);
+      pullFromRedis();
+    };
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("focus", handleWindowFocus);
+    window.addEventListener("online", handleOnline);
     window.addEventListener("pointerdown", handleActivity, { passive: true });
     window.addEventListener("keydown", handleActivity, { passive: true });
     
@@ -217,6 +225,7 @@ export function useTabSync(tabId: string) {
       stopPolling();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("focus", handleWindowFocus);
+      window.removeEventListener("online", handleOnline);
       window.removeEventListener("pointerdown", handleActivity);
       window.removeEventListener("keydown", handleActivity);
       window.removeEventListener("meshTab-members-update", handleLocalUpdate);
