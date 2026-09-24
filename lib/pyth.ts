@@ -123,25 +123,16 @@ export async function getLivePythRate(currencyCode: string): Promise<{ rate: num
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2500); // 2.5s safe timeout
 
-    const url = `https://hermes.pyth.network/v2/updates/price/latest?ids[]=${config.pythFeedId}`;
+    const url = `/api/pyth?feedId=${config.pythFeedId}&currency=${currencyCode}`;
     const response = await fetch(url, { signal: controller.signal });
     clearTimeout(timeoutId);
 
-    if (!response.ok) {
-      throw new Error(`Pyth Hermes responded with status ${response.status}`);
-    }
-
-    const data = await response.json();
-    const parsed = data?.parsed?.[0]?.price;
-    if (parsed && typeof parsed.price === "string" && typeof parsed.expo === "number") {
-      const rawPrice = parseFloat(parsed.price) * Math.pow(10, parsed.expo);
-      
-      // Invert USD/JPY to get JPY/USD rate if needed
-      const rate = config.code === "JPY" && rawPrice > 50 ? 1 / rawPrice : rawPrice;
-
-      // Update cache
-      memoryCache[currencyCode] = { rate, timestamp: now };
-      return { rate, isLive: true };
+    if (response.ok) {
+      const data = await response.json();
+      if (typeof data.rate === "number" && !isNaN(data.rate)) {
+        memoryCache[currencyCode] = { rate: data.rate, timestamp: now };
+        return { rate: data.rate, isLive: true };
+      }
     }
   } catch (err) {
     // Fail silently to cached fallback so demo never breaks

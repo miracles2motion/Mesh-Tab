@@ -505,10 +505,9 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense) {
   const updated = [expense, ...current];
   localStorage.setItem(storageKey, JSON.stringify(updated));
 
-  // Dynamically recalculate tab member balances if custom tab
-  if (tabId !== "lisbon-24") {
-    try {
-      const members = getStoredTabMembers(tabId);
+  // Dynamically recalculate tab member balances
+  try {
+    const members = getStoredTabMembers(tabId);
       if (members.length > 0) {
         const isExact = expense.splitType === "exact" && expense.splits && Object.keys(expense.splits).length > 0;
         const isSelectedSplit = !isExact && expense.splits && Object.keys(expense.splits).length > 0;
@@ -572,7 +571,6 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense) {
         }
       }
     } catch (e) {}
-  }
 
   // Live Notification Dispatch
   try {
@@ -609,10 +607,9 @@ export function deleteStoredExpense(tabId: string, expenseId: string): { success
     return { success: false, error: "Finalized debt settlements cannot be deleted." };
   }
 
-  // 1. Rollback balances on custom tabs
-  if (tabId !== "lisbon-24") {
-    try {
-      const members = getStoredTabMembers(tabId);
+  // 1. Rollback balances
+  try {
+    const members = getStoredTabMembers(tabId);
       if (members.length > 0) {
         const isExact = target.splitType === "exact" && target.splits && Object.keys(target.splits).length > 0;
         const isSelectedSplit = !isExact && target.splits && Object.keys(target.splits).length > 0;
@@ -679,7 +676,6 @@ export function deleteStoredExpense(tabId: string, expenseId: string): { success
         }
       }
     } catch (e) {}
-  }
 
   // 2. Remove expense from stored list
   const filtered = current.filter(e => e.id !== expenseId);

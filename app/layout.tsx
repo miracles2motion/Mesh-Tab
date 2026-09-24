@@ -19,6 +19,11 @@ export const metadata: Metadata = {
   title: "MeshTab | Smart Settlement",
   description: "Gasless micro-expense tracking and multilateral debt netting on Monad.",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
 };
 
 export const viewport: Viewport = {

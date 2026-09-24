@@ -95,8 +95,13 @@ function DashboardContent() {
   const [txState, setTxState] = useState<TransactionState>("idle");
 
   const [nettingTxState, setNettingTxState] = useState<TransactionState>("idle");
+  const [mounted, setMounted] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (searchParams.get("settle") === "true") {
@@ -199,7 +204,7 @@ function DashboardContent() {
         success: "Netting Complete: Saved $3,400 in redundant transfers!"
       }}
     />
-    <div className="flex-1 flex flex-col pb-24 md:pb-12 text-slate-900 dark:text-white transition-colors duration-300">
+    <div className="flex-1 flex flex-col pb-36 sm:pb-32 md:pb-12 text-slate-900 dark:text-white transition-colors duration-300">
       
       {/* Header */}
       <header className="px-4 sm:px-6 md:px-12 pt-6 sm:pt-8 pb-6 flex items-center justify-between border-b border-slate-200 dark:border-white/10 mb-8 max-w-7xl mx-auto w-full gap-4">
@@ -232,8 +237,8 @@ function DashboardContent() {
                     ? "⚠️ Sync Offline" 
                     : isSyncing 
                       ? "Syncing..." 
-                      : lastSync 
-                        ? `Sandbox Sync • ${Math.max(0, Math.floor((new Date().getTime() - lastSync.getTime()) / 1000))}s` 
+                      : mounted && lastSync 
+                        ? `Sandbox Sync • ${Math.max(0, Math.floor((Date.now() - lastSync.getTime()) / 1000))}s` 
                         : "Sandbox Sync • 0s"}
                 </span>
               </div>

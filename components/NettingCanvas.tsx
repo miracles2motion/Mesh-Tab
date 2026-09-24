@@ -367,7 +367,7 @@ export function NettingCanvas({
   return (
     <div className="w-full bg-white dark:bg-[#0c0c0e] border border-slate-200 dark:border-white/10 rounded-[32px] overflow-hidden flex flex-col shadow-2xl text-slate-900 dark:text-white transition-colors max-w-xl mx-auto">
       {/* Header with Monad Partner Accolade */}
-      <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-white/10 flex justify-between items-center bg-slate-50/70 dark:bg-black/30">
+      <div className="p-5 sm:p-6 pr-14 sm:pr-16 border-b border-slate-100 dark:border-white/10 flex justify-between items-center bg-slate-50/70 dark:bg-black/30">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
             <Network className="w-5 h-5" />
@@ -539,69 +539,76 @@ export function NettingCanvas({
           {/* STATE 3: SIMPLIFIED EDGES (Clean Directed Settlement Arrows) */}
           {hasActiveDebts && nettingState === "simplified" && (
             <g>
-              {simplifiedEdges.map((edge, idx) => (
-                <g key={`${edge.from.id}->${edge.to.id}`}>
-                  {/* Glowing background stroke */}
-                  <motion.line
-                    initial={{ pathLength: 0 }}
-                    animate={{ pathLength: 1 }}
-                    transition={{ duration: 0.8, delay: idx * 0.15 }}
-                    x1={edge.startX}
-                    y1={edge.startY}
-                    x2={edge.endX}
-                    y2={edge.endY}
-                    stroke="#10b981"
-                    strokeWidth="4"
-                    opacity="0.3"
-                    strokeLinecap="round"
-                  />
-                  {/* Main directed edge with arrowhead */}
-                  <motion.line
-                    initial={{ pathLength: 0 }}
-                    animate={{ pathLength: 1 }}
-                    transition={{ duration: 0.8, delay: idx * 0.15 }}
-                    x1={edge.startX}
-                    y1={edge.startY}
-                    x2={edge.endX}
-                    y2={edge.endY}
-                    stroke="#10b981"
-                    strokeWidth="2.5"
-                    markerEnd="url(#arrow-green)"
-                    strokeLinecap="round"
-                  />
+              {simplifiedEdges.map((edge, idx) => {
+                // Check if line is vertical or passes through the central axis (x ~ 270)
+                const isVerticalCenter = Math.abs(edge.startX - 270) < 20 && Math.abs(edge.endX - 270) < 20;
+                const curveOffset = isVerticalCenter ? -48 : 0;
+                const pathD = curveOffset !== 0
+                  ? `M ${edge.startX} ${edge.startY} Q ${edge.midX + curveOffset} ${edge.midY} ${edge.endX} ${edge.endY}`
+                  : `M ${edge.startX} ${edge.startY} L ${edge.endX} ${edge.endY}`;
+                const pillX = edge.midX + (curveOffset !== 0 ? curveOffset * 0.72 : 0);
+                const pillY = edge.midY;
 
-                  {/* Payment Amount Pill on the Arrow */}
-                  <g transform={`translate(${edge.midX}, ${edge.midY})`}>
-                    <rect 
-                      x="-30" 
-                      y="-10" 
-                      width="60" 
-                      height="20" 
-                      rx="10" 
-                      fill="#064e3b" 
-                      stroke="#34d399" 
-                      strokeWidth="1.5" 
-                      filter="drop-shadow(0 2px 4px rgba(0,0,0,0.5))"
+                return (
+                  <g key={`${edge.from.id}->${edge.to.id}`}>
+                    {/* Glowing background stroke */}
+                    <motion.path
+                      initial={{ pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
+                      transition={{ duration: 0.8, delay: idx * 0.15 }}
+                      d={pathD}
+                      fill="none"
+                      stroke="#10b981"
+                      strokeWidth="4"
+                      opacity="0.3"
+                      strokeLinecap="round"
                     />
-                    <text 
-                      x="0" 
-                      y="3.5" 
-                      textAnchor="middle" 
-                      fill="#a7f3d0" 
-                      fontSize="9.5" 
-                      fontWeight="bold" 
-                      fontFamily="sans-serif"
-                    >
-                      {formatCurrency(edge.amount)}
-                    </text>
+                    {/* Main directed edge with arrowhead */}
+                    <motion.path
+                      initial={{ pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
+                      transition={{ duration: 0.8, delay: idx * 0.15 }}
+                      d={pathD}
+                      fill="none"
+                      stroke="#10b981"
+                      strokeWidth="2.5"
+                      markerEnd="url(#arrow-green)"
+                      strokeLinecap="round"
+                    />
+
+                    {/* Payment Amount Pill on the Arrow */}
+                    <g transform={`translate(${pillX}, ${pillY})`}>
+                      <rect 
+                        x="-30" 
+                        y="-10" 
+                        width="60" 
+                        height="20" 
+                        rx="10" 
+                        fill="#064e3b" 
+                        stroke="#34d399" 
+                        strokeWidth="1.5" 
+                        filter="drop-shadow(0 2px 4px rgba(0,0,0,0.5))"
+                      />
+                      <text 
+                        x="0" 
+                        y="3.5" 
+                        textAnchor="middle" 
+                        fill="#a7f3d0" 
+                        fontSize="9.5" 
+                        fontWeight="bold" 
+                        fontFamily="sans-serif"
+                      >
+                        {formatCurrency(edge.amount)}
+                      </text>
+                    </g>
                   </g>
-                </g>
-              ))}
+                );
+              })}
 
               {/* Central Netting Result Badge */}
               <g transform="translate(270, 160)">
-                <rect x="-95" y="-13" width="190" height="26" rx="13" fill="#022c22" stroke="#10b981" strokeWidth="1.5" />
-                <text x="0" y="4" textAnchor="middle" fill="#6ee7b7" fontSize="10" fontWeight="bold" fontFamily="sans-serif">
+                <rect x="-85" y="-12" width="170" height="24" rx="12" fill="#022c22" stroke="#10b981" strokeWidth="1.5" />
+                <text x="0" y="4" textAnchor="middle" fill="#6ee7b7" fontSize="9.5" fontWeight="bold" fontFamily="sans-serif">
                   ✓ {simplifiedEdges.length} Settlements ({formatCurrency(settledCapital)})
                 </text>
               </g>
