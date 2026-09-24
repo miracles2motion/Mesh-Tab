@@ -1,6 +1,6 @@
-"use client";
+ad"use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Copy, Users, Check, QrCode, Crown, ShieldAlert, AlertCircle, Info, Trash2, Sparkles, UserPlus } from "lucide-react";
 import { Button } from "../ui/button";
 import { QRCodeSVG } from "qrcode.react";
@@ -57,7 +57,7 @@ export function ManageMembers({
 
   const [inviteLink, setInviteLink] = useState(`https://mesh-tab.vercel.app/tab/${tabId}/join`);
 
-  import { useEffect } from "react";
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       setInviteLink(`${window.location.origin}/tab/${tabId}/join`);
