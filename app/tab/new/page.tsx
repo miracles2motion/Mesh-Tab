@@ -7,14 +7,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Fingerprint, Loader2, CheckCircle2, ArrowLeft, LayoutGrid } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import Image from "next/image";
-import { MonadLogo, AgoraLogo } from "../../../components/ui/partner-logo";
+import { MonadLogo, AgoraLogo, PythLogo } from "../../../components/ui/partner-logo";
 
 import { saveNewTab, getStoredUser, DEFAULT_USER_NAME } from "../../../lib/user";
+import { SUPPORTED_CURRENCIES } from "../../../lib/pyth";
 
 export default function CreateTab() {
   const router = useRouter();
   const [step, setStep] = useState<1 | 2>(1);
   const [tabName, setTabName] = useState("");
+  const [currency, setCurrency] = useState<string>("USD");
   
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +27,8 @@ export default function CreateTab() {
     await new Promise(r => setTimeout(r, 1500));
 
     const cleanId = tabName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    const newTabId = cleanId || "custom-tab";
+    const uniqueSuffix = Math.random().toString(36).substring(2, 6);
+    const newTabId = (cleanId || "custom-tab") + "-" + uniqueSuffix;
     const currentUserName = getStoredUser().name || DEFAULT_USER_NAME;
     
     saveNewTab({
@@ -91,11 +94,27 @@ export default function CreateTab() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 dark:text-white/80 ml-1">Group Currency</label>
-                <div className="w-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-slate-700 dark:text-white/70 flex items-center justify-between opacity-80 cursor-not-allowed">
-                  <span className="font-medium">US Dollars (AUSD)</span>
-                  <span className="text-xs bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 px-2.5 py-1 rounded-full font-semibold border border-indigo-200 dark:border-indigo-500/20">Default</span>
+                <label className="text-sm font-semibold text-slate-700 dark:text-white/80 ml-1">Trip Currency</label>
+                <div className="grid grid-cols-5 gap-1.5">
+                  {SUPPORTED_CURRENCIES.slice(0, 5).map(curr => (
+                    <button
+                      key={curr.code}
+                      type="button"
+                      onClick={() => setCurrency(curr.code)}
+                      className={`py-2.5 px-1.5 rounded-2xl border text-xs font-bold transition-all flex flex-col items-center gap-0.5 cursor-pointer ${
+                        currency === curr.code
+                          ? "bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20"
+                          : "bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/70 hover:bg-slate-100 dark:hover:bg-white/10"
+                      }`}
+                    >
+                      <span className="text-sm">{curr.flag}</span>
+                      <span className="text-[11px] font-mono">{curr.code}</span>
+                    </button>
+                  ))}
                 </div>
+                <p className="text-[11px] text-slate-400 dark:text-white/40 ml-1 leading-relaxed">
+                  Settlements clear in digital USD (AUSD). Foreign currencies convert automatically with 0% bank markup via Pyth Network mid-market rates.
+                </p>
               </div>
 
               <Button type="submit" variant="primary" size="lg" className="w-full group mt-4">
@@ -106,9 +125,12 @@ export default function CreateTab() {
               {/* Partner Branding */}
               <div className="pt-2 flex items-center justify-center gap-3 text-slate-500 dark:text-white/50 text-xs font-medium">
                 <span>Powered by</span>
-                <div className="flex items-center gap-3 opacity-90 hover:opacity-100 transition-all text-slate-800 dark:text-white">
-                  <MonadLogo className="h-4 w-auto" />
-                  <AgoraLogo className="h-4 w-auto" />
+                <div className="flex items-center gap-2.5 opacity-90 hover:opacity-100 transition-all text-slate-800 dark:text-white">
+                  <MonadLogo className="h-3.5 w-auto" />
+                  <span className="text-slate-300 dark:text-white/20">×</span>
+                  <AgoraLogo className="h-3.5 w-auto" />
+                  <span className="text-slate-300 dark:text-white/20">×</span>
+                  <PythLogo className="h-3.5 w-auto" />
                 </div>
               </div>
             </motion.form>

@@ -22,6 +22,7 @@ import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import Image from "next/image";
+import { DynamicLogo } from "../../components/ui/partner-logo";
 
 function OnboardingContent() {
   const router = useRouter();
@@ -49,8 +50,8 @@ function OnboardingContent() {
     setIsScanningPasskey(true);
     sounds.playClick();
 
-    toast.info("Mera WebAuthn Enrollment", {
-      description: "Requesting Touch ID / Face ID hardware passkey creation..."
+    toast.info("Setting Up Passkey", {
+      description: "Requesting Touch ID / Face ID biometric registration..."
     });
 
     await new Promise(r => setTimeout(r, 1600));
@@ -59,8 +60,8 @@ function OnboardingContent() {
     setPasskeyDone(true);
     sounds.playSuccessChime();
 
-    toast.success("Passkey Created", {
-      description: "Cryptographic P-256 keypair secured in hardware enclave."
+    toast.success("Passkey Registered", {
+      description: "Secured in your device's biometric vault for 1-tap sign in."
     });
 
     setTimeout(() => {
@@ -147,7 +148,7 @@ function OnboardingContent() {
                   Create Passkey
                 </h1>
                 <p className="text-slate-500 dark:text-white/60 text-xs md:text-sm">
-                  Register your device with Mera WebAuthn for zero-password logins.
+                  Register your device for instant, passwordless sign-ins.
                 </p>
               </div>
 
@@ -182,7 +183,7 @@ function OnboardingContent() {
 
               <div className="p-3 rounded-2xl bg-indigo-50/70 dark:bg-indigo-500/5 border border-indigo-200/70 dark:border-indigo-500/20 flex items-center gap-2.5 text-xs text-left text-slate-600 dark:text-white/70">
                 <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                <span>Signed with your hardware Secure Enclave. No seed phrases.</span>
+                <span>Protected by your device hardware. Zero passwords required.</span>
               </div>
 
               <Button
@@ -321,7 +322,7 @@ function OnboardingContent() {
                 className="w-full group cursor-pointer"
                 isLoading={isSubmitting}
               >
-                Complete Setup & Deploy
+                Complete Setup & Get Started
                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
             </motion.form>
@@ -353,6 +354,14 @@ function OnboardingContent() {
           )}
         </AnimatePresence>
       </motion.div>
+
+      {/* Partner Attribution */}
+      <div className="mt-8 flex items-center gap-2 text-slate-500 dark:text-white/50 text-xs font-medium relative z-10">
+        <span>Protected by</span>
+        <div className="opacity-90 hover:opacity-100 transition-all text-slate-800 dark:text-white">
+          <DynamicLogo className="h-4 w-auto" />
+        </div>
+      </div>
     </div>
   );
 }

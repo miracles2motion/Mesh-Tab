@@ -5,14 +5,14 @@ import { Zap, AlertCircle, Coins, CreditCard, Sparkles, Check } from "lucide-rea
 import { Sheet } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { formatCurrency } from "../../lib/utils";
-import Image from "next/image";
 import { ReceiptView } from "../ReceiptView";
-import { MonadLogo, AgoraLogo } from "../ui/partner-logo";
+import { MonadLogo, AgoraLogo, DynamicLogo, PythLogo } from "../ui/partner-logo";
 
 import { useUserProfile, settleTab, useVirtualBalance, useStoredTabMembers, useWorkspaceMode } from "../../lib/user";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { fireSettlementConfetti, fireFaucetConfetti } from "../../lib/confetti";
+import { SUPPORTED_CURRENCIES, usePythRate } from "../../lib/pyth";
 
 interface SettlementDrawerProps {
   isOpen: boolean;
@@ -36,6 +36,16 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [justToppedUp, setJustToppedUp] = useState(false);
+
+  const defaultPayCurrency = tabId.includes("lisbon") ? "EUR" : "USD";
+  const [payCurrency, setPayCurrency] = useState<string>(defaultPayCurrency);
+  const { rate: pythRate, config: pythConfig } = usePythRate(payCurrency);
+
+  const debtInUsd = debtAmount / 100;
+  const convertedAmount = pythRate > 0 ? (debtInUsd / pythRate) : debtInUsd;
+  const formattedConverted = payCurrency === "JPY" 
+    ? Math.round(convertedAmount).toLocaleString() 
+    : convertedAmount.toFixed(2);
 
   const hasEnoughVirtual = virtualBalance >= debtAmount;
 
@@ -214,11 +224,48 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
         )}
 
         {paymentMethod === "apple-pay" && (
-          <div className="w-full flex items-center gap-3 p-4 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 rounded-2xl mb-6 text-left">
-            <AlertCircle className="w-5 h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
-            <p className="text-xs text-indigo-800 dark:text-indigo-200">
-              Purchases AUSD at 1:1 parity with Apple Pay or Debit card via Dynamic checkout.
-            </p>
+          <div className="w-full space-y-3 mb-6 text-left">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-white/60">
+                Card Billing Currency
+              </label>
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                0% Bank FX Markup
+              </span>
+            </div>
+
+            {/* Currency Selector Chips */}
+            <div className="grid grid-cols-5 gap-1.5">
+              {SUPPORTED_CURRENCIES.slice(0, 5).map(curr => (
+                <button
+                  key={curr.code}
+                  type="button"
+                  onClick={() => setPayCurrency(curr.code)}
+                  className={`py-2 px-1.5 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-0.5 cursor-pointer ${
+                    payCurrency === curr.code
+                      ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                      : "bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/70 hover:bg-slate-100"
+                  }`}
+                >
+                  <span className="text-sm">{curr.flag}</span>
+                  <span className="text-[10px] font-mono">{curr.code}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Live Pyth Mid-Market Rate Box */}
+            <div className="p-3.5 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 rounded-2xl flex items-center justify-between text-xs">
+              <div className="space-y-0.5">
+                <span className="text-slate-500 dark:text-white/60 text-[11px]">Dynamic Card Charge:</span>
+                <p className="font-bold text-slate-900 dark:text-white text-sm">
+                  {pythConfig?.symbol || "$"}{formattedConverted} {payCurrency}
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">
+                <PythLogo className="h-3.5 w-auto" />
+                <span>Live Mid-Market</span>
+              </div>
+            </div>
           </div>
         )}
 
@@ -227,12 +274,12 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
           disabled={paymentMethod === "ausd" && !hasEnoughVirtual}
           variant="primary" 
           size="lg" 
-          className="w-full h-14 font-bold text-base shadow-md shadow-indigo-500/20"
+          className="w-full h-14 font-bold text-base shadow-md shadow-indigo-500/20 cursor-pointer"
           isLoading={isProcessing}
         >
           {paymentMethod === "ausd"
             ? `Confirm ${formatCurrency(debtAmount)} with Virtual AUSD`
-            : "Pay with Apple Pay"}
+            : `Pay ${pythConfig?.symbol || "$"}${formattedConverted} ${payCurrency} with Apple Pay`}
         </Button>
         
         {/* Partner Branding */}
@@ -242,6 +289,10 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
              <MonadLogo className="h-3.5 w-auto" />
              <span className="text-slate-300 dark:text-white/20">×</span>
              <AgoraLogo className="h-3.5 w-auto" />
+             <span className="text-slate-300 dark:text-white/20">×</span>
+             <DynamicLogo className="h-3.5 w-auto" />
+             <span className="text-slate-300 dark:text-white/20">×</span>
+             <PythLogo className="h-3.5 w-auto" />
            </div>
         </div>
       </div>

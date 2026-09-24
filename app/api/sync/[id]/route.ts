@@ -74,8 +74,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (expenses && Array.isArray(expenses)) {
       const mergedExpenses = [...serverExpenses];
       expenses.forEach(e => {
-        if (!mergedExpenses.some(se => se.id === e.id)) {
+        const idx = mergedExpenses.findIndex(se => se.id === e.id);
+        if (idx === -1) {
           mergedExpenses.push(e);
+        } else {
+          mergedExpenses[idx] = { ...mergedExpenses[idx], ...e };
         }
       });
       // Sort by time or leave as is (assume newer items are appended or prepended correctly)

@@ -40,13 +40,23 @@ export default function GlobalHub() {
     setMounted(true);
   }, []);
 
-  // Only compute tabs after mounting to ensure pristine zero-flash guarantee
   const currentUserName = profile.name || "David";
+
+  // Read archived tab IDs from localStorage
+  const archivedTabIds: string[] = (() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const raw = localStorage.getItem("meshTab_archived");
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  })();
+
   const activeTabsList = !mounted
     ? []
-    : workspaceMode === "blank" 
-      ? mockTabs.filter(t => t.id !== "lisbon-24" && t.id !== "house-groceries") 
-      : mockTabs;
+    : (workspaceMode === "blank" 
+        ? mockTabs.filter(t => t.id !== "lisbon-24" && t.id !== "house-groceries") 
+        : mockTabs
+      ).filter(t => !archivedTabIds.includes(t.id));
 
   const syncedTabs = !mounted
     ? []

@@ -15,17 +15,20 @@ interface MemberItem {
   role?: "admin" | "member";
 }
 
-import { useUserProfile, saveStoredTabMembers, useWorkspaceMode } from "../../lib/user";
+import { useUserProfile, saveStoredTabMembers, useWorkspaceMode, seedDemoExpenses } from "../../lib/user";
+import { pushTabStateToRedis } from "../../lib/sync";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 
 export function ManageMembers({ 
   tabId, 
   members,
+  tabName,
   currentUser 
 }: { 
   tabId: string; 
   members: any[];
+  tabName?: string;
   currentUser?: string;
 }) {
   const router = useRouter();
@@ -51,18 +54,29 @@ export function ManageMembers({
     });
   });
 
+  useEffect(() => {
+    setMemberList(members.map(m => {
+      const resolvedName = (m.name === "Sarah" && activeUser !== "Sarah") ? activeUser : m.name;
+      return {
+        ...m,
+        name: resolvedName,
+        role: (resolvedName.toLowerCase() === creatorName.toLowerCase() || m.role === "admin") ? ("admin" as const) : ("member" as const)
+      };
+    }));
+  }, [members, activeUser, creatorName]);
+
   const [notification, setNotification] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null);
   const [pendingRemovalMember, setPendingRemovalMember] = useState<MemberItem | null>(null);
   const [blockedRemovalMember, setBlockedRemovalMember] = useState<MemberItem | null>(null);
 
   const [inviteLink, setInviteLink] = useState(`https://mesh-tab.vercel.app/tab/${tabId}/join`);
 
-
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setInviteLink(`${window.location.origin}/tab/${tabId}/join`);
+      const nameParam = tabName ? `?n=${encodeURIComponent(tabName)}` : "";
+      setInviteLink(`${window.location.origin}/tab/${tabId}/join${nameParam}`);
     }
-  }, [tabId]);
+  }, [tabId, tabName]);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(inviteLink);
@@ -99,6 +113,7 @@ export function ManageMembers({
     setMemberList(prev => {
       const updated = [...prev, newMember];
       saveStoredTabMembers(tabId, updated);
+      pushTabStateToRedis(tabId);
       return updated;
     });
     setIsSimulating(false);
@@ -123,6 +138,23 @@ export function ManageMembers({
       message: `${nextName} successfully joined the group via QR code invite!`
     });
     setTimeout(() => setNotification(null), 5000);
+  };
+
+  const handleSeedDemo = () => {
+    sounds.playClick();
+    seedDemoExpenses(tabId, activeUser);
+    pushTabStateToRedis(tabId);
+    sounds.playSuccessChime();
+    try {
+      confetti({
+        particleCount: 50,
+        spread: 60,
+        origin: { y: 0.6 }
+      });
+    } catch {}
+    toast.success("Demo Trip Seeded!", {
+      description: "Added 4 group members and 3 realistic expenses for live presentation."
+    });
   };
 
   const handleAttemptRemove = (member: MemberItem) => {
@@ -290,7 +322,7 @@ export function ManageMembers({
              </div>
           </div>
 
-          <div className="w-full pt-3 border-t border-slate-200/80 dark:border-white/10">
+          <div className="w-full pt-3 border-t border-slate-200/80 dark:border-white/10 space-y-2">
             <button
               onClick={handleSimulateJoin}
               disabled={isSimulating}
@@ -299,8 +331,15 @@ export function ManageMembers({
               <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 animate-pulse" />
               <span>{isSimulating ? "Authenticating WebAuthn Passkey..." : "⚡ Simulate Friend Scanning QR & Joining"}</span>
             </button>
-            <p className="text-[10px] text-slate-500 dark:text-white/40 mt-1.5 text-center">
-              Demonstrates live multi-player roster admission & cryptographic passkey signing.
+
+            <button
+              onClick={handleSeedDemo}
+              className="w-full py-2 px-4 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-white/80 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+            >
+              <span>🏝️ Seed Demo Trip Activity (Villa, Dinners, Excursions)</span>
+            </button>
+            <p className="text-[10px] text-slate-500 dark:text-white/40 mt-1 text-center">
+              Quickly populate this tab with multi-member expenses for live presentation.
             </p>
           </div>
         </div>
@@ -356,7 +395,7 @@ export function ManageMembers({
                         ) : isCreditor ? (
                           <span className="text-emerald-600 dark:text-emerald-400 font-medium">Owed +{formatCurrency(member.balance)}</span>
                         ) : (
-                          <span className="text-rose-600 dark:text-rose-400 font-medium">Owes -{formatCurrency(member.balance)}</span>
+                          <span className="text-rose-600 dark:text-rose-400 font-medium">Owes {formatCurrency(Math.abs(member.balance))}</span>
                         )}
                       </div>
                     </div>

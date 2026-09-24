@@ -257,8 +257,30 @@ function NotificationsContent() {
                       {notif.desc}
                     </p>
 
+                    {/* 1-Tap Quick Actions */}
+                    {(notif.type === "settlement" || notif.type === "expense") && notif.tabId && (
+                      <div className="mt-3 flex items-center gap-2 flex-wrap">
+                        {notif.type === "settlement" && (
+                          <Link
+                            href={`/tab/${notif.tabId}?settle=true`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-black text-[11px] font-bold shadow-sm hover:bg-slate-800 dark:hover:bg-white/90 transition-all active:scale-95"
+                          >
+                            <Zap className="w-3 h-3" /> Settle Now
+                          </Link>
+                        )}
+                        <Link
+                          href={`/tab/${notif.tabId}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-white/70 text-[11px] font-semibold border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/15 transition-all"
+                        >
+                          <ExternalLink className="w-3 h-3" /> View Tab
+                        </Link>
+                      </div>
+                    )}
+
                     {/* Footer link cue if clickable */}
-                    {notif.link && (
+                    {notif.link && !(notif.type === "settlement" || notif.type === "expense") && (
                       <div className="mt-2.5 flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 group-hover:underline">
                         <span>Open tab details</span>
                         <ExternalLink className="w-3 h-3" />

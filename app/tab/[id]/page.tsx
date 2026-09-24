@@ -1,13 +1,20 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { Activity, Plus, ArrowLeft, Settings, Users, Download, CheckCircle2, LayoutGrid, Sparkles, Crown } from "lucide-react";
+import { Activity, Plus, ArrowLeft, Settings, Users, Download, CheckCircle2, LayoutGrid, Sparkles, Crown, Upload, Award } from "lucide-react";
 import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { BalanceCard } from "../../../components/tab/balance-card";
 import { SettlementDrawer } from "../../../components/tab/settlement-drawer";
 import { CashOutDrawer } from "../../../components/tab/cash-out-drawer";
 import { RosterCarousel } from "../../../components/tab/roster-carousel";
+import { MemberDetailsDrawer } from "../../../components/tab/member-details-drawer";
+import { PaymentRequestDrawer } from "../../../components/tab/payment-request-drawer";
+import { ImportExpensesModal } from "../../../components/tab/import-expenses-modal";
+import { SettlementCertificateModal } from "../../../components/tab/settlement-certificate-modal";
+import { CategoryAnalytics } from "../../../components/tab/category-analytics";
+import { SmartRebalancer } from "../../../components/tab/smart-rebalancer";
+import { TabSettingsDrawer } from "../../../components/tab/tab-settings-drawer";
 import { FeedList, ExpenseItem } from "../../../components/tab/feed-list";
 import { TransactionOverlay, TransactionState } from "../../../components/ui/transaction-overlay";
 import { NettingCanvas } from "../../../components/NettingCanvas";
@@ -28,7 +35,7 @@ function DashboardContent() {
   const { tabs: storedTabs } = useStoredTabs();
   const { expenses } = useStoredExpenses(rawTabId);
   const { mode: workspaceMode } = useWorkspaceMode();
-  useTabSync(rawTabId);
+  const { isSyncing, lastSync, syncError } = useTabSync(rawTabId);
 
   const currentUser = profile.name || "David";
   const { members: activeMembers } = useStoredTabMembers(rawTabId, currentUser);
@@ -80,11 +87,22 @@ function DashboardContent() {
   const [isSettlementOpen, setIsSettlementOpen] = useState(false);
   const [isCashOutOpen, setIsCashOutOpen] = useState(false);
   const [isNettingModalOpen, setIsNettingModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isCertificateOpen, setIsCertificateOpen] = useState(false);
+  const [isTabSettingsOpen, setIsTabSettingsOpen] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<any | null>(null);
+  const [paymentRequest, setPaymentRequest] = useState<{ debtorName: string; amount: number } | null>(null);
   const [txState, setTxState] = useState<TransactionState>("idle");
 
   const [nettingTxState, setNettingTxState] = useState<TransactionState>("idle");
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  useEffect(() => {
+    if (searchParams.get("settle") === "true") {
+      setIsSettlementOpen(true);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (searchParams.get("invite") === "true") {
@@ -207,9 +225,17 @@ function DashboardContent() {
                   <Crown className="w-3 h-3 text-amber-500" /> Host: {creatorName}
                 </span>
               )}
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 shrink-0" title="Simulated Monad sub-second indexer response">
-                <Activity className="w-3.5 h-3.5 animate-pulse" />
-                <span>Sandbox Sync • 0.3s</span>
+              <div className={`flex items-center gap-1.5 text-xs font-semibold shrink-0 ${syncError ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`} title={syncError ? "Sync Offline" : "Simulated Monad sub-second indexer response"}>
+                <Activity className={`w-3.5 h-3.5 ${isSyncing ? "animate-pulse" : ""}`} />
+                <span>
+                  {syncError 
+                    ? "⚠️ Sync Offline" 
+                    : isSyncing 
+                      ? "Syncing..." 
+                      : lastSync 
+                        ? `Sandbox Sync • ${Math.max(0, Math.floor((new Date().getTime() - lastSync.getTime()) / 1000))}s` 
+                        : "Sandbox Sync • 0s"}
+                </span>
               </div>
               {workspaceMode === "sample" && rawTabId === "lisbon-24" && (
                 <Link
@@ -230,6 +256,26 @@ function DashboardContent() {
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {!hasOutstandingTabDebt && (
+            <button
+              onClick={() => setIsCertificateOpen(true)}
+              className="text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-300 hover:text-emerald-900 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 border border-emerald-200 dark:border-emerald-500/20 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+              title="Share Settlement Certificate"
+            >
+              <Award className="w-3.5 h-3.5 text-emerald-500" />
+              <span className="hidden sm:inline">Certificate</span>
+              <span className="sm:hidden text-xs font-bold">Cert</span>
+            </button>
+          )}
+          <button
+            onClick={() => setIsImportModalOpen(true)}
+            className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-white/70 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+            title="Import from Splitwise or CSV"
+          >
+            <Upload className="w-3.5 h-3.5 text-indigo-500" />
+            <span className="hidden sm:inline">Import</span>
+            <span className="sm:hidden text-xs font-bold">Import</span>
+          </button>
           <button
             onClick={exportLedgerCSV}
             className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-white/70 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
@@ -252,11 +298,19 @@ function DashboardContent() {
           <Link 
             href={`/settings?from=/tab/${rawTabId}`}
             className="p-2 sm:p-2.5 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-white/80 transition-colors shadow-sm"
-            title="Settings"
-            aria-label="Settings"
+            title="Global Settings"
+            aria-label="Global Settings"
           >
             <Settings className="w-4 h-4" />
           </Link>
+          <button
+            onClick={() => setIsTabSettingsOpen(true)}
+            className="p-2 sm:p-2.5 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-white/80 transition-colors shadow-sm cursor-pointer"
+            title="Tab Settings"
+            aria-label="Tab Settings"
+          >
+            <Settings className="w-4 h-4 text-indigo-500" />
+          </button>
           <Link 
             href={`/settings?from=/tab/${rawTabId}`}
             className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full ${profile.avatarColor} text-white flex items-center justify-center font-bold text-sm sm:text-base shadow-md hover:scale-105 active:scale-95 transition-transform`}
@@ -285,6 +339,12 @@ function DashboardContent() {
               setNettingTxState("idle");
             }}
           />
+
+          {/* Category Analytics Widget */}
+          <CategoryAnalytics expenses={expenses} currentUserName={currentUser} />
+
+          {/* Smart Rebalancer */}
+          <SmartRebalancer members={activeMembers} expenses={expenses} currentUserName={currentUser} />
           
           {/* Desktop Actions */}
           <div className="hidden lg:flex flex-col gap-4">
@@ -322,6 +382,8 @@ function DashboardContent() {
             grossVolume={grossVolume} 
             currentUserName={currentUser} 
             creatorName={creatorName} 
+            onSelectMember={(member) => setSelectedMember(member)}
+            onRequestPayment={(debtorName, amount) => setPaymentRequest({ debtorName, amount })}
           />
           <FeedList expenses={expenses} currentUserName={currentUser} />
         </div>
@@ -373,6 +435,38 @@ function DashboardContent() {
         currentUserName={currentUser}
       />
 
+      {/* Member Details Breakdown Drawer */}
+      <MemberDetailsDrawer
+        isOpen={!!selectedMember}
+        onClose={() => setSelectedMember(null)}
+        member={selectedMember}
+        tabId={rawTabId}
+        tabName={currentTab.name}
+        currentUserName={currentUser}
+        expenses={expenses}
+        onRequestPayment={(debtorName, amount) => {
+          setSelectedMember(null);
+          setPaymentRequest({ debtorName, amount });
+        }}
+        onSettleSelf={() => {
+          setSelectedMember(null);
+          setIsSettlementOpen(true);
+        }}
+      />
+
+      {/* Payment Request Drawer */}
+      {paymentRequest && (
+        <PaymentRequestDrawer
+          isOpen={!!paymentRequest}
+          onClose={() => setPaymentRequest(null)}
+          tabId={rawTabId}
+          tabName={currentTab.name}
+          debtorName={paymentRequest.debtorName}
+          amount={paymentRequest.amount}
+          creditorName={currentUser}
+        />
+      )}
+
       {isNettingModalOpen && (
         <Modal onClose={() => setIsNettingModalOpen(false)} className="max-w-xl bg-transparent border-0 shadow-none">
           <NettingCanvas 
@@ -385,6 +479,35 @@ function DashboardContent() {
           />
         </Modal>
       )}
+
+      {/* Splitwise & CSV Import Modal */}
+      <ImportExpensesModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        tabId={rawTabId}
+        tabName={currentTab.name}
+        currentUserName={currentUser}
+      />
+
+      {/* Debt Clearance Certificate Modal */}
+      <SettlementCertificateModal
+        isOpen={isCertificateOpen}
+        onClose={() => setIsCertificateOpen(false)}
+        tabName={currentTab.name}
+        tabId={rawTabId}
+        grossVolume={grossVolume}
+        memberCount={activeMembers.length > 0 ? activeMembers.length : 1}
+      />
+
+      {/* Tab Settings Drawer */}
+      <TabSettingsDrawer
+        isOpen={isTabSettingsOpen}
+        onClose={() => setIsTabSettingsOpen(false)}
+        tabId={rawTabId}
+        tabName={currentTab.name}
+        tabCurrency={currentTab.currency}
+        isCreator={isCurrentUserCreator}
+      />
     </div>
     </>
   );

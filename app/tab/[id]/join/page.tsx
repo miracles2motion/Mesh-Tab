@@ -1,22 +1,28 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { Sparkles, Fingerprint, ArrowRight, UserPlus, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import { getStoredTabMembers, saveStoredTabMembers, type TabMember, saveNewTab } from "../../../../lib/user";
+import { getStoredTabMembers, saveStoredTabMembers, type TabMember, saveNewTab, saveStoredUser } from "../../../../lib/user";
+import { pushTabStateToRedis } from "../../../../lib/sync";
 import { sounds } from "../../../../lib/sounds";
 import confetti from "canvas-confetti";
+import { DynamicLogo } from "../../../../components/ui/partner-logo";
 
 export default function JoinTabPage() {
   const params = useParams();
   const tabId = typeof params?.id === "string" ? params.id : "";
+  const searchParams = useSearchParams();
+  const paramName = searchParams?.get("n");
+  const tabName = paramName || tabId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   const router = useRouter();
   const [name, setName] = useState("");
   const [step, setStep] = useState<"name" | "auth" | "success">("name");
 
   const handleJoin = async () => {
-    if (!name.trim()) {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
       toast.error("Please enter your name");
       return;
     }
@@ -24,32 +30,54 @@ export default function JoinTabPage() {
     sounds.playClick();
     setStep("auth");
     
-    // Simulate biometric authentication delay
-    await new Promise(r => setTimeout(r, 2000));
+    // Set this joining user as the active user profile on this device
+    saveStoredUser(trimmedName);
     
-    const members = getStoredTabMembers(tabId);
-    const existing = members.find(m => m.name.toLowerCase() === name.trim().toLowerCase());
+    // Simulate biometric authentication delay
+    await new Promise(r => setTimeout(r, 1800));
+    
+    // Fetch live member roster from Redis so cold joiner starts with full group state
+    let members = getStoredTabMembers(tabId);
+    try {
+      const mode = typeof window !== "undefined" ? (localStorage.getItem("meshTab_workspaceMode") || "blank") : "blank";
+      const res = await fetch(`/api/sync/${tabId}?mode=${mode}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.members && Array.isArray(data.members) && data.members.length > 0) {
+          members = data.members;
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch server tab members on join:", e);
+    }
+
+    const existing = members.find(m => m.name.toLowerCase() === trimmedName.toLowerCase());
+    let updatedMembers = members;
     
     if (!existing) {
       const newMember: TabMember = {
-        name: name.trim(),
+        name: trimmedName,
         balance: 0,
         type: "settled",
         role: "member"
       };
-      const updatedMembers = [...members, newMember];
-      saveStoredTabMembers(tabId, updatedMembers);
-      
-      // Save to dashboard so it doesn't disappear when they close the app
-      saveNewTab({
-        id: tabId,
-        name: tabId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-        role: "Member",
-        balance: 0,
-        memberCount: updatedMembers.length,
-        lastActivity: "Just joined"
-      });
+      updatedMembers = [...members, newMember];
     }
+    
+    saveStoredTabMembers(tabId, updatedMembers);
+    
+    // Save to dashboard so it doesn't disappear when they close the app
+    saveNewTab({
+      id: tabId,
+      name: tabName,
+      role: "Member",
+      balance: 0,
+      memberCount: updatedMembers.length,
+      lastActivity: "Just joined"
+    });
+
+    // Immediately push joined member state to Redis so creator device sees them right away
+    pushTabStateToRedis(tabId);
 
     sounds.playSuccessChime();
     setStep("success");
@@ -71,7 +99,7 @@ export default function JoinTabPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] flex items-center justify-center p-6">
+    <div className="min-h-[100dvh] bg-slate-50 dark:bg-[#0a0a0a] flex items-center justify-center p-6">
       <div className="w-full max-w-md bg-white dark:bg-[#121212] border border-slate-200 dark:border-white/10 rounded-3xl p-8 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500 relative overflow-hidden">
         
         {/* Top Gradient */}
@@ -122,7 +150,7 @@ export default function JoinTabPage() {
                 </div>
                 <h3 className="mt-6 text-lg font-bold text-slate-900 dark:text-white">Authenticating...</h3>
                 <p className="text-xs text-slate-500 dark:text-white/50 mt-1 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5" /> Checking WebAuthn Passkey
+                  <Sparkles className="w-3.5 h-3.5" /> Confirming with Face ID / Touch ID
                 </p>
               </div>
             )}
@@ -138,6 +166,14 @@ export default function JoinTabPage() {
                 </p>
               </div>
             )}
+          </div>
+
+          {/* Partner Attribution */}
+          <div className="pt-2 flex items-center justify-center gap-2 text-slate-400 dark:text-white/40 text-xs font-medium">
+            <span>Protected by</span>
+            <div className="opacity-80 hover:opacity-100 transition-opacity text-slate-600 dark:text-white/70">
+              <DynamicLogo className="h-3.5 w-auto" />
+            </div>
           </div>
         </div>
       </div>

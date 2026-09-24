@@ -1,8 +1,14 @@
 "use client";
 
-import { X, Receipt, Clock, User, ArrowRight } from "lucide-react";
+import { useState } from "react";
+import { X, Receipt, Clock, User, ArrowRight, Trash2, AlertTriangle, Loader2, Edit2, Check } from "lucide-react";
 import { formatCurrency } from "../../lib/utils";
-import { useUserProfile, getWorkspaceMode, getStoredTabMembers, StoredExpense } from "../../lib/user";
+import { useUserProfile, getWorkspaceMode, getStoredTabMembers, StoredExpense, deleteStoredExpense, updateStoredExpenseDescription } from "../../lib/user";
+import { pushTabStateToRedis } from "../../lib/sync";
+import { sounds } from "../../lib/sounds";
+import { toast } from "sonner";
+import { MonadLogo, EnvioLogo, PythLogo } from "../ui/partner-logo";
+import { EXPENSE_CATEGORIES } from "./add-expense-form";
 
 interface ExpenseDetailsProps {
   onClose?: () => void;
@@ -13,6 +19,9 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
   const profile = useUserProfile();
   const currentUserName = profile.name || "David";
   const mode = getWorkspaceMode();
+
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // 1. Look up if this is a custom-created expense in localStorage
   let foundCustomExpense: StoredExpense | null = null;
@@ -43,6 +52,10 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
   const payer = foundCustomExpense?.payer || (isMock1 ? "Aisha" : isMock2 ? "Kemi" : isMock3 ? "Ben" : currentUserName);
   const time = foundCustomExpense?.time || (isMock1 ? "October 12, 2024 at 10:42 AM" : isMock2 ? "October 11, 2024 at 8:15 PM" : "Just now");
 
+  const categoryInfo = foundCustomExpense?.category
+    ? EXPENSE_CATEGORIES.find(c => c.id === foundCustomExpense.category)
+    : (isMock1 ? { label: "Stay", icon: "🏨" } : isMock2 ? { label: "Dining", icon: "🍽️" } : isMock3 ? { label: "Events", icon: "🎟️" } : null);
+
   const isLisbon = mode === "sample" && (tabId === "lisbon-24" || isMock1 || isMock2 || isMock3);
   let dynamicSplits: { name: string; amount: number }[] = [];
   const splitType = foundCustomExpense?.splitType || "equal";
@@ -69,8 +82,11 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
     dynamicSplits = names.map(name => ({ name, amount: splitAmount }));
   }
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [editDesc, setEditDesc] = useState(desc);
+
   const details = {
-    desc,
+    desc: editDesc,
     amount,
     payer,
     time,
@@ -78,16 +94,104 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
     splits: dynamicSplits
   };
 
+  const handleSaveEdit = async () => {
+    if (!editDesc.trim()) return;
+    sounds.playClick();
+    const res = updateStoredExpenseDescription(tabId, expenseId, editDesc);
+    if (res.success) {
+      sounds.playSuccessChime();
+      setIsEditing(false);
+      try {
+        await pushTabStateToRedis(tabId);
+      } catch {}
+      toast.success("Expense Note Updated!");
+    } else {
+      toast.error(res.error || "Failed to update note");
+    }
+  };
+
+  const handleDeleteExpense = async () => {
+    setIsDeleting(true);
+    sounds.playClick();
+    
+    const res = deleteStoredExpense(tabId, expenseId);
+    if (!res.success) {
+      setIsDeleting(false);
+      toast.error("Cannot Delete Expense", {
+        description: res.error || "Failed to remove expense from ledger."
+      });
+      return;
+    }
+
+    // Push state to Redis for cross-device sync
+    try {
+      await pushTabStateToRedis(tabId);
+    } catch {}
+
+    setIsDeleting(false);
+    toast.success("Expense Removed", {
+      description: "Ledger balances updated and synchronized across all devices."
+    });
+    
+    if (onClose) onClose();
+  };
+
   return (
     <div className="p-6 md:p-8 flex flex-col h-full bg-white dark:bg-[#0a0a0a] text-slate-900 dark:text-white">
       {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div className="flex gap-4 items-center">
-          <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center">
-            <Receipt className="w-6 h-6 text-slate-600 dark:text-white/50" />
+          <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center shrink-0">
+            {categoryInfo ? (
+              <span className="text-2xl">{categoryInfo.icon}</span>
+            ) : (
+              <Receipt className="w-6 h-6 text-slate-600 dark:text-white/50" />
+            )}
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{details.desc}</h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              {isEditing ? (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={editDesc}
+                    onChange={(e) => setEditDesc(e.target.value)}
+                    className="px-2.5 py-1 text-sm font-bold rounded-lg border border-indigo-500 bg-slate-50 dark:bg-white/10 text-slate-900 dark:text-white focus:outline-none"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleSaveEdit}
+                    className="p-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer"
+                    title="Save Note"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => { setIsEditing(false); setEditDesc(desc); }}
+                    className="p-1.5 rounded-lg bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-white cursor-pointer"
+                    title="Cancel"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{editDesc || details.desc}</h2>
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="p-1 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer"
+                    title="Edit Note"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </button>
+                </>
+              )}
+              {categoryInfo && (
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-white/70 border border-slate-200 dark:border-white/10">
+                  {categoryInfo.label}
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-2 text-slate-500 dark:text-white/50 text-sm mt-1">
               <Clock className="w-4 h-4" />
               <span>{details.time}</span>
@@ -107,8 +211,22 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
       {/* Total & Payer */}
       <div className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 mb-8 flex flex-col items-center justify-center text-center shadow-sm">
         <span className="text-slate-500 dark:text-white/60 text-xs uppercase tracking-wider font-semibold mb-2">Total Amount</span>
-        <span className="text-5xl font-bold text-slate-900 dark:text-white tabular-nums mb-6">{formatCurrency(details.amount)}</span>
+        <span className="text-5xl font-bold text-slate-900 dark:text-white tabular-nums mb-3">{formatCurrency(details.amount)}</span>
         
+        {/* Foreign currency converted pill */}
+        {foundCustomExpense?.originalCurrency && foundCustomExpense.originalCurrency !== "USD" && (
+          <div className="mb-4 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 flex items-center gap-2 text-xs">
+            <span className="text-indigo-900 dark:text-indigo-300 font-semibold">
+              Original: {foundCustomExpense.originalCurrency} {foundCustomExpense.originalAmount?.toFixed(2)}
+            </span>
+            <span className="text-slate-300 dark:text-white/20">•</span>
+            <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-white/50">
+              <span>0% markup via</span>
+              <PythLogo className="h-2.5 w-auto text-slate-700 dark:text-white" />
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center gap-3 bg-white dark:bg-white/5 px-4 py-2 rounded-full border border-slate-200 dark:border-white/10 shadow-sm">
           <div className="w-6 h-6 rounded-full bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 flex items-center justify-center text-xs font-bold">
             {details.payer[0]}
@@ -169,6 +287,66 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Delete Expense Action & Partner Credits */}
+      <div className="mt-8 pt-6 border-t border-slate-200 dark:border-white/10 space-y-4">
+        {showDeleteConfirm ? (
+          <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-900 dark:text-rose-200 text-xs space-y-3 animate-in fade-in">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-sm text-rose-950 dark:text-rose-200">Remove from Shared Ledger?</p>
+                <p className="text-rose-700 dark:text-rose-300/80 mt-1 leading-relaxed">
+                  This will reverse all shares and automatically recalculate everyone&apos;s balances across all devices.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-2 px-3 rounded-xl bg-white dark:bg-white/10 text-slate-700 dark:text-white font-semibold border border-slate-200 dark:border-white/10 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleDeleteExpense}
+                className="flex-1 py-2 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm shadow-rose-500/20 cursor-pointer"
+              >
+                {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                <span>Confirm Remove</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="w-full py-2.5 px-4 rounded-xl border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Delete Expense from Ledger</span>
+          </button>
+        )}
+
+        {/* Partner credit */}
+        <div className="flex items-center justify-between text-[11px] text-slate-400 dark:text-white/40 pt-1">
+          <div className="flex items-center gap-1.5">
+            <span>Synced via</span>
+            <div className="opacity-80 hover:opacity-100 transition-all text-slate-700 dark:text-white/80">
+              <EnvioLogo className="h-3.5 w-auto" />
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span>Ledger on</span>
+            <div className="opacity-80 hover:opacity-100 transition-all text-slate-700 dark:text-white/80">
+              <MonadLogo className="h-3.5 w-auto" />
+            </div>
+          </div>
         </div>
       </div>
     </div>

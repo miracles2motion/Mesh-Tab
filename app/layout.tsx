@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Outfit, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
+import { PwaRegister } from "../components/pwa-register";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -17,6 +18,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://mesh-tab.vercel.app"),
   title: "MeshTab | Smart Settlement",
   description: "Gasless micro-expense tracking and multilateral debt netting on Monad.",
+  manifest: "/manifest.json",
 };
 
 export const viewport: Viewport = {
@@ -67,6 +69,7 @@ export default function RootLayout({
         <main className="flex-1 flex flex-col w-full min-h-[100dvh] relative overflow-x-hidden">
           {children}
         </main>
+        <PwaRegister />
         <Toaster position="top-right" richColors closeButton />
       </body>
     </html>

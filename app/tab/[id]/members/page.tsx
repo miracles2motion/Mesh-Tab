@@ -4,7 +4,7 @@ import { ManageMembers } from "@/components/tab/manage-members";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { useParams } from "next/navigation";
-import { useUserProfile, useStoredTabMembers } from "@/lib/user";
+import { useUserProfile, useStoredTabMembers, useStoredTabs } from "@/lib/user";
 
 export default function MembersFallbackPage() {
   const params = useParams();
@@ -12,6 +12,9 @@ export default function MembersFallbackPage() {
   const currentUserName = profile.name || "David";
   const tabId = typeof params?.id === "string" ? params.id : "lisbon-24";
   const { members: membersList } = useStoredTabMembers(tabId, currentUserName);
+  const { tabs: storedTabs } = useStoredTabs();
+  const currentTab = storedTabs.find(t => t.id === tabId);
+  const tabName = currentTab ? currentTab.name : tabId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
   if (!params?.id) return null;
 
@@ -22,7 +25,7 @@ export default function MembersFallbackPage() {
       </Link>
       
       <div className="w-full max-w-lg bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden">
-        <ManageMembers tabId={params.id as string} members={membersList} currentUser={currentUserName} />
+        <ManageMembers tabId={params.id as string} tabName={tabName} members={membersList} currentUser={currentUserName} />
       </div>
     </div>
   );

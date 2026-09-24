@@ -19,9 +19,18 @@ interface RosterCarouselProps {
   grossVolume: number; // in cents
   currentUserName?: string;
   creatorName?: string;
+  onSelectMember?: (member: RosterMember) => void;
+  onRequestPayment?: (debtorName: string, amount: number) => void;
 }
 
-export function RosterCarousel({ members, grossVolume, currentUserName, creatorName }: RosterCarouselProps) {
+export function RosterCarousel({ 
+  members, 
+  grossVolume, 
+  currentUserName, 
+  creatorName,
+  onSelectMember,
+  onRequestPayment
+}: RosterCarouselProps) {
   const [isAllPinged, setIsAllPinged] = useState(false);
   const [pingedSingle, setPingedSingle] = useState<Record<string, boolean>>({});
 
@@ -124,10 +133,14 @@ export function RosterCarousel({ members, grossVolume, currentUserName, creatorN
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.05 }}
               key={member.name}
-              className={`flex-shrink-0 bg-white dark:bg-white/5 backdrop-blur-md border rounded-2xl p-3.5 w-[150px] flex flex-col justify-between h-[112px] shadow-sm relative transition-all ${
+              onClick={() => {
+                sounds.playClick();
+                onSelectMember?.(member);
+              }}
+              className={`flex-shrink-0 bg-white dark:bg-white/5 backdrop-blur-md border rounded-2xl p-3.5 w-[150px] flex flex-col justify-between h-[112px] shadow-sm relative transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
                 isUser 
                   ? "border-indigo-400/60 dark:border-indigo-500/50 bg-indigo-50/20 dark:bg-indigo-500/[0.06] ring-1 ring-indigo-500/20 shadow-indigo-500/5" 
-                  : "border-slate-200 dark:border-white/10"
+                  : "border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20"
               }`}
             >
               <div className="flex items-start justify-between gap-1">
@@ -163,14 +176,18 @@ export function RosterCarousel({ members, grossVolume, currentUserName, creatorN
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handlePingSingle(member.name, member.balance);
+                      if (onRequestPayment) {
+                        onRequestPayment(member.name, Math.abs(member.balance));
+                      } else {
+                        handlePingSingle(member.name, member.balance);
+                      }
                     }}
                     className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all hover:scale-110 active:scale-95 cursor-pointer ${
                       pingedSingle[member.name]
                         ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                         : "bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400"
                     }`}
-                    title={`Ping ${member.name} to settle ${formatCurrency(member.balance)}`}
+                    title={`Request payment from ${member.name} (${formatCurrency(member.balance)})`}
                   >
                     {pingedSingle[member.name] ? (
                       <Check className="w-3.5 h-3.5 stroke-[2.5]" />

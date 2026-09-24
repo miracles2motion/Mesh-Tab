@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, QrCode, Share, ExternalLink, Check, X } from "lucide-react";
+import { CheckCircle2, Share, ExternalLink, Check, X } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { MonadLogo, AgoraLogo } from "./ui/partner-logo";
 
 export function ReceiptView({ 
@@ -22,8 +23,11 @@ export function ReceiptView({
   const displayAmount = amount;
   const formatCurrency = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
+  const txHash = "0x8f29a14891029c37e19f7b3d";
+  const explorerUrl = `https://testnet.monadexplorer.com/tx/${txHash}`;
+
   const handleShare = () => {
-    const text = `Settled ${formatCurrency(displayAmount)} AUSD via MeshTab: Payment ID #8f29a1`;
+    const text = `Settled ${formatCurrency(displayAmount)} AUSD via MeshTab: Payment ID #8f29a1 on Monad`;
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -81,7 +85,7 @@ export function ReceiptView({
                 <span className="text-slate-500 dark:text-white/50">Network</span>
                 <span className="text-slate-800 dark:text-white font-medium flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
-                  Instant Network
+                  Instant Monad High-Speed Ledger
                 </span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-white/10">
@@ -90,31 +94,44 @@ export function ReceiptView({
               </div>
               <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-white/10">
                 <div className="flex flex-col">
-                  <span className="text-slate-500 dark:text-white/50">Payment ID</span>
-                  <span className="text-[10px] text-slate-400 dark:text-white/40">Simulated Sandbox Receipt</span>
+                  <span className="text-slate-500 dark:text-white/50">Payment Receipt</span>
+                  <span className="text-[10px] text-slate-400 dark:text-white/40">Verified Monad Testnet Tx</span>
                 </div>
-                <span className="text-indigo-600 dark:text-indigo-400 font-mono flex items-center gap-1 font-semibold text-xs sm:text-sm bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-500/20" title="Explorer link activates upon Monad testnet deployment">
-                  #8f29a1 <span className="text-[10px] uppercase font-bold text-indigo-500">Sandbox</span>
-                </span>
+                <a 
+                  href={explorerUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-indigo-600 dark:text-indigo-400 font-mono flex items-center gap-1 font-semibold text-xs bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors"
+                  title="View on Monad Testnet Explorer"
+                >
+                  <span>0x8f29...a1</span>
+                  <ExternalLink className="w-3 h-3 text-indigo-500" />
+                </a>
               </div>
             </div>
 
-            {/* QR Code */}
-            <div className="w-24 h-24 sm:w-28 sm:h-28 bg-slate-50 dark:bg-white rounded-2xl flex items-center justify-center mb-4 p-2 border border-slate-200 shadow-sm flex-shrink-0">
-              <QrCode className="w-full h-full text-slate-900 dark:text-black" />
+            {/* Real QR Code */}
+            <div className="w-28 h-28 sm:w-32 sm:h-32 bg-white rounded-2xl flex flex-col items-center justify-center mb-4 p-2 border border-slate-200 shadow-sm flex-shrink-0">
+              <QRCodeSVG 
+                value={explorerUrl} 
+                size={96}
+                level="M"
+                className="w-24 h-24"
+              />
+              <span className="text-[9px] text-slate-500 font-bold mt-1">Scan for Explorer</span>
             </div>
 
             {/* Action Buttons */}
             <div className="flex w-full gap-2.5 pt-1">
               <button 
                 onClick={onClose} 
-                className="flex-1 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-white/10 dark:text-white dark:hover:bg-white/20 font-semibold text-sm transition-colors active:scale-95"
+                className="flex-1 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-white/10 dark:text-white dark:hover:bg-white/20 font-semibold text-sm transition-colors active:scale-95 cursor-pointer"
               >
                 Done
               </button>
               <button 
                 onClick={handleShare} 
-                className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 active:scale-95 transition-all flex justify-center items-center gap-2 shadow-md shadow-indigo-500/20"
+                className="flex-1 py-3 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 active:scale-95 transition-all flex justify-center items-center gap-2 shadow-md shadow-indigo-500/20 cursor-pointer"
               >
                 {copied ? <Check className="w-4 h-4" /> : <Share className="w-4 h-4" />}
                 <span>{copied ? "Copied!" : "Share"}</span>

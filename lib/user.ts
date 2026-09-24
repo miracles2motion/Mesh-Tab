@@ -454,6 +454,8 @@ export function useStoredTabMembers(tabId: string, currentUserName?: string) {
 }
 
 // Expense & Settlement Persistence
+export type ExpenseCategory = "dining" | "stay" | "transit" | "activities" | "groceries" | "other";
+
 export interface StoredExpense {
   id: string;
   payer: string;
@@ -462,13 +464,16 @@ export interface StoredExpense {
   time: string;
   splitType?: "equal" | "exact";
   splits?: Record<string, number>; // memberName -> amount in cents
+  category?: ExpenseCategory;
+  originalCurrency?: string; // e.g. "EUR", "GBP", "NGN", "JPY"
+  originalAmount?: number; // amount in original foreign currency
 }
 
 export const DEFAULT_FEED: Record<string, StoredExpense[]> = {
   "lisbon-24": [
-    { id: "1", payer: "Aisha", amount: 60000, desc: "Villa booking", time: "Just now", splitType: "equal" },
-    { id: "2", payer: "Kemi", amount: 26000, desc: "Dinners & wine", time: "5h ago", splitType: "equal" },
-    { id: "3", payer: "Ben", amount: 22000, desc: "Excursions", time: "1d ago", splitType: "equal" },
+    { id: "1", payer: "Aisha", amount: 60000, desc: "Villa booking", time: "Just now", splitType: "equal", category: "stay", originalCurrency: "EUR", originalAmount: 555.50 },
+    { id: "2", payer: "Kemi", amount: 26000, desc: "Dinners & wine", time: "5h ago", splitType: "equal", category: "dining", originalCurrency: "EUR", originalAmount: 240.00 },
+    { id: "3", payer: "Ben", amount: 22000, desc: "Excursions", time: "1d ago", splitType: "equal", category: "activities", originalCurrency: "EUR", originalAmount: 203.70 },
   ]
 };
 
@@ -505,29 +510,31 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense) {
       const members = getStoredTabMembers(tabId);
       if (members.length > 0) {
         const isExact = expense.splitType === "exact" && expense.splits && Object.keys(expense.splits).length > 0;
+        const isSelectedSplit = !isExact && expense.splits && Object.keys(expense.splits).length > 0;
+        const participatingMembers = isSelectedSplit 
+          ? members.filter(m => expense.splits && expense.splits[m.name] !== undefined)
+          : members;
         
-        let splitCount = members.length;
-        let defaultEqualSplit = Math.round(expense.amount / splitCount);
-
-        // If equal split and specific members were chosen, split across only those members
-        if (!isExact && expense.splits && Object.keys(expense.splits).length > 0) {
-          const selectedMembers = Object.keys(expense.splits);
-          if (selectedMembers.length > 0) {
-            splitCount = selectedMembers.length;
-            defaultEqualSplit = Math.round(expense.amount / splitCount);
-          }
-        }
+        const splitCount = Math.max(1, participatingMembers.length);
+        const baseShare = Math.floor(expense.amount / splitCount);
+        let remainderPennies = expense.amount - (baseShare * splitCount);
 
         const updatedMembers = members.map(m => {
           let memberOwes = 0;
           if (isExact) {
-            // Member owes exactly what was allocated to them (could be $0)
             memberOwes = expense.splits?.[m.name] ?? 0;
-          } else if (expense.splits) {
-            // Selected members pay equal share; unticked members owe $0
-            memberOwes = expense.splits[m.name] !== undefined ? defaultEqualSplit : 0;
+          } else if (isSelectedSplit) {
+            if (expense.splits && expense.splits[m.name] !== undefined) {
+              const extraPenny = remainderPennies > 0 ? 1 : 0;
+              if (remainderPennies > 0) remainderPennies--;
+              memberOwes = baseShare + extraPenny;
+            } else {
+              memberOwes = 0;
+            }
           } else {
-            memberOwes = defaultEqualSplit;
+            const extraPenny = remainderPennies > 0 ? 1 : 0;
+            if (remainderPennies > 0) remainderPennies--;
+            memberOwes = baseShare + extraPenny;
           }
 
           let delta = -memberOwes;
@@ -589,6 +596,116 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense) {
   window.dispatchEvent(new Event("meshTab-expenses-update"));
 }
 
+export function deleteStoredExpense(tabId: string, expenseId: string): { success: boolean; error?: string } {
+  if (typeof window === "undefined") return { success: false, error: "Window undefined" };
+  const mode = getWorkspaceMode();
+  const storageKey = mode === "blank" ? `meshTab_clean_expenses_${tabId}` : `meshTab_expenses_${tabId}`;
+  const current = getStoredExpenses(tabId);
+  const target = current.find(e => e.id === expenseId);
+  if (!target) return { success: false, error: "Expense not found" };
+
+  if (target.id.startsWith("settle-") || target.desc.toLowerCase().includes("settled balance")) {
+    return { success: false, error: "Finalized debt settlements cannot be deleted." };
+  }
+
+  // 1. Rollback balances on custom tabs
+  if (tabId !== "lisbon-24") {
+    try {
+      const members = getStoredTabMembers(tabId);
+      if (members.length > 0) {
+        const isExact = target.splitType === "exact" && target.splits && Object.keys(target.splits).length > 0;
+        const isSelectedSplit = !isExact && target.splits && Object.keys(target.splits).length > 0;
+        const participatingMembers = isSelectedSplit 
+          ? members.filter(m => target.splits && target.splits[m.name] !== undefined)
+          : members;
+        
+        const splitCount = Math.max(1, participatingMembers.length);
+        const baseShare = Math.floor(target.amount / splitCount);
+        let remainderPennies = target.amount - (baseShare * splitCount);
+
+        const updatedMembers = members.map(m => {
+          let memberOwed = 0;
+          if (isExact) {
+            memberOwed = target.splits?.[m.name] ?? 0;
+          } else if (isSelectedSplit) {
+            if (target.splits && target.splits[m.name] !== undefined) {
+              const extraPenny = remainderPennies > 0 ? 1 : 0;
+              if (remainderPennies > 0) remainderPennies--;
+              memberOwed = baseShare + extraPenny;
+            } else {
+              memberOwed = 0;
+            }
+          } else {
+            const extraPenny = remainderPennies > 0 ? 1 : 0;
+            if (remainderPennies > 0) remainderPennies--;
+            memberOwed = baseShare + extraPenny;
+          }
+
+          // Invert delta to reverse the expense
+          let reverseDelta = memberOwed;
+          if (m.name.toLowerCase() === target.payer.toLowerCase()) {
+            reverseDelta -= target.amount;
+          }
+
+          const nextBal = m.balance + reverseDelta;
+          const nextType: "creditor" | "debtor" | "settled" =
+            nextBal === 0 ? "settled" : nextBal > 0 ? "creditor" : "debtor";
+          return {
+            ...m,
+            balance: nextBal,
+            type: nextType
+          };
+        });
+
+        const membersKey = mode === "blank" ? `meshTab_clean_members_${tabId}` : `meshTab_members_${tabId}`;
+        localStorage.setItem(membersKey, JSON.stringify(updatedMembers));
+        window.dispatchEvent(new Event("meshTab-members-update"));
+
+        // Update user balance in tab summary
+        const profile = getStoredUser();
+        const userMember = updatedMembers.find(m => m.name.toLowerCase() === profile.name.toLowerCase());
+        if (userMember) {
+          const key = getTabsStorageKey();
+          const tabs = getStoredTabs();
+          const nextTabs = tabs.map(t => {
+            if (t.id === tabId) {
+              return { ...t, balance: userMember.balance, lastActivity: "Just now" };
+            }
+            return t;
+          });
+          localStorage.setItem(key, JSON.stringify(nextTabs));
+          window.dispatchEvent(new Event("meshTab-tabs-update"));
+        }
+      }
+    } catch (e) {}
+  }
+
+  // 2. Remove expense from stored list
+  const filtered = current.filter(e => e.id !== expenseId);
+  localStorage.setItem(storageKey, JSON.stringify(filtered));
+  window.dispatchEvent(new Event("meshTab-expenses-update"));
+
+  return { success: true };
+}
+
+export function updateStoredExpenseDescription(tabId: string, expenseId: string, newDesc: string): { success: boolean; error?: string } {
+  if (typeof window === "undefined") return { success: false, error: "Window undefined" };
+  const mode = getWorkspaceMode();
+  const storageKey = mode === "blank" ? `meshTab_clean_expenses_${tabId}` : `meshTab_expenses_${tabId}`;
+  const current = getStoredExpenses(tabId);
+  const targetIndex = current.findIndex(e => String(e.id) === String(expenseId));
+  if (targetIndex === -1) return { success: false, error: "Expense not found" };
+
+  current[targetIndex] = {
+    ...current[targetIndex],
+    desc: newDesc.trim()
+  };
+
+  localStorage.setItem(storageKey, JSON.stringify(current));
+  window.dispatchEvent(new Event("meshTab-expenses-update"));
+  return { success: true };
+}
+
 export function useStoredExpenses(tabId: string) {
   const [expenses, setExpenses] = useState<StoredExpense[]>(() => getStoredExpenses(tabId));
 
@@ -610,7 +727,8 @@ export function useStoredExpenses(tabId: string) {
 
   return { 
     expenses, 
-    addExpense: (expense: StoredExpense) => saveStoredExpense(tabId, expense) 
+    addExpense: (expense: StoredExpense) => saveStoredExpense(tabId, expense),
+    deleteExpense: (expenseId: string) => deleteStoredExpense(tabId, expenseId)
   };
 }
 
@@ -853,5 +971,49 @@ export function useBuddySettings() {
 
   return { settings, updateSettings: saveBuddySettings };
 }
+
+// -------------------------------------------------------------
+// Live Demo Seeder (1-Click populate any custom tab with rich demo data)
+// -------------------------------------------------------------
+export function seedDemoExpenses(tabId: string, currentUserName?: string) {
+  if (typeof window === "undefined" || !tabId) return;
+  const activeUser = currentUserName || getStoredUser().name || DEFAULT_USER_NAME;
+  const mode = getWorkspaceMode();
+
+  // 1. Seed members: Aisha, Kemi, Ben, and activeUser
+  const demoMembers: TabMember[] = [
+    { name: "Aisha", balance: 30000, type: "creditor", role: "member" },
+    { name: "Kemi", balance: -4000, type: "debtor", role: "member" },
+    { name: "Ben", balance: -8000, type: "debtor", role: "member" },
+    { name: activeUser, balance: -18000, type: "debtor", role: "admin" }
+  ];
+  const membersKey = mode === "blank" ? `meshTab_clean_members_${tabId}` : `meshTab_members_${tabId}`;
+  localStorage.setItem(membersKey, JSON.stringify(demoMembers));
+
+  // 2. Seed 3 realistic expenses
+  const demoExpenses: StoredExpense[] = [
+    { id: `demo-${Date.now()}-1`, payer: "Aisha", amount: 60000, desc: "Seaside Villa Booking", time: "2h ago", splitType: "equal" },
+    { id: `demo-${Date.now()}-2`, payer: "Kemi", amount: 26000, desc: "Tasting Menu & Wine", time: "5h ago", splitType: "equal" },
+    { id: `demo-${Date.now()}-3`, payer: "Ben", amount: 22000, desc: "Catamaran Excursion", time: "1d ago", splitType: "equal" }
+  ];
+  const expensesKey = mode === "blank" ? `meshTab_clean_expenses_${tabId}` : `meshTab_expenses_${tabId}`;
+  localStorage.setItem(expensesKey, JSON.stringify(demoExpenses));
+
+  // 3. Update tab summary
+  const key = getTabsStorageKey(mode);
+  const tabs = getStoredTabs();
+  const updatedTabs = tabs.map(t => {
+    if (t.id === tabId) {
+      return { ...t, balance: -18000, memberCount: 4, lastActivity: "Demo seeded just now" };
+    }
+    return t;
+  });
+  localStorage.setItem(key, JSON.stringify(updatedTabs));
+
+  window.dispatchEvent(new Event("meshTab-expenses-update"));
+  window.dispatchEvent(new Event("meshTab-members-update"));
+  window.dispatchEvent(new Event("meshTab-tabs-update"));
+}
+
 
 

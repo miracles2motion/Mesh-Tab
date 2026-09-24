@@ -207,6 +207,26 @@ export function MeraLogo({ className = "h-5 w-auto", ...props }: LogoProps) {
   );
 }
 
+export function PythLogo({ className = "h-5 w-auto", ...props }: LogoProps) {
+  return (
+    <svg 
+      viewBox="0 0 110 28" 
+      fill="none" 
+      xmlns="http://www.w3.org/2000/svg" 
+      className={className} 
+      role="img" 
+      aria-label="Pyth Network"
+      {...props}
+    >
+      <circle cx="14" cy="14" r="11" fill="#662DD1" />
+      <path d="M9.5 9H15.5C17.433 9 19 10.567 19 12.5C19 14.433 17.433 16 15.5 16H12.5V20H9.5V9ZM12.5 13.5H15C15.5523 13.5 16 13.0523 16 12.5C16 11.9477 15.5523 11.5 15 11.5H12.5V13.5Z" fill="#FFFFFF" />
+      <g fill="currentColor">
+        <text x="32" y="19" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="800" fontSize="13" letterSpacing="0.06em">PYTH</text>
+      </g>
+    </svg>
+  );
+}
+
 export function PartnerLogo({ 
   name, 
   className = "h-5 w-auto" 
@@ -229,7 +249,10 @@ export function PartnerLogo({
       return <AlchemyLogo className={className} />;
     case "mera":
       return <MeraLogo className={className} />;
+    case "pyth":
+      return <PythLogo className={className} />;
     default:
       return <span className="font-bold text-sm tracking-wide">{name}</span>;
   }
 }
+

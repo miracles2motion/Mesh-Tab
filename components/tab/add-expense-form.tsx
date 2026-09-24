@@ -4,21 +4,32 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
 import { TransactionOverlay, TransactionState } from "../ui/transaction-overlay";
 import Image from "next/image";
-import { PimlicoLogo } from "../ui/partner-logo";
-import { Check, ChevronDown, Sparkles, Camera, Mic, Zap, Loader2, Upload, FileText, SplitSquareHorizontal, AlertCircle } from "lucide-react";
+import { PimlicoLogo, PythLogo } from "../ui/partner-logo";
+import { Check, ChevronDown, Sparkles, Camera, Mic, Zap, Loader2, Upload, FileText, SplitSquareHorizontal, AlertCircle, Globe } from "lucide-react";
 
-import { useUserProfile, saveStoredExpense, useWorkspaceMode } from "../../lib/user";
+import { useUserProfile, saveStoredExpense, useWorkspaceMode, ExpenseCategory } from "../../lib/user";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
+import { SUPPORTED_CURRENCIES, usePythRate } from "../../lib/pyth";
+
+export const EXPENSE_CATEGORIES = [
+  { id: "dining", label: "Dining", icon: "🍽️" },
+  { id: "stay", label: "Stay", icon: "🏨" },
+  { id: "transit", label: "Rides", icon: "🚕" },
+  { id: "activities", label: "Events", icon: "🎟️" },
+  { id: "groceries", label: "Supplies", icon: "🛒" },
+  { id: "other", label: "Other", icon: "⚡" },
+] as const;
 
 interface AddExpenseFormProps {
   onSuccess?: () => void;
   members?: string[];
   currentUser?: string;
   tabId?: string;
+  defaultCurrency?: string;
 }
 
-export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, tabId = "lisbon-24" }: AddExpenseFormProps) {
+export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, tabId = "lisbon-24", defaultCurrency }: AddExpenseFormProps) {
   const profile = useUserProfile();
   const { mode: workspaceMode } = useWorkspaceMode();
   const activeUser = currentUser || profile.name || "David";
@@ -42,26 +53,86 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [currency, setCurrency] = useState<string>(() => {
+    if (defaultCurrency) return defaultCurrency;
+    if (typeof window !== "undefined") {
+      try {
+        const modes = ["meshTab_sample_tabs", "meshTab_clean_tabs"];
+        for (const key of modes) {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const tabs = JSON.parse(raw);
+            const found = tabs.find((t: { id: string; currency?: string }) => t.id === tabId);
+            if (found?.currency) return found.currency;
+          }
+        }
+      } catch { /* ignore in demo */ }
+    }
+    return "USD";
+  });
+
+  useEffect(() => {
+    if (defaultCurrency) {
+      setCurrency(defaultCurrency);
+      return;
+    }
+    try {
+      const modes = ["meshTab_sample_tabs", "meshTab_clean_tabs"];
+      for (const key of modes) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const tabs = JSON.parse(raw);
+          const found = tabs.find((t: { id: string; currency?: string }) => t.id === tabId);
+          if (found?.currency) {
+            setCurrency(found.currency);
+            break;
+          }
+        }
+      }
+    } catch { /* ignore in demo */ }
+  }, [tabId, defaultCurrency]);
+  const { rate: activeRate, isLive: isRateLive, isLoading: isRateLoading, config: activeCurrencyInfo } = usePythRate(currency);
+  const [category, setCategory] = useState<ExpenseCategory>("dining");
   const [amount, setAmount] = useState("");
   const [desc, setDesc] = useState("");
-  const [splitType, setSplitType] = useState<'equal' | 'exact'>('equal');
+  const [splitType, setSplitType] = useState<'equal' | 'exact' | 'percentage' | 'shares'>('equal');
   const [exactAmounts, setExactAmounts] = useState<Record<string, string>>({});
+  const [percentages, setPercentages] = useState<Record<string, string>>({});
+  const [shares, setShares] = useState<Record<string, string>>({});
   const [txState, setTxState] = useState<TransactionState>("idle");
   
   // UI states for splitting
   const [paidBy, setPaidBy] = useState(activeUser);
   const [splitBetween, setSplitBetween] = useState<string[]>(normalizedMembers);
   const [showPaidByDropdown, setShowPaidByDropdown] = useState(false);
+  const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
 
-  // Compute sum of exact amounts in cents
-  const totalBillCents = Math.round((parseFloat(amount) || 0) * 100);
+  // Compute conversion & integer cents in USD using live or cached Pyth rate
+  const rawNumericAmount = parseFloat(amount) || 0;
+  const totalBillCents = Math.round(rawNumericAmount * activeRate * 100);
+
   const assignedExactCents = Object.entries(exactAmounts).reduce((acc, [member, val]) => {
     if (!splitBetween.includes(member)) return acc;
     const cents = Math.round((parseFloat(val) || 0) * 100);
     return acc + (isNaN(cents) ? 0 : cents);
   }, 0);
   const remainingCents = totalBillCents - assignedExactCents;
-  const isExactValid = splitType === 'equal' || (totalBillCents > 0 && remainingCents === 0);
+
+  // Percentage validation: total of selected members should sum to 100
+  const totalPercentage = Object.entries(percentages).reduce((acc, [member, val]) => {
+    if (!splitBetween.includes(member)) return acc;
+    return acc + (parseFloat(val) || 0);
+  }, 0);
+  const isPercentageValid = splitType !== 'percentage' || (totalBillCents > 0 && Math.abs(totalPercentage - 100) < 0.01);
+
+  // Shares validation: at least one member must have > 0 shares
+  const totalShares = Object.entries(shares).reduce((acc, [member, val]) => {
+    if (!splitBetween.includes(member)) return acc;
+    return acc + (parseFloat(val) || 0);
+  }, 0);
+  const isSharesValid = splitType !== 'shares' || (totalBillCents > 0 && totalShares > 0);
+
+  const isExactValid = splitType === 'equal' || splitType === 'percentage' || splitType === 'shares' || (totalBillCents > 0 && remainingCents === 0);
 
   const handleExactAmountChange = (member: string, value: string) => {
     // Only allow numbers and up to 2 decimal places
@@ -83,6 +154,53 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
     }));
   };
 
+  const handlePercentageChange = (member: string, value: string) => {
+    if (value === "" || /^\d*(\.\d{0,1})?$/.test(value)) {
+      setPercentages(prev => ({ ...prev, [member]: value }));
+    }
+  };
+
+  const handleSharesChange = (member: string, value: string) => {
+    if (value === "" || /^\d*$/.test(value)) {
+      setShares(prev => ({ ...prev, [member]: value }));
+    }
+  };
+
+  const handleEqualizePercentages = () => {
+    const count = splitBetween.length;
+    if (count === 0) return;
+    const equalPct = (100 / count).toFixed(1);
+    const newPcts: Record<string, string> = {};
+    splitBetween.forEach(m => { newPcts[m] = equalPct; });
+    setPercentages(newPcts);
+  };
+
+  const handleEqualizeShares = () => {
+    const newShares: Record<string, string> = {};
+    splitBetween.forEach(m => { newShares[m] = "1"; });
+    setShares(newShares);
+  };
+
+  const handleSelectPresetReceipt = (receiptName: string, price: string) => {
+    sounds.playClick();
+    setIsAiProcessing(true);
+    setReceiptImageName(receiptName);
+    setAiNotice(`Scanning ${receiptName} with OCR...`);
+    setTimeout(() => {
+      setDesc(receiptName);
+      setAmount(price);
+      setPaidBy(activeUser);
+      setSplitType("equal");
+      setIsAiProcessing(false);
+      setShowDraft(true);
+      sounds.playSuccessChime();
+      toast.success("Receipt Scanned via OCR", {
+        description: `Extracted $${price} for "${receiptName}". Ready to review.`
+      });
+      setAiNotice(`Receipt Verified: ${receiptName} • $${price} total extracted`);
+    }, 900);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -90,19 +208,34 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
     setIsAiProcessing(true);
     setAiNotice(`Scanning ${file.name} with OCR...`);
     
+    const lowerName = file.name.toLowerCase();
+    let detectedDesc = "Seafood Dinner & Wine";
+    let detectedAmount = "84.50";
+
+    if (lowerName.includes("coffee") || lowerName.includes("cafe") || lowerName.includes("starbucks")) {
+      detectedDesc = "Specialty Espresso & Pastries";
+      detectedAmount = "14.20";
+    } else if (lowerName.includes("taxi") || lowerName.includes("uber") || lowerName.includes("cab") || lowerName.includes("ride")) {
+      detectedDesc = "Airport Transfer / Taxi";
+      detectedAmount = "32.00";
+    } else if (lowerName.includes("grocery") || lowerName.includes("market") || lowerName.includes("store")) {
+      detectedDesc = "Supermarket Provisions";
+      detectedAmount = "46.75";
+    }
+    
     setTimeout(() => {
-      setDesc("Seafood Dinner & Wine");
-      setAmount("84.50");
+      setDesc(detectedDesc);
+      setAmount(detectedAmount);
       setPaidBy(activeUser);
       setSplitType("equal");
       setIsAiProcessing(false);
       setShowDraft(true);
       sounds.playSuccessChime();
       toast.success("Receipt Scanned via OCR", {
-        description: `Extracted $84.50 from ${file.name}. Ready to review.`
+        description: `Extracted $${detectedAmount} from ${file.name}. Ready to review.`
       });
-      setAiNotice(`Receipt Verified: ${file.name} • $84.50 total extracted`);
-    }, 1500);
+      setAiNotice(`Receipt Verified: ${file.name} • $${detectedAmount} total extracted`);
+    }, 1200);
   };
 
   const handleTriggerUpload = () => {
@@ -224,6 +357,20 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
       });
       return;
     }
+
+    if (splitType === "percentage" && !isPercentageValid) {
+      toast.error("Percentages Must Total 100%", {
+        description: `Current total: ${totalPercentage.toFixed(1)}%. Adjust to exactly 100%.`
+      });
+      return;
+    }
+
+    if (splitType === "shares" && !isSharesValid) {
+      toast.error("At Least One Share Required", {
+        description: "Assign at least 1 share to a member."
+      });
+      return;
+    }
     
     // Prepare splits map
     const splitsMap: Record<string, number> = {};
@@ -232,6 +379,25 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
         if (splitBetween.includes(m)) {
           const valCents = Math.round((parseFloat(exactAmounts[m] || "0") || 0) * 100);
           splitsMap[m] = Math.max(0, valCents);
+        } else {
+          splitsMap[m] = 0;
+        }
+      });
+    } else if (splitType === "percentage") {
+      normalizedMembers.forEach(m => {
+        if (splitBetween.includes(m)) {
+          const pct = parseFloat(percentages[m] || "0") || 0;
+          splitsMap[m] = Math.round(totalBillCents * (pct / 100));
+        } else {
+          splitsMap[m] = 0;
+        }
+      });
+    } else if (splitType === "shares") {
+      const tShares = totalShares || 1;
+      normalizedMembers.forEach(m => {
+        if (splitBetween.includes(m)) {
+          const s = parseFloat(shares[m] || "0") || 0;
+          splitsMap[m] = Math.round(totalBillCents * (s / tShares));
         } else {
           splitsMap[m] = 0;
         }
@@ -262,15 +428,18 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
       amount: totalBillCents,
       desc: desc.trim(),
       time: "Just now",
-      splitType,
-      splits: splitsMap
+      splitType: splitType === 'percentage' || splitType === 'shares' ? 'exact' : splitType,
+      splits: splitsMap,
+      category,
+      originalCurrency: currency,
+      originalAmount: currency !== "USD" ? rawNumericAmount : undefined
     });
 
     // 4. Success
     setTxState("success");
     sounds.playSuccessChime();
     toast.success("Expense Logged to Ledger", {
-      description: `$${amount} logged for "${desc.trim()}". ${splitType === 'exact' ? 'Exact split recorded.' : 'Split equally.'}`
+      description: `${currency !== "USD" ? `${activeCurrencyInfo.symbol}${amount} (≈ $${(totalBillCents / 100).toFixed(2)} USD)` : `$${amount}`} logged for "${desc.trim()}". ${splitType === 'exact' ? 'Exact split recorded.' : 'Split equally.'}`
     });
     await new Promise(r => setTimeout(r, 1000));
     
@@ -373,6 +542,32 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
                 </div>
               </div>
 
+              {/* Quick Preset Chips for Demo Pitch */}
+              <div className="flex items-center gap-1.5 flex-wrap px-1">
+                <span className="text-[10px] font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider mr-0.5">Demo Presets:</span>
+                <button
+                  type="button"
+                  onClick={() => handleSelectPresetReceipt("Specialty Espresso & Pastries", "14.20")}
+                  className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-[11px] font-semibold border border-indigo-200 dark:border-indigo-500/20 transition-all cursor-pointer"
+                >
+                  ☕ Coffee $14.20
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectPresetReceipt("Seafood Dinner & Wine", "84.50")}
+                  className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-[11px] font-semibold border border-indigo-200 dark:border-indigo-500/20 transition-all cursor-pointer"
+                >
+                  🍽️ Dinner $84.50
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectPresetReceipt("Airport Transfer / Taxi", "32.00")}
+                  className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-[11px] font-semibold border border-indigo-200 dark:border-indigo-500/20 transition-all cursor-pointer"
+                >
+                  🚕 Taxi $32.00
+                </button>
+              </div>
+
               {aiNotice && (
                 <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
                   <Check className="w-4 h-4 shrink-0" />
@@ -434,15 +629,63 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
           )}
           <div className="space-y-2">
             <div className="flex items-center justify-between ml-1">
-              <label className="text-sm font-semibold text-slate-700 dark:text-white/80">Amount (AUSD)</label>
-              {showDraft && (
-                <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md">
-                  Editable • Auto-Extracted
-                </span>
-              )}
+              <label className="text-sm font-semibold text-slate-700 dark:text-white/80">
+                Amount ({currency === "USD" ? "AUSD / USD" : currency})
+              </label>
+              
+              {/* Currency Selector Pill */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
+                  className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-xs font-bold flex items-center gap-1.5 transition-colors border border-slate-200 dark:border-white/10"
+                >
+                  <Globe className="w-3 h-3 text-indigo-500 dark:text-indigo-400" />
+                  <span>{currency}</span>
+                  <span className="text-slate-400 dark:text-white/40">({activeCurrencyInfo.symbol})</span>
+                  <ChevronDown className="w-3 h-3 text-slate-400" />
+                </button>
+
+                {showCurrencyDropdown && (
+                  <div className="absolute top-full right-0 mt-1.5 bg-white dark:bg-[#121212] border border-slate-200 dark:border-white/10 rounded-2xl p-1 z-30 shadow-2xl min-w-[170px]">
+                    <div className="px-2 py-1 text-[10px] uppercase font-bold text-slate-400 dark:text-white/40 tracking-wider">
+                      Select Currency
+                    </div>
+                    {SUPPORTED_CURRENCIES.map(curr => (
+                      <div
+                        key={curr.code}
+                        onClick={() => {
+                          sounds.playClick();
+                          setCurrency(curr.code);
+                          setShowCurrencyDropdown(false);
+                        }}
+                        className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between cursor-pointer transition-colors ${
+                          currency === curr.code
+                            ? "bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 font-bold"
+                            : "hover:bg-slate-100 dark:hover:bg-white/5 text-slate-800 dark:text-white/80"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">{curr.flag}</span>
+                          <span className="font-mono text-slate-400 dark:text-white/40 w-5">{curr.symbol}</span>
+                          <span>{curr.name}</span>
+                        </div>
+                        {currency === curr.code && <Check className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />}
+                      </div>
+                    ))}
+                    <div className="mt-1 pt-1.5 border-t border-slate-100 dark:border-white/10 px-2 py-1 flex items-center justify-between text-[9px] text-slate-400 dark:text-white/40">
+                      <span>Mid-market rates</span>
+                      <PythLogo className="h-2.5 w-auto opacity-70" />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
+
             <div className="relative">
-              <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/50 text-xl font-bold">$</span>
+              <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/50 text-xl font-bold select-none">
+                {activeCurrencyInfo.symbol}
+              </span>
               <input
                 type="number"
                 step="0.01"
@@ -450,9 +693,29 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
                 placeholder="0.00"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl pl-10 pr-5 py-4 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-2xl tabular-nums font-bold"
+                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl pl-11 pr-5 py-4 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-2xl tabular-nums font-bold"
               />
             </div>
+
+            {/* Live conversion pill when non-USD is selected */}
+            {currency !== "USD" && rawNumericAmount > 0 && (
+              <div className="p-3 rounded-2xl bg-indigo-50/80 dark:bg-indigo-500/10 border border-indigo-200/60 dark:border-indigo-500/20 flex items-center justify-between text-xs animate-in fade-in">
+                <div className="flex items-center gap-2 font-medium text-indigo-950 dark:text-indigo-200">
+                  <span className="font-bold text-sm">≈ ${(totalBillCents / 100).toFixed(2)} USD</span>
+                  <span className="text-slate-300 dark:text-white/20">•</span>
+                  <span className="text-emerald-700 dark:text-emerald-400 font-semibold text-[11px] bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                    0% Bank FX Markup
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-white/50">
+                  <span>{isRateLive ? "Live rate via" : "Rate via"}</span>
+                  <PythLogo className="h-3.5 w-auto text-slate-800 dark:text-white opacity-85" />
+                  {isRateLive && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" title="Live Pyth Hermes stream active" />
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -472,6 +735,31 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
               onChange={(e) => setDesc(e.target.value)}
               className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-base font-medium"
             />
+          </div>
+
+          {/* Expense Category Picker */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700 dark:text-white/80 ml-1">Category</label>
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+              {EXPENSE_CATEGORIES.map(cat => {
+                const isSelected = category === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => { sounds.playClick(); setCategory(cat.id as ExpenseCategory); }}
+                    className={`py-2 px-2 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                      isSelected
+                        ? "bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-500/20"
+                        : "bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/70 hover:bg-slate-100 dark:hover:bg-white/10"
+                    }`}
+                  >
+                    <span>{cat.icon}</span>
+                    <span className="truncate">{cat.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
           
           <div className="grid grid-cols-2 gap-4">
@@ -510,23 +798,19 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
             </div>
 
             {/* Split Type */}
-            <div className="space-y-2">
+            <div className="space-y-2 col-span-2">
               <label className="text-sm font-semibold text-slate-700 dark:text-white/80 ml-1">Split Method</label>
-              <div className="flex p-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl h-[50px]">
-                <button 
-                  type="button" 
-                  onClick={() => setSplitType('equal')}
-                  className={`flex-1 rounded-xl font-semibold text-xs transition-colors ${splitType === 'equal' ? 'bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white'}`}
-                >
-                  Equal
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => setSplitType('exact')}
-                  className={`flex-1 rounded-xl font-semibold text-xs transition-colors ${splitType === 'exact' ? 'bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white'}`}
-                >
-                  Exact
-                </button>
+              <div className="flex p-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl h-[44px]">
+                {(['equal', 'exact', 'percentage', 'shares'] as const).map(mode => (
+                  <button 
+                    key={mode}
+                    type="button" 
+                    onClick={() => setSplitType(mode)}
+                    className={`flex-1 rounded-xl font-semibold text-[11px] transition-colors cursor-pointer ${splitType === mode ? 'bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white'}`}
+                  >
+                    {mode === 'equal' ? '= Equal' : mode === 'exact' ? '$ Exact' : mode === 'percentage' ? '% Pct' : '⊞ Shares'}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -535,11 +819,22 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
           <div className="space-y-2 pt-2">
              <div className="flex items-center justify-between ml-1 mb-2">
                <label className="text-sm font-semibold text-slate-700 dark:text-white/80">
-                 {splitType === "exact" ? "Assign Exact Amounts" : "Split Between"}
+                 {splitType === "exact" ? "Assign Exact Amounts" : splitType === "percentage" ? "Assign Percentages" : splitType === "shares" ? "Assign Shares" : "Split Between"}
                </label>
-               <span className="text-xs text-slate-500 dark:text-white/40">
-                 {splitBetween.length} selected
-               </span>
+               <div className="flex items-center gap-2">
+                 {(splitType === "percentage" || splitType === "shares") && (
+                   <button
+                     type="button"
+                     onClick={splitType === "percentage" ? handleEqualizePercentages : handleEqualizeShares}
+                     className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors cursor-pointer"
+                   >
+                     Equalize
+                   </button>
+                 )}
+                 <span className="text-xs text-slate-500 dark:text-white/40">
+                   {splitBetween.length} selected
+                 </span>
+               </div>
              </div>
 
              {/* Exact Balance Status Banner */}
@@ -564,6 +859,43 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
                          ? `$${(remainingCents / 100).toFixed(2)} left to allocate.`
                          : `Assigned exceeds total by $${(Math.abs(remainingCents) / 100).toFixed(2)}.`}
                    </div>
+                 </div>
+               </div>
+             )}
+
+             {/* Percentage Status Banner */}
+             {splitType === "percentage" && (
+               <div className={`p-3 rounded-2xl border text-xs flex items-center justify-between transition-colors ${
+                 Math.abs(totalPercentage - 100) < 0.01 && totalBillCents > 0
+                   ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
+                   : totalPercentage < 100
+                     ? "bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-300"
+                     : "bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300"
+               }`}>
+                 <div className="space-y-0.5">
+                   <div className="font-bold">
+                     Total: {totalPercentage.toFixed(1)}% of 100%
+                   </div>
+                   <div className="text-[11px] opacity-90">
+                     {Math.abs(totalPercentage - 100) < 0.01 && totalBillCents > 0
+                       ? "✓ Percentages sum to 100% — perfectly balanced."
+                       : totalPercentage < 100
+                         ? `${(100 - totalPercentage).toFixed(1)}% remaining to assign.`
+                         : `Exceeds 100% by ${(totalPercentage - 100).toFixed(1)}%.`}
+                   </div>
+                 </div>
+               </div>
+             )}
+
+             {/* Shares Status Banner */}
+             {splitType === "shares" && totalBillCents > 0 && (
+               <div className={`p-3 rounded-2xl border text-xs transition-colors ${
+                 totalShares > 0
+                   ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-700 dark:text-indigo-300"
+                   : "bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-300"
+               }`}>
+                 <div className="font-bold">
+                   {totalShares} total share{totalShares !== 1 ? 's' : ''} • ${(totalBillCents / 100 / Math.max(1, totalShares)).toFixed(2)} per share
                  </div>
                </div>
              )}
@@ -597,13 +929,60 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
                        </div>
                      </div>
 
-                     {/* Right: Checkmark for Equal, or Numeric Input for Exact */}
+                     {/* Right: split mode inputs */}
                      {splitType === "equal" ? (
                        <div 
                          onClick={() => toggleSplitMember(member)}
                          className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors cursor-pointer shrink-0 ${isSelected ? 'bg-emerald-500 border-emerald-500 text-black' : 'border-slate-300 dark:border-white/20'}`}
                        >
                          {isSelected && <Check className="w-3 h-3 text-white" />}
+                       </div>
+                     ) : splitType === "percentage" ? (
+                       <div className="flex items-center gap-1.5 shrink-0">
+                         <div className="relative w-20">
+                           <input
+                             type="text"
+                             inputMode="decimal"
+                             placeholder="0"
+                             value={isSelected ? (percentages[member] || "") : "0"}
+                             disabled={!isSelected}
+                             onChange={(e) => handlePercentageChange(member, e.target.value)}
+                             className={`w-full pl-3 pr-7 py-1.5 text-right font-mono text-xs font-bold rounded-xl border transition-all ${
+                               !isSelected
+                                 ? "bg-slate-100 dark:bg-white/5 border-transparent text-slate-400 dark:text-white/30 cursor-not-allowed"
+                                 : "bg-white dark:bg-black/50 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                             }`}
+                           />
+                           <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 dark:text-white/40 select-none">%</span>
+                         </div>
+                         {isSelected && totalBillCents > 0 && (
+                           <span className="text-[10px] text-slate-400 dark:text-white/30 font-mono w-14 text-right">
+                             ${(totalBillCents / 100 * ((parseFloat(percentages[member] || "0") || 0) / 100)).toFixed(2)}
+                           </span>
+                         )}
+                       </div>
+                     ) : splitType === "shares" ? (
+                       <div className="flex items-center gap-1.5 shrink-0">
+                         <div className="relative w-16">
+                           <input
+                             type="text"
+                             inputMode="numeric"
+                             placeholder="1"
+                             value={isSelected ? (shares[member] || "") : "0"}
+                             disabled={!isSelected}
+                             onChange={(e) => handleSharesChange(member, e.target.value)}
+                             className={`w-full px-3 py-1.5 text-center font-mono text-xs font-bold rounded-xl border transition-all ${
+                               !isSelected
+                                 ? "bg-slate-100 dark:bg-white/5 border-transparent text-slate-400 dark:text-white/30 cursor-not-allowed"
+                                 : "bg-white dark:bg-black/50 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                             }`}
+                           />
+                         </div>
+                         {isSelected && totalShares > 0 && totalBillCents > 0 && (
+                           <span className="text-[10px] text-slate-400 dark:text-white/30 font-mono w-14 text-right">
+                             ${(totalBillCents / 100 * ((parseFloat(shares[member] || "0") || 0) / totalShares)).toFixed(2)}
+                           </span>
+                         )}
                        </div>
                      ) : (
                        <div className="flex items-center gap-2 shrink-0">
@@ -659,10 +1038,18 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
               : "Log Expense"}
           </Button>
           
-          <div className="mt-4 flex items-center justify-center gap-2 text-slate-500 dark:text-white/50 text-xs font-medium">
-            <span>Zero-fee sponsored sync via</span>
-            <div className="opacity-90 hover:opacity-100 transition-all text-slate-800 dark:text-white">
-              <PimlicoLogo className="h-4 w-auto" />
+          <div className="mt-4 flex items-center justify-between text-slate-500 dark:text-white/50 text-xs font-medium px-1">
+            <div className="flex items-center gap-1.5">
+              <span>Zero-fee sync via</span>
+              <div className="opacity-90 hover:opacity-100 transition-all text-slate-800 dark:text-white">
+                <PimlicoLogo className="h-3.5 w-auto" />
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span>Powered by</span>
+              <div className="opacity-90 hover:opacity-100 transition-all text-slate-800 dark:text-white">
+                <PythLogo className="h-3.5 w-auto" />
+              </div>
             </div>
           </div>
         </div>
