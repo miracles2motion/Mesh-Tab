@@ -10,9 +10,10 @@ interface ModalProps {
   children: React.ReactNode;
   onClose?: () => void;
   className?: string;
+  hideCloseButton?: boolean;
 }
 
-export function Modal({ children, onClose, className }: ModalProps) {
+export function Modal({ children, onClose, className, hideCloseButton = false }: ModalProps) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
@@ -63,13 +64,15 @@ export function Modal({ children, onClose, className }: ModalProps) {
             className
           )}
         >
-          <button
-            onClick={handleClose}
-            className="absolute top-4 right-4 p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 dark:bg-white/5 dark:hover:bg-white/10 dark:text-white/50 dark:hover:text-white transition-colors z-10 shadow-sm"
-            aria-label="Close modal"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          {!hideCloseButton && (
+            <button
+              onClick={handleClose}
+              className="absolute top-4 right-4 p-2 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 dark:bg-white/5 dark:hover:bg-white/10 dark:text-white/50 dark:hover:text-white transition-colors z-10 shadow-sm cursor-pointer"
+              aria-label="Close modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
           <div className="flex-1 overflow-y-auto">
             {children}
           </div>

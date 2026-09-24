@@ -89,6 +89,8 @@ function OnboardingContent() {
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("meshTab-tabs-update"));
       }
+    } else {
+      setWorkspaceMode("sample");
     }
 
     setStep(3);

@@ -75,7 +75,7 @@ export function SettlementCertificateModal({
   };
 
   return (
-    <Modal onClose={onClose} className="max-w-md p-0 overflow-hidden bg-white dark:bg-[#0e0e11] border border-slate-200 dark:border-white/10 rounded-[32px] shadow-2xl text-slate-900 dark:text-white">
+    <Modal onClose={onClose} hideCloseButton={true} className="max-w-md p-0 overflow-hidden bg-white dark:bg-[#0e0e11] border border-slate-200 dark:border-white/10 rounded-[32px] shadow-2xl text-slate-900 dark:text-white">
       {/* Top Banner Gradient */}
       <div className="h-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-indigo-600" />
 

@@ -252,7 +252,7 @@ Airport Van Logistics, 120.00, Sarah`;
   const totalGrossCents = parsedExpenses.reduce((sum, p) => sum + p.amountCents, 0);
 
   return (
-    <Modal onClose={onClose} className="max-w-xl p-0 overflow-hidden bg-white dark:bg-[#0c0c0e] border border-slate-200 dark:border-white/10 rounded-[32px] shadow-2xl text-slate-900 dark:text-white">
+    <Modal onClose={onClose} hideCloseButton={true} className="max-w-xl p-0 overflow-hidden bg-white dark:bg-[#0c0c0e] border border-slate-200 dark:border-white/10 rounded-[32px] shadow-2xl text-slate-900 dark:text-white">
       {/* Header */}
       <div className="p-6 border-b border-slate-100 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-white/5">
         <div className="flex items-center gap-3">

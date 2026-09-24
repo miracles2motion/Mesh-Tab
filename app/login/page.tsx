@@ -9,6 +9,7 @@ import { Button } from "../../components/ui/button";
 import { DynamicLogo } from "../../components/ui/partner-logo";
 
 import { ThemeToggle } from "../../components/theme-toggle";
+import { setWorkspaceMode, saveStoredUser } from "../../lib/user";
 
 function LoginContent() {
   const router = useRouter();
@@ -21,15 +22,20 @@ function LoginContent() {
   const handleLogin = async () => {
     setIsAuthenticating(true);
     // Mock Passkey / FaceID delay
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
     
-    // Check if user has an existing profile
+    // Lock in sample mode during demo phase so Lisbon Weekend & demo data are loaded
+    if (typeof window !== "undefined" && localStorage.getItem("meshTab_workspaceMode") !== "blank") {
+      setWorkspaceMode("sample");
+    }
+
+    // Check if user has an existing profile; if not, initialize default demo profile
     const hasProfile = typeof window !== "undefined" && Boolean(localStorage.getItem("meshTab_displayName"));
     if (!hasProfile) {
-      router.push(`/onboarding${isInvite ? `?invite=true&tab=${inviteTab}` : ""}`);
-    } else {
-      router.push(isInvite ? `/tab/${inviteTab}?invite=true` : "/home");
+      saveStoredUser("David", 0);
     }
+
+    router.push(isInvite ? `/tab/${inviteTab}?invite=true` : "/home");
   };
 
   return (

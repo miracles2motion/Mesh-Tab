@@ -122,9 +122,10 @@ export const DEFAULT_TABS: TabSummary[] = [];
 export type WorkspaceMode = "sample" | "blank";
 
 export function getWorkspaceMode(): WorkspaceMode {
-  if (typeof window === "undefined") return "blank";
+  if (typeof window === "undefined") return "sample";
   const mode = localStorage.getItem("meshTab_workspaceMode");
-  return mode === "sample" ? "sample" : "blank";
+  // Default to "sample" during demo phase so Lisbon Weekend demo trip data is loaded by default
+  return mode === "blank" ? "blank" : "sample";
 }
 
 function getTabsStorageKey(mode?: WorkspaceMode): string {

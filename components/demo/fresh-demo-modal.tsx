@@ -125,7 +125,7 @@ export function FreshDemoModal({ isOpen, onClose }: FreshDemoModalProps) {
   };
 
   return (
-    <Modal onClose={onClose} className="max-w-lg bg-white dark:bg-[#121212] border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 text-slate-900 dark:text-white shadow-2xl relative overflow-hidden">
+    <Modal onClose={onClose} hideCloseButton={true} className="max-w-lg bg-white dark:bg-[#121212] border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 text-slate-900 dark:text-white shadow-2xl relative overflow-hidden">
       {/* Top Header & Progress */}
       <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-4 mb-6">
         <div className="flex items-center gap-2">
