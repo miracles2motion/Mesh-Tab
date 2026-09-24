@@ -1,4 +1,4 @@
-ad"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { Copy, Users, Check, QrCode, Crown, ShieldAlert, AlertCircle, Info, Trash2, Sparkles, UserPlus } from "lucide-react";

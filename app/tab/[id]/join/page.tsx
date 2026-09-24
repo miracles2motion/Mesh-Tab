@@ -1,14 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { Sparkles, Fingerprint, ArrowRight, UserPlus, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { getStoredTabMembers, saveStoredTabMembers, type TabMember, saveNewTab } from "../../../../lib/user";
 import { sounds } from "../../../../lib/sounds";
 import confetti from "canvas-confetti";
 
-export default function JoinTabPage({ params }: { params: { id: string } }) {
+export default function JoinTabPage() {
+  const params = useParams();
+  const tabId = typeof params?.id === "string" ? params.id : "";
   const router = useRouter();
   const [name, setName] = useState("");
   const [step, setStep] = useState<"name" | "auth" | "success">("name");
@@ -25,7 +27,7 @@ export default function JoinTabPage({ params }: { params: { id: string } }) {
     // Simulate biometric authentication delay
     await new Promise(r => setTimeout(r, 2000));
     
-    const members = getStoredTabMembers(params.id);
+    const members = getStoredTabMembers(tabId);
     const existing = members.find(m => m.name.toLowerCase() === name.trim().toLowerCase());
     
     if (!existing) {
@@ -36,12 +38,12 @@ export default function JoinTabPage({ params }: { params: { id: string } }) {
         role: "member"
       };
       const updatedMembers = [...members, newMember];
-      saveStoredTabMembers(params.id, updatedMembers);
+      saveStoredTabMembers(tabId, updatedMembers);
       
       // Save to dashboard so it doesn't disappear when they close the app
       saveNewTab({
-        id: params.id,
-        name: params.id.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+        id: tabId,
+        name: tabId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
         role: "Member",
         balance: 0,
         memberCount: updatedMembers.length,
