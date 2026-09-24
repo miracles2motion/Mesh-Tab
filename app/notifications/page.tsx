@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, Suspense } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { 
@@ -33,6 +33,11 @@ function NotificationsContent() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll } = useNotifications();
   const { mode: workspaceMode } = useWorkspaceMode();
   const [filter, setFilter] = useState<"all" | "unread" | "expense" | "settlement" | "netting">("all");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleBack = () => {
     sounds.playClick();
@@ -114,6 +119,17 @@ function NotificationsContent() {
         };
     }
   };
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-indigo-600/30 border-t-indigo-600 rounded-full animate-spin" />
+          <p className="text-xs text-slate-400 font-medium tracking-wide uppercase">Loading Notifications...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300">

@@ -78,6 +78,11 @@ function SettingsContent() {
   const [faucetClaimStatus, setFaucetClaimStatus] = useState<string | null>(null);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [themeMode, setThemeMode] = useState<"light" | "dark" | "system">("system");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const syncTheme = () => {
@@ -202,6 +207,17 @@ function SettingsContent() {
       }, 3500);
     }, 1200);
   };
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-indigo-600/30 border-t-indigo-600 rounded-full animate-spin" />
+          <p className="text-xs text-slate-400 font-medium tracking-wide uppercase">Loading Settings...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300">

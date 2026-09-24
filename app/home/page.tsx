@@ -204,10 +204,10 @@ export default function GlobalHub() {
           <Link 
             href="/notifications?from=/home" 
             className="relative w-10 h-10 md:w-12 md:h-12 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shadow-sm text-slate-700 dark:text-white/80"
-            title={`Notifications ${unreadCount > 0 ? `(${unreadCount} unread)` : ""}`}
+            title={`Notifications ${mounted && unreadCount > 0 ? `(${unreadCount} unread)` : ""}`}
           >
             <Bell className="w-5 h-5" />
-            {unreadCount > 0 && (
+            {mounted && unreadCount > 0 && (
               <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[10px] font-extrabold rounded-full flex items-center justify-center border-2 border-white dark:border-[#0a0a0a] shadow-sm">
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>

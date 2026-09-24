@@ -185,6 +185,15 @@ function DashboardContent() {
       description: `Downloaded MeshTab-${currentTab.name.replace(/\s+/g, "_")}-Ledger.csv`
     });
   };
+
+  if (!mounted) {
+    return (
+      <div className="flex-1 min-h-[85vh] flex flex-col p-6 items-center justify-center text-slate-900 dark:text-white">
+        <div className="w-10 h-10 border-4 border-indigo-600/30 border-t-indigo-600 rounded-full animate-spin mb-4" />
+        <p className="text-xs text-slate-400 font-medium tracking-wide uppercase">Loading Tab Ledger...</p>
+      </div>
+    );
+  }
   
   return (
     <>
