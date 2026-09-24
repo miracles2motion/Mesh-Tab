@@ -1,9 +1,20 @@
+"use client";
+
 import { LANDING_CONTENT } from "../../content/landing";
 import Link from "next/link";
-import { ChevronRight, ArrowRight } from "lucide-react";
+import { ChevronRight, Sparkles } from "lucide-react";
+import { toast } from "sonner";
+import { sounds } from "../../lib/sounds";
 
 export function Hero() {
   const { hero } = LANDING_CONTENT;
+
+  const handleTestnetClick = () => {
+    sounds.playPop();
+    toast.info("Testnet Release Coming Soon!", {
+      description: "Live on-chain testnet deployment is scheduled for the upcoming phase. Click 'Explore Demo Tab' to test the full app today!"
+    });
+  };
 
   return (
     <section className="relative pt-32 pb-20 px-6 max-w-7xl mx-auto flex flex-col items-center text-center">
@@ -30,12 +41,20 @@ export function Hero() {
       </p>
 
       <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-        <Link href="/login" className="btn-primary flex items-center justify-center gap-2 text-lg px-8 py-4">
+        <Link href="/demo" className="btn-primary flex items-center justify-center gap-2 text-lg px-8 py-4 shadow-lg shadow-indigo-500/25">
+          <Sparkles className="w-5 h-5" />
           {hero.primaryCta} <ChevronRight className="w-5 h-5" />
         </Link>
-        <Link href="/demo" className="btn-secondary flex items-center justify-center gap-2 text-lg px-8 py-4">
-          {hero.secondaryCta}
-        </Link>
+        <button 
+          type="button"
+          onClick={handleTestnetClick}
+          className="btn-secondary flex items-center justify-center gap-2.5 text-lg px-8 py-4 cursor-pointer"
+        >
+          <span>{hero.secondaryCta}</span>
+          <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+            Coming Soon
+          </span>
+        </button>
       </div>
     </section>
   );

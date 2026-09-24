@@ -9,8 +9,8 @@ export const LANDING_CONTENT = {
     headline: "The end of group debt.",
     headlineHighlight: "Settled instantly.",
     subheadline: "MeshTab replaces crisscrossing international bank wires with a single, gasless ledger. We calculate the minimum possible payments and settle them instantly in stablecoins.",
-    primaryCta: "Launch App",
-    secondaryCta: "Explore Demo Tab",
+    primaryCta: "Explore Demo Tab",
+    secondaryCta: "Explore Testnet",
   },
   socialProof: {
     text: "Powered by next-generation Web3 infrastructure",
@@ -100,6 +100,6 @@ export const LANDING_CONTENT = {
   finalCta: {
     title: "Ready to settle the tab?",
     description: "Join thousands of groups saving time and money on international trips.",
-    cta: "Launch App",
+    cta: "Explore Demo Tab",
   }
 } as const;

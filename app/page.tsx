@@ -10,7 +10,7 @@ import { FeatureGrid } from "../components/landing/feature-grid";
 import { ComparisonTable } from "../components/landing/comparison-table";
 import { FAQAccordion } from "../components/landing/faq-accordion";
 import { ThemeToggle } from "../components/theme-toggle";
-import { Network } from "lucide-react";
+import { Network, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Metadata } from "next";
 import Image from "next/image";
@@ -39,8 +39,8 @@ export default function LandingPage() {
           </Link>
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <Link href="/login" className="btn-primary py-2 text-sm px-6">
-              Launch App
+            <Link href="/demo" className="btn-primary py-2 text-sm px-5 flex items-center gap-1.5 shadow-md shadow-indigo-500/20">
+              <Sparkles className="w-3.5 h-3.5" /> Explore Demo
             </Link>
           </div>
         </div>
@@ -62,9 +62,15 @@ export default function LandingPage() {
           <div className="max-w-3xl mx-auto">
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">{finalCta.title}</h2>
             <p className="text-indigo-100 text-lg mb-10">{finalCta.description}</p>
-            <Link href="/login" className="bg-white text-indigo-600 px-8 py-4 rounded-full font-bold text-lg hover:scale-105 transition-transform shadow-xl inline-block">
-              {finalCta.cta}
-            </Link>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link href="/demo" className="bg-white text-indigo-600 px-8 py-4 rounded-full font-bold text-lg hover:scale-105 transition-transform shadow-xl inline-block">
+                {finalCta.cta}
+              </Link>
+              <div className="inline-flex items-center gap-2 px-5 py-3.5 rounded-full border border-white/20 text-white/90 text-sm font-semibold backdrop-blur-sm">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                <span>Explore Testnet (Coming Soon)</span>
+              </div>
+            </div>
           </div>
         </section>
       </main>
