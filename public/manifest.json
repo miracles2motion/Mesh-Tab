@@ -1,0 +1,16 @@
+{
+  "name": "MeshTab",
+  "short_name": "MeshTab",
+  "description": "Smart, gasless multilateral netting on Monad.",
+  "start_url": "/home",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "/apple-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

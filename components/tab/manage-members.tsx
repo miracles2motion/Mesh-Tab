@@ -6,6 +6,7 @@ import { Button } from "../ui/button";
 import { QRCodeSVG } from "qrcode.react";
 import { formatCurrency } from "../../lib/utils";
 import confetti from "canvas-confetti";
+import { useRouter } from "next/navigation";
 
 interface MemberItem {
   name: string;
@@ -27,6 +28,7 @@ export function ManageMembers({
   members: any[];
   currentUser?: string;
 }) {
+  const router = useRouter();
   const profile = useUserProfile();
   const { mode: workspaceMode } = useWorkspaceMode();
   const activeUser = currentUser || profile.name;
@@ -53,8 +55,14 @@ export function ManageMembers({
   const [pendingRemovalMember, setPendingRemovalMember] = useState<MemberItem | null>(null);
   const [blockedRemovalMember, setBlockedRemovalMember] = useState<MemberItem | null>(null);
 
-  // Invite link
-  const inviteLink = `https://mesh-tab.vercel.app/tab/${tabId}?invite=true`;
+  const [inviteLink, setInviteLink] = useState(`https://mesh-tab.vercel.app/tab/${tabId}/join`);
+
+  import { useEffect } from "react";
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setInviteLink(`${window.location.origin}/tab/${tabId}/join`);
+    }
+  }, [tabId]);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(inviteLink);
@@ -158,6 +166,77 @@ export function ManageMembers({
       message: `${removedName} removed from active roster. Historical contributions remain preserved in the ledger.`
     });
     setTimeout(() => setNotification(null), 4000);
+  };
+
+  const handleLeaveGroup = () => {
+    const me = memberList.find(m => m.name.toLowerCase() === activeUser.toLowerCase());
+    if (!me) return;
+
+    if (me.balance !== 0) {
+      toast.error("Cannot Leave Group", { description: "You must settle your balance to $0.00 first." });
+      setNotification({ type: "error", message: "You must settle your balance to $0.00 before leaving." });
+      return;
+    }
+
+    // Process Leave
+    const updated = memberList.filter(m => m.name.toLowerCase() !== activeUser.toLowerCase());
+    saveStoredTabMembers(tabId, updated);
+    
+    // Remove tab from local dashboard
+    try {
+      const mode = workspaceMode;
+      const tabsKey = mode === "sample" ? "meshTab_sample_tabs" : "meshTab_clean_tabs";
+      const saved = localStorage.getItem(tabsKey);
+      if (saved) {
+        const parsedTabs = JSON.parse(saved);
+        const filteredTabs = parsedTabs.filter((t: any) => t.id !== tabId);
+        localStorage.setItem(tabsKey, JSON.stringify(filteredTabs));
+        window.dispatchEvent(new Event("meshTab-tabs-update"));
+      }
+    } catch (e) {}
+
+    sounds.playSuccessChime();
+    toast.success("You have left the group.");
+    router.replace("/home");
+  };
+
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const handleDeleteTab = async () => {
+    if (!window.confirm(`Are you sure you want to permanently delete this tab? All data will be wiped globally.`)) {
+      return;
+    }
+    
+    setIsDeleting(true);
+    toast.info("Deleting tab from network...");
+
+    try {
+      // API call to wipe from Redis
+      await fetch(`/api/sync/${tabId}?mode=${workspaceMode}`, { method: "DELETE" });
+
+      // Wipe local storage
+      const mode = workspaceMode;
+      const tabsKey = mode === "sample" ? "meshTab_sample_tabs" : "meshTab_clean_tabs";
+      const saved = localStorage.getItem(tabsKey);
+      if (saved) {
+        const parsedTabs = JSON.parse(saved);
+        const filteredTabs = parsedTabs.filter((t: any) => t.id !== tabId);
+        localStorage.setItem(tabsKey, JSON.stringify(filteredTabs));
+      }
+      
+      const membersKey = mode === "blank" ? `meshTab_clean_members_${tabId}` : `meshTab_members_${tabId}`;
+      const expensesKey = mode === "blank" ? `meshTab_clean_expenses_${tabId}` : `meshTab_expenses_${tabId}`;
+      localStorage.removeItem(membersKey);
+      localStorage.removeItem(expensesKey);
+
+      window.dispatchEvent(new Event("meshTab-tabs-update"));
+      sounds.playSuccessChime();
+      toast.success("Tab permanently deleted.");
+      router.replace("/home");
+    } catch (err) {
+      setIsDeleting(false);
+      toast.error("Failed to delete tab.");
+    }
   };
 
   return (
@@ -310,6 +389,40 @@ export function ManageMembers({
             <span className="font-bold text-indigo-900 dark:text-indigo-300">Accounting Safeguard: </span>
             Members with active balances cannot be removed until debts are settled to $0.00, protecting the group from unpaid shortfalls. Historical receipts remain permanently in the ledger.
           </div>
+        </div>
+
+        {/* Danger Zone */}
+        <div className="pt-4 mt-6 border-t border-slate-200 dark:border-white/10">
+          <h3 className="text-xs font-bold text-rose-500 uppercase tracking-wider mb-3">Danger Zone</h3>
+          
+          {!isCurrentUserAdmin ? (
+            <div className="flex items-center justify-between p-4 rounded-2xl border border-rose-200 dark:border-rose-500/20 bg-rose-50/50 dark:bg-rose-500/5">
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">Leave Group</h4>
+                <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5">Remove yourself from this room.</p>
+              </div>
+              <button 
+                onClick={handleLeaveGroup}
+                className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold rounded-xl transition-all shadow-sm active:scale-95"
+              >
+                Leave Group
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between p-4 rounded-2xl border border-rose-200 dark:border-rose-500/20 bg-rose-50/50 dark:bg-rose-500/5">
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">Delete Tab</h4>
+                <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5">Permanently wipe all data globally.</p>
+              </div>
+              <button 
+                onClick={handleDeleteTab}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold rounded-xl transition-all shadow-sm active:scale-95 disabled:opacity-50"
+              >
+                {isDeleting ? "Deleting..." : "Delete Tab"}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { sounds } from "../../../lib/sounds";
 
 import { useUserProfile, useDeveloperMode, useStoredTabs, useStoredExpenses, useStoredTabMembers, useWorkspaceMode } from "../../../lib/user";
+import { useTabSync } from "../../../lib/sync";
 
 function DashboardContent() {
   const params = useParams();
@@ -27,6 +28,7 @@ function DashboardContent() {
   const { tabs: storedTabs } = useStoredTabs();
   const { expenses } = useStoredExpenses(rawTabId);
   const { mode: workspaceMode } = useWorkspaceMode();
+  useTabSync(rawTabId);
 
   const currentUser = profile.name || "David";
   const { members: activeMembers } = useStoredTabMembers(rawTabId, currentUser);
