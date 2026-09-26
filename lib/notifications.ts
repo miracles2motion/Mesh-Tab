@@ -115,7 +115,7 @@ export function getStoredNotifications(): AppNotification[] {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
         if (mode === "blank") {
-          return parsed.filter((n) => n.tabId !== "lisbon-24" && n.tabId !== "house-groceries");
+          return parsed.filter((n) => n.tabId !== "lisbon-24");
         }
         return parsed;
       }

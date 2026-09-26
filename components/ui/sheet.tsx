@@ -10,9 +10,22 @@ interface SheetProps {
   onClose: () => void;
   children: React.ReactNode;
   className?: string;
+  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "full";
 }
 
-export function Sheet({ isOpen, onClose, children, className }: SheetProps) {
+const sizeClasses = {
+  sm: "sm:max-w-sm",
+  md: "sm:max-w-md",
+  lg: "sm:max-w-lg",
+  xl: "sm:max-w-xl",
+  "2xl": "sm:max-w-2xl",
+  "3xl": "sm:max-w-3xl",
+  "4xl": "sm:max-w-4xl",
+  "5xl": "sm:max-w-5xl",
+  full: "sm:max-w-[98vw] sm:h-[98vh] sm:max-h-[98vh] sm:m-auto sm:rounded-3xl",
+};
+
+export function Sheet({ isOpen, onClose, children, className, size = "full" }: SheetProps) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -63,8 +76,10 @@ export function Sheet({ isOpen, onClose, children, className }: SheetProps) {
               }
             }}
             className={cn(
-              "relative w-full max-w-lg bg-white dark:bg-[#0a0a0a] border-t sm:border border-slate-200 dark:border-white/10 shadow-2xl text-slate-900 dark:text-white",
+              "relative w-full bg-white dark:bg-[#0a0a0a] border-t sm:border border-slate-200 dark:border-white/10 shadow-2xl text-slate-900 dark:text-white",
               "rounded-t-3xl sm:rounded-3xl max-h-[90vh] flex flex-col overflow-hidden",
+              size === "full" ? "sm:max-h-[98vh] sm:h-[98vh]" : "",
+              sizeClasses[size],
               className
             )}
           >

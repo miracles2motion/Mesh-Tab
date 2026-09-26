@@ -40,26 +40,20 @@ function DashboardContent() {
   const { expenses } = useStoredExpenses(rawTabId);
   const { mode: workspaceMode } = useWorkspaceMode();
   const { isSyncing, lastSync, syncError } = useTabSync(rawTabId);
-  const { settledBalance } = useSettledPayoutBalance();
+  const { settledBalance, totalOutstandingDebt, withdrawableAmount } = useSettledPayoutBalance();
 
   const currentUser = profile.name || "David";
   const { members: activeMembers } = useStoredTabMembers(rawTabId, currentUser);
 
   const isSampleLisbon = workspaceMode === "sample" && rawTabId === "lisbon-24";
-  const isSampleGroceries = workspaceMode === "sample" && rawTabId === "house-groceries";
-
   const creatorName = isSampleLisbon 
     ? "Aisha" 
-    : isSampleGroceries 
-    ? "Alex" 
     : (activeMembers.find(m => m.role === "admin")?.name || currentUser);
   const isCurrentUserCreator = currentUser.toLowerCase() === creatorName.toLowerCase();
 
   const currentTab = storedTabs.find(t => t.id === rawTabId) || {
     id: rawTabId,
-    name: isSampleGroceries 
-      ? "House Groceries" 
-      : isSampleLisbon
+    name: isSampleLisbon
       ? "Lisbon Weekend"
       : rawTabId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
     balance: isSampleLisbon ? -18000 : 0,
@@ -375,7 +369,7 @@ function DashboardContent() {
 
       {/* Modern Web2 Sticky Bottom Action Dock on Mobile & Desktop */}
       <div className="fixed bottom-6 lg:bottom-10 inset-x-0 z-40 flex justify-center pointer-events-none px-4">
-        <div className="bg-white/95 dark:bg-[#121212]/95 backdrop-blur-2xl border border-slate-200/90 dark:border-white/15 rounded-full p-2 flex items-center justify-between gap-2 shadow-2xl w-full max-w-sm md:max-w-md mx-auto pointer-events-auto">
+        <div className="bg-white/95 dark:bg-[#121212]/95 backdrop-blur-2xl border border-slate-200/90 dark:border-white/15 rounded-full p-2 flex items-center justify-between gap-2 shadow-2xl w-full max-w-sm md:max-w-lg lg:max-w-xl mx-auto pointer-events-auto">
           <button 
             onClick={() => setIsNettingModalOpen(true)}
             className={`flex-[1.5] border font-bold py-3 sm:py-3.5 px-4 rounded-full flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all active:scale-95 text-xs sm:text-sm ${
@@ -415,7 +409,9 @@ function DashboardContent() {
       <CashOutDrawer 
         isOpen={isCashOutOpen}
         onClose={() => setIsCashOutOpen(false)}
-        availableAmount={settledBalance}
+        settledBalance={settledBalance}
+        totalOutstandingDebt={totalOutstandingDebt}
+        withdrawableAmount={withdrawableAmount}
         currentUserName={currentUser}
       />
 

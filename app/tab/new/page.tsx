@@ -50,7 +50,7 @@ export default function CreateTab() {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-500/10 dark:bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none" />
       
       {/* Back to All Tabs */}
-      <div className="w-full max-w-md mb-4 flex items-center justify-start relative z-10">
+      <div className="w-full max-w-full px-4 md:px-12 mb-4 flex items-center justify-start relative z-10">
         <Link 
           href="/home" 
           className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-white/80 transition-all text-xs font-semibold shadow-sm group"
@@ -64,7 +64,7 @@ export default function CreateTab() {
 
       <motion.div 
         layout
-        className="w-full max-w-md bg-white dark:bg-white/5 backdrop-blur-xl border border-slate-200 dark:border-white/10 p-8 rounded-3xl relative z-10 shadow-2xl"
+        className="w-full max-w-full px-4 md:px-12 bg-white dark:bg-white/5 backdrop-blur-xl border border-slate-200 dark:border-white/10 p-8 md:p-12 lg:p-16 rounded-3xl relative z-10 shadow-2xl flex-1 flex flex-col mb-12"
       >
         <AnimatePresence mode="wait">
           {step === 1 && (

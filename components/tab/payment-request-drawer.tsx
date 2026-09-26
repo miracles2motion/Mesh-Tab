@@ -73,8 +73,8 @@ export function PaymentRequestDrawer({
   };
 
   return (
-    <Sheet isOpen={isOpen} onClose={onClose}>
-      <div className="p-6 md:p-8 flex flex-col items-center text-center max-w-md mx-auto w-full bg-white dark:bg-[#0a0a0a] text-slate-900 dark:text-white relative">
+    <Sheet isOpen={isOpen} onClose={onClose} size="full">
+      <div className="p-6 md:p-8 flex flex-col items-center text-center w-full bg-white dark:bg-[#0a0a0a] text-slate-900 dark:text-white relative">
 
 
         {/* Debtor Profile Pill */}

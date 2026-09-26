@@ -25,7 +25,7 @@ export default function GlobalHub() {
   const { tabs: mockTabs, saveTab } = useStoredTabs();
   const { balance: virtualBalance } = useVirtualBalance();
   const { mode: workspaceMode } = useWorkspaceMode();
-  const { settledBalance } = useSettledPayoutBalance();
+  const { settledBalance, totalOutstandingDebt, withdrawableAmount } = useSettledPayoutBalance();
   const { unreadCount } = useNotifications();
 
   const [showJoinModal, setShowJoinModal] = useState(false);
@@ -56,7 +56,7 @@ export default function GlobalHub() {
   const activeTabsList = !mounted
     ? []
     : (workspaceMode === "blank" 
-        ? mockTabs.filter(t => t.id !== "lisbon-24" && t.id !== "house-groceries") 
+        ? mockTabs.filter(t => t.id !== "lisbon-24") 
         : mockTabs
       ).filter(t => !archivedTabIds.includes(t.id));
 
@@ -463,7 +463,7 @@ export default function GlobalHub() {
 
       {/* Modern Web2 Sticky Bottom Action Dock on Mobile & Desktop */}
       <div className="fixed bottom-6 lg:bottom-10 inset-x-0 z-40 flex justify-center pointer-events-none px-4">
-        <div className="bg-white/95 dark:bg-[#121212]/95 backdrop-blur-2xl border border-slate-200/90 dark:border-white/15 rounded-full p-2 flex items-center justify-between gap-2 shadow-2xl w-full max-w-sm md:max-w-md mx-auto pointer-events-auto">
+        <div className="bg-white/95 dark:bg-[#121212]/95 backdrop-blur-2xl border border-slate-200/90 dark:border-white/15 rounded-full p-2 flex items-center justify-between gap-2 shadow-2xl w-full max-w-sm md:max-w-lg lg:max-w-xl mx-auto pointer-events-auto">
           <Link 
             href="/tab/new" 
             className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-4 rounded-full font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md shadow-indigo-500/25 active:scale-95 transition-transform"
@@ -485,7 +485,7 @@ export default function GlobalHub() {
       {/* Join Modal */}
       {showJoinModal && (
         <div className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-[#121212] border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 max-w-md w-full space-y-6 shadow-2xl text-slate-900 dark:text-white my-auto max-h-[92vh] overflow-y-auto">
+          <div className="bg-white dark:bg-[#121212] border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 max-w-lg w-full space-y-6 shadow-2xl text-slate-900 dark:text-white my-auto max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between">
               <h3 className="text-xl font-bold">Join Group via Code</h3>
               <button 
@@ -523,7 +523,9 @@ export default function GlobalHub() {
       <CashOutDrawer 
         isOpen={showCashOutModal} 
         onClose={() => setShowCashOutModal(false)} 
-        availableAmount={Math.max(0, settledBalance)} 
+        settledBalance={settledBalance}
+        totalOutstandingDebt={totalOutstandingDebt}
+        withdrawableAmount={withdrawableAmount}
         currentUserName={profile.name} 
       />
 

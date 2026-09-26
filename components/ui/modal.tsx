@@ -23,10 +23,10 @@ const sizeClasses = {
   "3xl": "max-w-3xl",
   "4xl": "max-w-4xl",
   "5xl": "max-w-5xl",
-  full: "max-w-full m-4",
+  full: "w-[98vw] h-[98vh] max-w-[98vw] max-h-[98vh] m-auto rounded-3xl",
 };
 
-export function Modal({ children, onClose, className, hideCloseButton = false, size = "lg" }: ModalProps) {
+export function Modal({ children, onClose, className, hideCloseButton = false, size = "full" }: ModalProps) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 

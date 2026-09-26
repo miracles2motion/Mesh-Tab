@@ -100,7 +100,7 @@ export default function JoinTabPage() {
 
   return (
     <div className="min-h-[100dvh] bg-slate-50 dark:bg-[#0a0a0a] flex items-center justify-center p-6">
-      <div className="w-full max-w-md bg-white dark:bg-[#121212] border border-slate-200 dark:border-white/10 rounded-3xl p-8 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500 relative overflow-hidden">
+      <div className="w-full max-w-full px-4 md:px-12 bg-white dark:bg-[#121212] border border-slate-200 dark:border-white/10 rounded-3xl p-8 md:p-16 lg:p-24 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500 relative overflow-hidden flex-1 flex flex-col items-center justify-center m-4 md:m-8">
         
         {/* Top Gradient */}
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500" />

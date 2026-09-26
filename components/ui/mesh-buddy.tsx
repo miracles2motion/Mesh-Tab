@@ -139,7 +139,7 @@ export function MeshBuddy() {
   const currentTabId = (pathSegments[0] === "tab" && pathSegments[1] && pathSegments[1] !== "new")
     ? pathSegments[1]
     : null;
-  const isDemoTab = (currentTabId === "lisbon-24" || currentTabId === "house-groceries") && workspaceMode === "sample";
+  const isDemoTab = currentTabId === "lisbon-24" && workspaceMode === "sample";
   const isCustomTab = currentTabId !== null && !isDemoTab;
 
   const activeTab = storedTabs.find((t) => t.id === currentTabId);

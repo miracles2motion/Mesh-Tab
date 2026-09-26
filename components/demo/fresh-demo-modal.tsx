@@ -125,7 +125,7 @@ export function FreshDemoModal({ isOpen, onClose }: FreshDemoModalProps) {
   };
 
   return (
-    <Modal onClose={onClose} hideCloseButton={true} className="max-w-lg bg-white dark:bg-[#121212] border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 text-slate-900 dark:text-white shadow-2xl relative overflow-hidden">
+    <Modal onClose={onClose} hideCloseButton={true} size="full" className="bg-white dark:bg-[#121212] border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-10 text-slate-900 dark:text-white shadow-2xl relative overflow-hidden">
       {/* Top Header & Progress */}
       <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-4 mb-6">
         <div className="flex items-center gap-2">
@@ -239,65 +239,66 @@ export function FreshDemoModal({ isOpen, onClose }: FreshDemoModalProps) {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             onSubmit={handleProceedToDeployment}
-            className="space-y-6"
+            className="space-y-8"
           >
             <div className="text-center">
-              <div className={`w-14 h-14 rounded-full ${AVATAR_COLORS[selectedColorIdx]} text-white flex items-center justify-center font-bold text-2xl mx-auto mb-3 shadow-md transition-colors`}>
+              <div className={`w-16 h-16 md:w-20 md:h-20 rounded-full ${AVATAR_COLORS[selectedColorIdx]} text-white flex items-center justify-center font-bold text-3xl mx-auto mb-4 shadow-lg transition-colors`}>
                 {name.trim() ? name.trim()[0].toUpperCase() : "U"}
               </div>
-              <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+              <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
                 Choose Your Identity
               </h2>
-              <p className="text-xs text-slate-500 dark:text-white/60 mt-0.5">
+              <p className="text-sm text-slate-500 dark:text-white/60 mt-1">
                 What should your friends see when you split bills?
               </p>
             </div>
 
-            {/* Name Input */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700 dark:text-white/80 ml-1 uppercase tracking-wider">
-                Display Name
-              </label>
-              <input
-                autoFocus
-                type="text"
-                placeholder="e.g., Sarah, Alex, or your name"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                maxLength={24}
-                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3.5 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-semibold text-base"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 text-left">
+              {/* Name Input */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-slate-700 dark:text-white/80 uppercase tracking-wider">
+                  Display Name
+                </label>
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="e.g., Sarah, Alex, or your name"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  maxLength={24}
+                  className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-semibold text-lg"
+                />
 
-              {/* Quick Suggestion Chips */}
-              <div className="flex items-center gap-2 pt-1 flex-wrap">
-                <span className="text-[11px] text-slate-400 dark:text-white/40 font-medium">Quick Pick:</span>
-                {quickNames.map(qName => (
-                  <button
-                    key={qName}
-                    type="button"
-                    onClick={() => {
-                      setName(qName);
-                      sounds.playClick();
-                    }}
-                    className={`text-[11px] font-bold px-2.5 py-1 rounded-full border transition-all cursor-pointer ${
-                      name === qName 
-                        ? "bg-indigo-600 text-white border-indigo-600" 
-                        : "bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/70 hover:bg-slate-200 dark:hover:bg-white/10"
-                    }`}
-                  >
-                    {qName}
-                  </button>
-                ))}
+                {/* Quick Suggestion Chips */}
+                <div className="flex items-center gap-2 pt-2 flex-wrap">
+                  <span className="text-xs text-slate-400 dark:text-white/40 font-medium">Quick Pick:</span>
+                  {quickNames.map(qName => (
+                    <button
+                      key={qName}
+                      type="button"
+                      onClick={() => {
+                        setName(qName);
+                        sounds.playClick();
+                      }}
+                      className={`text-xs font-bold px-3 py-1.5 rounded-full border transition-all cursor-pointer hover:-translate-y-0.5 ${
+                        name === qName 
+                          ? "bg-indigo-600 text-white border-indigo-600 shadow-md" 
+                          : "bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-white/70 hover:bg-slate-200 dark:hover:bg-white/10"
+                      }`}
+                    >
+                      {qName}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Avatar Color Picker */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700 dark:text-white/80 ml-1 uppercase tracking-wider">
-                Avatar Theme Color
-              </label>
-              <div className="flex items-center justify-between p-2 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10">
-                {AVATAR_COLORS.map((color, idx) => (
+              {/* Avatar Color Picker */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-slate-700 dark:text-white/80 uppercase tracking-wider">
+                  Avatar Theme Color
+                </label>
+                <div className="grid grid-cols-6 gap-2 p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10">
+                  {AVATAR_COLORS.map((color, idx) => (
                   <button
                     key={color}
                     type="button"
@@ -316,15 +317,16 @@ export function FreshDemoModal({ isOpen, onClose }: FreshDemoModalProps) {
                 ))}
               </div>
             </div>
+            </div>
 
-            {/* MeshBuddy Co-Pilot Opt-in */}
-            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-between">
-              <div className="text-left text-xs">
+            {/* MeshBuddy Co-Pilot Opt-in - Spans both columns on desktop */}
+            <div className="md:col-span-2 p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-between">
+              <div className="text-left text-sm">
                 <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                   <span>Enable MeshBuddy Co-Pilot</span>
                   <span className="text-[10px] bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded-md font-bold">AI</span>
                 </div>
-                <div className="text-slate-500 dark:text-white/50 text-[11px] mt-0.5">
+                <div className="text-slate-500 dark:text-white/50 text-xs mt-0.5">
                   Provides proactive netting advice and instant help
                 </div>
               </div>
@@ -345,10 +347,10 @@ export function FreshDemoModal({ isOpen, onClose }: FreshDemoModalProps) {
             <button
               type="submit"
               disabled={!name.trim()}
-              className="w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
+              className="md:col-span-2 w-full py-4 md:py-5 md:text-lg rounded-2xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5 active:scale-95 cursor-pointer"
             >
               <span>Continue with {name.trim() || "Chosen Persona"}</span>
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-5 h-5" />
             </button>
           </motion.form>
         )}

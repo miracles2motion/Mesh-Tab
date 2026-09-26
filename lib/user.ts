@@ -115,7 +115,7 @@ export interface TabSummary {
 
 export const SAMPLE_BENCHMARK_TABS: TabSummary[] = [
   { id: "lisbon-24", name: "Lisbon Weekend", creator: "Aisha", role: "Member", balance: -27000, memberCount: 4, lastActivity: "2 hours ago" },
-  { id: "house-groceries", name: "House Groceries", creator: "Alex", role: "Member", balance: 4500, memberCount: 2, lastActivity: "Yesterday" },
+  { id: "miami-boat", name: "Miami Boat Trip", creator: "You", role: "Creator", balance: 50000, memberCount: 3, lastActivity: "Just now" },
 ];
 
 export const DEFAULT_TABS: TabSummary[] = [];
@@ -176,19 +176,20 @@ export function resetLisbonDemo() {
   // 2. Clear added/settled expenses for Lisbon to restore initial benchmark
   localStorage.removeItem("meshTab_expenses_lisbon-24");
 
-  // 3. Ensure Lisbon benchmark tabs are active with -$180.00 debt in the sample namespace
+  // 3. Ensure benchmark tabs are active in the sample namespace
   try {
     const raw = localStorage.getItem("meshTab_sample_tabs");
     let current: TabSummary[] = [];
     if (raw) current = JSON.parse(raw);
-    const nonLisbon = Array.isArray(current) ? current.filter(t => t.id !== "lisbon-24") : [SAMPLE_BENCHMARK_TABS[1]];
-    localStorage.setItem("meshTab_sample_tabs", JSON.stringify([SAMPLE_BENCHMARK_TABS[0], ...nonLisbon]));
+    const customTabs = Array.isArray(current) ? current.filter(t => t.id !== "lisbon-24" && t.id !== "miami-boat") : [];
+    localStorage.setItem("meshTab_sample_tabs", JSON.stringify([...SAMPLE_BENCHMARK_TABS, ...customTabs]));
+
   } catch (e) {
     localStorage.setItem("meshTab_sample_tabs", JSON.stringify(SAMPLE_BENCHMARK_TABS));
   }
 
-  // 4. Reset settled payout balance to benchmark clean state ($0)
-  localStorage.removeItem("meshTab_settledPayoutBalance");
+  // 4. Reset settled payout balance to benchmark clean state ($500)
+  localStorage.setItem("meshTab_settledPayoutBalance", "50000");
   window.dispatchEvent(new Event("meshTab-payout-update"));
 
   // 5. Force mode to sample and reset notifications to sample
@@ -232,21 +233,18 @@ export function getStoredTabs(): TabSummary[] {
           if (t.id === "lisbon-24") {
             return { ...t, role: "Member" as const, creator: "Aisha" };
           }
-          if (t.id === "house-groceries") {
-            return { ...t, role: "Member" as const, creator: "Alex" };
-          }
           return t;
         });
 
         if (mode === "blank") {
           // Clean Slate: guaranteed no sample demo tabs ever leak into clean slate
-          return normalized.filter(t => t.id !== "lisbon-24" && t.id !== "house-groceries");
+          return normalized.filter(t => t.id !== "lisbon-24");
         }
         
         // Sample Mode: ensure Lisbon benchmark is present
         const hasLisbon = normalized.some(t => t.id === "lisbon-24");
         if (!hasLisbon) {
-          const merged = [...SAMPLE_BENCHMARK_TABS, ...normalized.filter(t => t.id !== "lisbon-24" && t.id !== "house-groceries")];
+          const merged = [...SAMPLE_BENCHMARK_TABS, ...normalized.filter(t => t.id !== "lisbon-24")];
           localStorage.setItem(key, JSON.stringify(merged));
           return merged;
         }
@@ -388,15 +386,16 @@ export function getStoredTabMembers(tabId: string, currentUserName?: string): Ta
       localStorage.setItem(storageKey, JSON.stringify(defaultList));
       return defaultList;
     }
-
-    if (tabId === "house-groceries") {
+    if (tabId === "miami-boat") {
       const defaultList: TabMember[] = [
-        { name: "Alex", balance: -4500, type: "debtor", role: "admin" },
-        { name: activeUser, balance: 4500, type: "creditor", role: "member" }
+        { name: activeUser, balance: 50000, type: "creditor", role: "admin" },
+        { name: "John", balance: 0, type: "settled", role: "member" },
+        { name: "Sarah", balance: -50000, type: "debtor", role: "member" }
       ];
       localStorage.setItem(storageKey, JSON.stringify(defaultList));
       return defaultList;
     }
+
   }
 
   // Clean Slate Mode: absolutely 0 sample demo contamination
@@ -476,8 +475,8 @@ export const DEFAULT_FEED: Record<string, StoredExpense[]> = {
     { id: "2", payer: "Kemi", amount: 26000, desc: "Dinners & wine", time: "5h ago", splitType: "equal", category: "dining", originalCurrency: "EUR", originalAmount: 240.00 },
     { id: "3", payer: "Ben", amount: 22000, desc: "Excursions", time: "1d ago", splitType: "equal", category: "activities", originalCurrency: "EUR", originalAmount: 203.70 },
   ],
-  "house-groceries": [
-    { id: "hg-1", payer: "David", amount: 9000, desc: "Whole Foods Groceries", time: "Yesterday", splitType: "equal", category: "groceries" }
+  "miami-boat": [
+    { id: "mb-1", payer: "You", amount: 150000, desc: "Yacht Rental", time: "2 days ago", splitType: "equal", category: "activities" }
   ]
 };
 
@@ -577,7 +576,7 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense, skipBal
   // Live Notification Dispatch
   try {
     const tabs = getStoredTabs();
-    const tabName = tabId === "lisbon-24" ? "Lisbon Weekend" : tabId === "house-groceries" ? "House Groceries" : (tabs.find(t => t.id === tabId)?.name || "Group Tab");
+    const tabName = tabId === "lisbon-24" ? "Lisbon Weekend" : (tabs.find(t => t.id === tabId)?.name || "Group Tab");
     const isSettle = expense.id.startsWith("settle-");
 
     addNotification({
@@ -821,7 +820,14 @@ export function withdrawSettledPayout(amountCents?: number): number {
   const mode = getWorkspaceMode();
   const key = mode === "blank" ? "meshTab_clean_settledPayoutBalance" : "meshTab_settledPayoutBalance";
   const current = getSettledPayoutBalance();
-  const toWithdraw = amountCents !== undefined ? Math.min(current, amountCents) : current;
+  
+  // Calculate max available based on cross-tab liability
+  const currentUserName = getStoredUser().name || DEFAULT_USER_NAME;
+  const totalDebt = getTotalOutstandingDebt(currentUserName);
+  const maxAvailable = getWithdrawableAmount(current, totalDebt);
+
+  const desiredWithdrawal = amountCents !== undefined ? amountCents : maxAvailable;
+  const toWithdraw = Math.min(maxAvailable, desiredWithdrawal);
   const next = Math.max(0, current - toWithdraw);
   localStorage.setItem(key, String(next));
   window.dispatchEvent(new Event("meshTab-payout-update"));
@@ -844,8 +850,14 @@ export function useSettledPayoutBalance() {
     };
   }, []);
 
+  const currentUserName = getStoredUser().name || DEFAULT_USER_NAME;
+  const totalOutstandingDebt = getTotalOutstandingDebt(currentUserName);
+  const withdrawableAmount = getWithdrawableAmount(balance, totalOutstandingDebt);
+
   return {
     settledBalance: balance,
+    totalOutstandingDebt,
+    withdrawableAmount,
     addPayout: addSettledPayout,
     withdrawPayout: withdrawSettledPayout
   };
@@ -1009,6 +1021,24 @@ export function seedDemoExpenses(tabId: string, currentUserName?: string) {
   window.dispatchEvent(new Event("meshTab-expenses-update"));
   window.dispatchEvent(new Event("meshTab-members-update"));
   window.dispatchEvent(new Event("meshTab-tabs-update"));
+}
+
+// CROSS-TAB LIABILITY ENGINE
+export function getTotalOutstandingDebt(currentUserName: string): number {
+  if (typeof window === "undefined") return 0;
+  const tabs = getStoredTabs();
+  let totalDebt = 0;
+  
+  for (const tab of tabs) {
+    if (tab.balance < 0) {
+      totalDebt += Math.abs(tab.balance);
+    }
+  }
+  return totalDebt;
+}
+
+export function getWithdrawableAmount(settledBalance: number, totalDebt: number): number {
+  return Math.max(0, settledBalance - totalDebt);
 }
 
 

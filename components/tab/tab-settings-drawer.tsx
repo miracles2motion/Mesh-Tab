@@ -156,7 +156,7 @@ export function TabSettingsDrawer({ isOpen, onClose, tabId, tabName, tabCurrency
           initial={{ y: 40, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 40, opacity: 0 }}
-          className="relative w-full max-w-md mx-auto bg-white dark:bg-[#1a1a1a] rounded-t-3xl sm:rounded-2xl shadow-2xl border border-slate-200 dark:border-white/10 max-h-[85vh] overflow-y-auto"
+          className="relative w-full sm:max-w-xl mx-auto bg-white dark:bg-[#1a1a1a] rounded-t-3xl sm:rounded-2xl shadow-2xl border border-slate-200 dark:border-white/10 max-h-[85vh] overflow-y-auto"
         >
           {/* Handle */}
           <div className="flex justify-center pt-3 pb-1 sm:hidden">
