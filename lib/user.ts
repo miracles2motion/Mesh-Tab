@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { addNotification, resetNotificationsToMode } from "./notifications";
+import { isEffectivelyOnline } from "./network";
 
 export interface UserProfile {
   name: string;
@@ -468,6 +469,7 @@ export interface StoredExpense {
   category?: ExpenseCategory;
   originalCurrency?: string; // e.g. "EUR", "GBP", "NGN", "JPY"
   originalAmount?: number; // amount in original foreign currency
+  syncStatus?: "synced" | "pending";
 }
 
 export const DEFAULT_FEED: Record<string, StoredExpense[]> = {
@@ -499,6 +501,10 @@ export function getStoredExpenses(tabId: string): StoredExpense[] {
 
 export function saveStoredExpense(tabId: string, expense: StoredExpense) {
   if (typeof window === "undefined") return;
+  
+  // Tag sync status based on current connectivity
+  expense.syncStatus = isEffectivelyOnline() ? "synced" : "pending";
+  
   const mode = getWorkspaceMode();
   const storageKey = mode === "blank" ? `meshTab_clean_expenses_${tabId}` : `meshTab_expenses_${tabId}`;
   const current = getStoredExpenses(tabId);

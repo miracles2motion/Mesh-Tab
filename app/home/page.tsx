@@ -16,6 +16,7 @@ import { MeshBuddy } from "../../components/ui/mesh-buddy";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { AnimatedCounter } from "../../components/ui/animated-counter";
+import { NetworkStatusBadge } from "../../components/ui/network-status-badge";
 
 export default function GlobalHub() {
   const router = useRouter();
@@ -137,6 +138,7 @@ export default function GlobalHub() {
       <header className="px-6 md:px-12 pt-10 pb-6 flex items-center justify-between max-w-5xl mx-auto w-full">
         <div>
           <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+            <NetworkStatusBadge compact />
             <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Demo Sandbox (Monad Testnet)

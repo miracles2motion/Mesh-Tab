@@ -5,12 +5,13 @@ import { Button } from "../ui/button";
 import { TransactionOverlay, TransactionState } from "../ui/transaction-overlay";
 import Image from "next/image";
 import { PimlicoLogo, PythLogo } from "../ui/partner-logo";
-import { Check, ChevronDown, Sparkles, Camera, Mic, Zap, Loader2, Upload, FileText, SplitSquareHorizontal, AlertCircle, Globe } from "lucide-react";
+import { Check, ChevronDown, Sparkles, Camera, Mic, Zap, Loader2, Upload, FileText, SplitSquareHorizontal, AlertCircle, Globe, CloudUpload } from "lucide-react";
 
 import { useUserProfile, saveStoredExpense, useWorkspaceMode, ExpenseCategory } from "../../lib/user";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { SUPPORTED_CURRENCIES, usePythRate } from "../../lib/pyth";
+import { useNetworkStatus } from "../../lib/network";
 
 export const EXPENSE_CATEGORIES = [
   { id: "dining", label: "Dining", icon: "🍽️" },
@@ -32,6 +33,7 @@ interface AddExpenseFormProps {
 export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, tabId = "lisbon-24", defaultCurrency }: AddExpenseFormProps) {
   const profile = useUserProfile();
   const { mode: workspaceMode } = useWorkspaceMode();
+  const { isEffectivelyOnline } = useNetworkStatus();
   const activeUser = currentUser || profile.name || "David";
 
   const rawList = members.length > 0 
@@ -708,10 +710,12 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-white/50">
-                  <span>{isRateLive ? "Live rate via" : "Rate via"}</span>
+                  <span>{(isRateLive && isEffectivelyOnline) ? "Live rate via" : "Cached rate"}</span>
                   <PythLogo className="h-3.5 w-auto text-slate-800 dark:text-white opacity-85" />
-                  {isRateLive && (
+                  {(isRateLive && isEffectivelyOnline) ? (
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" title="Live Pyth Hermes stream active" />
+                  ) : (
+                    <CloudUpload className="w-3 h-3 ml-0.5 text-amber-500" title="Offline - Using cached Pyth rate" />
                   )}
                 </div>
               </div>

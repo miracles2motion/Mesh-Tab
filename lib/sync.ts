@@ -2,10 +2,21 @@
 
 import { useEffect, useState, useRef } from "react";
 import { getStoredTabMembers, getStoredExpenses, getWorkspaceMode, getStoredUser, getStoredTabs, TabMember, StoredExpense } from "./user";
+import { isEffectivelyOnline } from "./network";
 
-const FAST_INTERVAL = 4000;  // 4s polling during active user interaction
-const SLOW_INTERVAL = 16000; // 16s back-off when idle to protect Upstash quota
-const IDLE_TIMEOUT = 45000;  // 45s without activity enters idle mode
+const FAST_INTERVAL = 15000;  // 15s polling during active user interaction
+const SLOW_INTERVAL = 60000; // 60s back-off when idle to protect Upstash quota
+const IDLE_TIMEOUT = 30000;  // 30s without activity enters idle mode
+
+function simpleHash(str: string) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return hash.toString();
+}
 
 function haveMembersChanged(serverMembers: TabMember[], localMembers: TabMember[]): boolean {
   if (!serverMembers || !localMembers) return true;
@@ -37,10 +48,16 @@ function haveExpensesChanged(serverExpenses: StoredExpense[], localExpenses: Sto
 
 export function pushTabStateToRedis(tabId: string) {
   if (typeof window === "undefined" || !tabId || tabId === "new") return;
+  if (!isEffectivelyOnline()) return;
 
   const mode = getWorkspaceMode();
   const members = getStoredTabMembers(tabId);
   const expenses = getStoredExpenses(tabId);
+
+  const localHash = simpleHash(JSON.stringify({ members, expenses }));
+  const lastPushedHash = sessionStorage.getItem(`meshTab_lastPush_${tabId}`);
+  if (localHash === lastPushedHash) return; // Skip — nothing changed since last push
+  sessionStorage.setItem(`meshTab_lastPush_${tabId}`, localHash);
 
   // Background fetch
   fetch(`/api/sync/${tabId}`, {
@@ -49,6 +66,18 @@ export function pushTabStateToRedis(tabId: string) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ mode, members, expenses }),
+  }).then((res) => {
+    if (res.ok) {
+      // Mark all pending expenses as synced
+      const currentExpenses = getStoredExpenses(tabId);
+      const hadPending = currentExpenses.some(e => e.syncStatus === "pending");
+      if (hadPending) {
+        const updated = currentExpenses.map(e => ({ ...e, syncStatus: "synced" as const }));
+        const storageKey = mode === "blank" ? `meshTab_clean_expenses_${tabId}` : `meshTab_expenses_${tabId}`;
+        localStorage.setItem(storageKey, JSON.stringify(updated));
+        window.dispatchEvent(new CustomEvent("meshTab-expenses-update", { detail: { fromServer: true } }));
+      }
+    }
   }).catch((error) => {
     console.error("Failed to sync tab to redis:", error);
   });
@@ -66,6 +95,7 @@ export function useTabSync(tabId: string) {
     let isActive = true;
     let errorCount = 0;
     let lastActivityTime = Date.now();
+    let consecutiveNoChanges = 0;
 
     const markUserActive = () => {
       lastActivityTime = Date.now();
@@ -74,6 +104,7 @@ export function useTabSync(tabId: string) {
     // 1. Initial Pull & Smart Polling
     const pullFromRedis = async () => {
       if (!isActive || document.visibilityState !== "visible") return;
+      if (!isEffectivelyOnline()) return;
       
       try {
         const mode = getWorkspaceMode();
@@ -127,7 +158,12 @@ export function useTabSync(tabId: string) {
           }
 
           setLastSync(new Date());
-          if (stateUpdated) setIsSyncing(true);
+          if (stateUpdated) {
+            setIsSyncing(true);
+            consecutiveNoChanges = 0;
+          } else {
+            consecutiveNoChanges++;
+          }
         } else {
           errorCount++;
           if (errorCount >= 3) setSyncError(true);
@@ -147,7 +183,9 @@ export function useTabSync(tabId: string) {
       if (document.visibilityState !== "visible") return;
 
       const isUserActive = Date.now() - lastActivityTime < IDLE_TIMEOUT;
-      const delay = isUserActive ? FAST_INTERVAL : SLOW_INTERVAL;
+      const baseDelay = isUserActive ? FAST_INTERVAL : SLOW_INTERVAL;
+      const backoffMultiplier = Math.min(consecutiveNoChanges, 4); // max 4× backoff
+      const delay = baseDelay * (1 + backoffMultiplier);
 
       pollingTimer = setTimeout(async () => {
         await pullFromRedis();
@@ -187,9 +225,13 @@ export function useTabSync(tabId: string) {
       }
     };
 
+    let focusDebounce: NodeJS.Timeout | null = null;
     const handleWindowFocus = () => {
-      markUserActive();
-      pullFromRedis();
+      if (focusDebounce) clearTimeout(focusDebounce);
+      focusDebounce = setTimeout(() => {
+        markUserActive();
+        pullFromRedis();
+      }, 1000);
     };
 
     const handleOnline = () => {

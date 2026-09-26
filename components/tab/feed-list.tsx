@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Receipt, ShieldCheck, Activity, ChevronRight, CheckCircle2, Search, X } from "lucide-react";
+import { Receipt, ShieldCheck, Activity, ChevronRight, CheckCircle2, Search, X, CloudUpload } from "lucide-react";
 import { formatCurrency } from "../../lib/utils";
 import Image from "next/image";
 import { EnvioLogo, MonadLogo } from "../ui/partner-logo";
@@ -19,6 +19,7 @@ export interface ExpenseItem {
   category?: ExpenseCategory;
   originalCurrency?: string;
   originalAmount?: number;
+  syncStatus?: "synced" | "pending";
 }
 
 interface FeedListProps {
@@ -310,7 +311,12 @@ export function FeedList({ expenses, currentUserName }: FeedListProps) {
                             {currentUserName && item.payer.toLowerCase() === currentUserName.toLowerCase() ? `You (${item.payer})` : item.payer}
                           </span>
                         </span>
-                        <span className={isSettlement ? "text-emerald-600/70 dark:text-emerald-400/60 font-semibold" : "text-slate-400 dark:text-white/40"}>
+                        <span className={`flex items-center gap-1 ${isSettlement ? "text-emerald-600/70 dark:text-emerald-400/60 font-semibold" : "text-slate-400 dark:text-white/40"}`}>
+                          {item.syncStatus === "pending" && (
+                            <span className="flex items-center gap-0.5 text-amber-500" title="Saved to Local Vault (Offline)">
+                              <CloudUpload className="w-3 h-3" />
+                            </span>
+                          )}
                           {item.time}
                         </span>
                       </div>

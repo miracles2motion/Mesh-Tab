@@ -12,6 +12,7 @@ import { MemberDetailsDrawer } from "../../../components/tab/member-details-draw
 import { PaymentRequestDrawer } from "../../../components/tab/payment-request-drawer";
 import { ImportExpensesModal } from "../../../components/tab/import-expenses-modal";
 import { SettlementCertificateModal } from "../../../components/tab/settlement-certificate-modal";
+import { OfflineMeshSyncModal } from "../../../components/tab/offline-mesh-sync-modal";
 import { CategoryAnalytics } from "../../../components/tab/category-analytics";
 import { SmartRebalancer } from "../../../components/tab/smart-rebalancer";
 import { TabSettingsDrawer } from "../../../components/tab/tab-settings-drawer";
@@ -22,6 +23,8 @@ import { Modal } from "../../../components/ui/modal";
 import { ThemeToggle } from "../../../components/theme-toggle";
 import { toast } from "sonner";
 import { sounds } from "../../../lib/sounds";
+import { NetworkStatusBadge } from "../../../components/ui/network-status-badge";
+import { Wifi } from "lucide-react";
 
 import { useUserProfile, useDeveloperMode, useStoredTabs, useStoredExpenses, useStoredTabMembers, useWorkspaceMode } from "../../../lib/user";
 import { useTabSync } from "../../../lib/sync";
@@ -89,6 +92,7 @@ function DashboardContent() {
   const [isNettingModalOpen, setIsNettingModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isCertificateOpen, setIsCertificateOpen] = useState(false);
+  const [isOfflineSyncOpen, setIsOfflineSyncOpen] = useState(false);
   const [isTabSettingsOpen, setIsTabSettingsOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<any | null>(null);
   const [paymentRequest, setPaymentRequest] = useState<{ debtorName: string; amount: number } | null>(null);
@@ -239,18 +243,7 @@ function DashboardContent() {
                   <Crown className="w-3 h-3 text-amber-500" /> Host: {creatorName}
                 </span>
               )}
-              <div className={`flex items-center gap-1.5 text-xs font-semibold shrink-0 ${syncError ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`} title={syncError ? "Sync Offline" : "Simulated Monad sub-second indexer response"}>
-                <Activity className={`w-3.5 h-3.5 ${isSyncing ? "animate-pulse" : ""}`} />
-                <span>
-                  {syncError 
-                    ? "⚠️ Sync Offline" 
-                    : isSyncing 
-                      ? "Syncing..." 
-                      : mounted && lastSync 
-                        ? `Sandbox Sync • ${Math.max(0, Math.floor((Date.now() - lastSync.getTime()) / 1000))}s` 
-                        : "Sandbox Sync • 0s"}
-                </span>
-              </div>
+              <NetworkStatusBadge compact />
               {workspaceMode === "sample" && rawTabId === "lisbon-24" && (
                 <Link
                   href={`/demo?from=/tab/${rawTabId}`}
@@ -281,6 +274,15 @@ function DashboardContent() {
               <span className="sm:hidden text-xs font-bold">Cert</span>
             </button>
           )}
+          <button
+            onClick={() => setIsOfflineSyncOpen(true)}
+            className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-white/70 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+            title="Offline Mesh Sync (QR)"
+          >
+            <Wifi className="w-3.5 h-3.5 text-indigo-500" />
+            <span className="hidden sm:inline">Offline Sync</span>
+            <span className="sm:hidden text-xs font-bold">Sync</span>
+          </button>
           <button
             onClick={() => setIsImportModalOpen(true)}
             className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-white/70 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
@@ -511,6 +513,12 @@ function DashboardContent() {
         tabId={rawTabId}
         grossVolume={grossVolume}
         memberCount={activeMembers.length > 0 ? activeMembers.length : 1}
+      />
+
+      <OfflineMeshSyncModal
+        isOpen={isOfflineSyncOpen}
+        onClose={() => setIsOfflineSyncOpen(false)}
+        tabId={rawTabId}
       />
 
       {/* Tab Settings Drawer */}
