@@ -38,12 +38,18 @@ export default function AddExpenseFallbackPage() {
       </div>
       <div className="w-full max-w-full px-4 md:px-12 mx-auto mb-12 flex-1 flex flex-col">
         <div className="w-full flex-1 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden">
-          <AddExpenseForm 
-            tabId={tabId}
-            members={memberNames} 
-          currentUser={mounted ? currentUserName : "David"}
-          onSuccess={() => router.push(`/tab/${params.id}`)} 
-        />
+          {mounted ? (
+            <AddExpenseForm 
+              tabId={tabId}
+              members={memberNames} 
+              currentUser={currentUserName}
+              onSuccess={() => router.push(`/tab/${params.id}`)} 
+            />
+          ) : (
+            <div className="w-full h-full min-h-[400px] flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full border-2 border-slate-300 border-t-slate-800 dark:border-white/20 dark:border-t-white animate-spin" />
+            </div>
+          )}
         </div>
       </div>
     </div>
