@@ -39,9 +39,7 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
   const rawList = members.length > 0 
     ? members 
     : (workspaceMode === "sample" && tabId === "lisbon-24" ? ["Aisha", "Kemi", "Ben", activeUser] : [activeUser]);
-  const normalizedMembers = Array.from(new Set(
-    rawList.map(m => (m === "Sarah" && activeUser !== "Sarah") ? activeUser : m)
-  ));
+  const normalizedMembers = Array.from(new Set(rawList));
   if (!normalizedMembers.includes(activeUser)) {
     normalizedMembers.push(activeUser);
   }
@@ -309,10 +307,9 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
 
   useEffect(() => {
     if (activeUser) {
-      setPaidBy(prev => (prev === "Sarah" || prev === "David") ? activeUser : prev);
+      setPaidBy(prev => (prev === "David") ? activeUser : prev);
       setSplitBetween(prev => {
-        const mapped = prev.map(m => (m === "Sarah" && activeUser !== "Sarah") ? activeUser : m);
-        return mapped.includes(activeUser) ? mapped : [...mapped, activeUser];
+        return prev.includes(activeUser) ? prev : [...prev, activeUser];
       });
     }
   }, [activeUser]);

@@ -137,47 +137,49 @@ export default function GlobalHub() {
     <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300 pb-36 lg:pb-36">
       <GlobalNav />
       {/* Header */}
-      <header className="px-6 md:px-12 pt-10 pb-6 flex items-center justify-between max-w-6xl mx-auto w-full">
+      <header className="px-6 md:px-12 pt-10 pb-6 flex items-center justify-between max-w-[1600px] mx-auto w-full">
         <div>
-          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-            <NetworkStatusBadge compact />
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Demo Sandbox (Monad Testnet)
-            </span>
-            <Link 
-              href="/demo?from=/home"
-              className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors"
-              title="Open Demo Mode Selection"
-            >
-              <Sparkles className="w-3 h-3" />
-              <span>Change Mode</span>
-            </Link>
-            <button
-              onClick={() => {
-                sounds.playClick();
-                setShowPitchModal(true);
-              }}
-              className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20 hover:bg-purple-500/20 transition-colors cursor-pointer"
-              title="Open Monad Metropolis Pitch Mode"
-            >
-              <Award className="w-3 h-3 text-purple-600 dark:text-purple-400" />
-              <span>Pitch Mode</span>
-            </button>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {!mounted ? (
-              <div className="h-9 w-52 bg-slate-200 dark:bg-white/10 rounded-xl animate-pulse" />
-            ) : (
-              <>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{greeting}, {profile.name} {emoji}</h1>
-                {workspaceMode === "sample" && (
-                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/20" title="Exploring Lisbon Trip Demo as David">
-                    🏖️ Lisbon Demo Persona
-                  </span>
-                )}
-              </>
-            )}
+          <div className="flex flex-col md:flex-row md:items-end gap-2 md:gap-4 mb-1">
+            <div className="flex items-center gap-2 flex-wrap order-2 md:order-1">
+              {!mounted ? (
+                <div className="h-9 w-52 bg-slate-200 dark:bg-white/10 rounded-xl animate-pulse" />
+              ) : (
+                <>
+                  <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{greeting}, {profile.name} {emoji}</h1>
+                  {workspaceMode === "sample" && (
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/20" title="Exploring Lisbon Trip Demo as David">
+                      🏖️ Lisbon Demo Persona
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-2 flex-wrap order-1 md:order-2 md:pb-1">
+              <NetworkStatusBadge compact />
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Demo Sandbox (Monad Testnet)
+              </span>
+              <Link 
+                href="/demo?from=/home"
+                className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors"
+                title="Open Demo Mode Selection"
+              >
+                <Sparkles className="w-3 h-3" />
+                <span>Change Mode</span>
+              </Link>
+              <button
+                onClick={() => {
+                  sounds.playClick();
+                  setShowPitchModal(true);
+                }}
+                className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20 hover:bg-purple-500/20 transition-colors cursor-pointer"
+                title="Open Monad Metropolis Pitch Mode"
+              >
+                <Award className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+                <span>Pitch Mode</span>
+              </button>
+            </div>
           </div>
           <p className="text-slate-500 dark:text-white/60 mt-0.5 text-sm">
             {!mounted ? (
@@ -219,7 +221,7 @@ export default function GlobalHub() {
         </div>
       </header>
 
-      <main className="px-6 md:px-12 max-w-6xl mx-auto w-full space-y-10">
+      <main className="px-6 md:px-12 max-w-[1600px] mx-auto w-full space-y-10">
         {/* Unified Overall Balance & Payout Hub */}
         <div className="bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-indigo-500/15 dark:from-indigo-500/20 dark:to-purple-500/10 border border-indigo-200/80 dark:border-indigo-500/20 rounded-3xl p-6 md:p-8 relative overflow-hidden shadow-sm">
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">

@@ -4,7 +4,8 @@ import { use } from "react";
 import { ExpenseDetails } from "@/components/tab/expense-details-modal";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
+import { GlobalNav } from "@/components/ui/global-nav";
 
 export default function ExpenseDetailsFallbackPage({ 
   params 
@@ -12,18 +13,35 @@ export default function ExpenseDetailsFallbackPage({
   params: Promise<{ id?: string; expenseId: string }> 
 }) {
   const resolvedParams = use(params);
-  const router = useRouter();
   const routeParams = useParams();
 
   return (
-    <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] flex flex-col items-center p-6 md:p-12 pt-24 text-slate-900 dark:text-white">
-      <Link href={`/tab/${routeParams.id || resolvedParams.id}`} className="flex items-center gap-2 text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white transition-colors mb-8 self-start max-w-lg mx-auto w-full font-medium">
-        <ArrowLeft className="w-5 h-5" /> Back to Tab
-      </Link>
+    <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300 flex flex-col">
+      <GlobalNav />
       
-      <div className="w-full max-w-lg bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden h-[800px] max-h-[85vh]">
-        <ExpenseDetails expenseId={resolvedParams.expenseId} />
+      <div className="sticky top-16 z-30 bg-[#f5f5f7]/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/10 w-full">
+        <header className="px-6 md:px-12 py-3 md:py-4 max-w-[1600px] mx-auto w-full flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link 
+              href={`/tab/${routeParams.id || resolvedParams.id}`} 
+              className="w-10 h-10 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shadow-sm text-slate-700 dark:text-white/80 shrink-0"
+              title="Back to Tab"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight">Expense Ledger</h1>
+              <p className="text-slate-500 dark:text-white/60 text-xs mt-0.5 truncate max-w-xs sm:max-w-md md:max-w-xl">
+                Detailed breakdown and verifiable cryptographic proof
+              </p>
+            </div>
+          </div>
+        </header>
       </div>
+      
+      <main className="flex-1 w-full max-w-[1600px] mx-auto py-8 flex flex-col">
+        <ExpenseDetails expenseId={resolvedParams.expenseId} tabId={resolvedParams.id || "lisbon-24"} />
+      </main>
     </div>
   );
 }

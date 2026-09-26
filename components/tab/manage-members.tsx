@@ -45,22 +45,20 @@ export function ManageMembers({
   // Initialize with members enriched with roles matching actual tab data
   const [memberList, setMemberList] = useState<MemberItem[]>(() => {
     return members.map(m => {
-      const resolvedName = (m.name === "Sarah" && activeUser !== "Sarah") ? activeUser : m.name;
       return {
         ...m,
-        name: resolvedName,
-        role: (resolvedName.toLowerCase() === creatorName.toLowerCase() || m.role === "admin") ? ("admin" as const) : ("member" as const)
+        name: m.name,
+        role: (m.name.toLowerCase() === creatorName.toLowerCase() || m.role === "admin") ? ("admin" as const) : ("member" as const)
       };
     });
   });
 
   useEffect(() => {
     setMemberList(members.map(m => {
-      const resolvedName = (m.name === "Sarah" && activeUser !== "Sarah") ? activeUser : m.name;
       return {
         ...m,
-        name: resolvedName,
-        role: (resolvedName.toLowerCase() === creatorName.toLowerCase() || m.role === "admin") ? ("admin" as const) : ("member" as const)
+        name: m.name,
+        role: (m.name.toLowerCase() === creatorName.toLowerCase() || m.role === "admin") ? ("admin" as const) : ("member" as const)
       };
     }));
   }, [members, activeUser, creatorName]);
@@ -302,7 +300,7 @@ export function ManageMembers({
         </div>
       )}
 
-      <div className="space-y-6 flex-1">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
         {/* Invite Section */}
         <div className="space-y-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-5 rounded-2xl flex flex-col items-center text-center">
           <h3 className="text-xs font-bold text-slate-700 dark:text-white/80 uppercase tracking-wider mb-1">Invite Friends via QR Code</h3>
@@ -421,8 +419,9 @@ export function ManageMembers({
           </div>
         </div>
 
-        {/* Ledger Integrity Safeguard Note */}
-        <div className="p-4 rounded-2xl bg-indigo-50/70 dark:bg-indigo-500/5 border border-indigo-200/70 dark:border-indigo-500/20 flex items-start gap-3 text-xs text-slate-600 dark:text-white/60 leading-relaxed">
+        <div className="lg:col-span-2 space-y-6">
+          {/* Ledger Integrity Safeguard Note */}
+          <div className="p-4 rounded-2xl bg-indigo-50/70 dark:bg-indigo-500/5 border border-indigo-200/70 dark:border-indigo-500/20 flex items-start gap-3 text-xs text-slate-600 dark:text-white/60 leading-relaxed">
           <Info className="w-4 h-4 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5" />
           <div>
             <span className="font-bold text-indigo-900 dark:text-indigo-300">Accounting Safeguard: </span>
@@ -463,6 +462,7 @@ export function ManageMembers({
             </div>
           )}
         </div>
+      </div>
       </div>
 
       {/* Blocked Removal Modal (Active Debt Protection) */}

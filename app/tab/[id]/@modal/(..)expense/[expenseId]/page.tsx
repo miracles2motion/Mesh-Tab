@@ -15,7 +15,7 @@ export default function InterceptedExpenseDetails({
   
   return (
     <Modal>
-      <ExpenseDetails expenseId={resolvedParams.expenseId} onClose={() => router.back()} />
+      <ExpenseDetails expenseId={resolvedParams.expenseId} tabId={resolvedParams.id || "lisbon-24"} onClose={() => router.back()} />
     </Modal>
   );
 }

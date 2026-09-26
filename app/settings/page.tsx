@@ -67,6 +67,14 @@ function SettingsContent() {
   };
 
   const [activeTab, setActiveTab] = useState<"profile" | "copilot" | "advanced">("profile");
+  
+  const handleTabChange = (tab: "profile" | "copilot" | "advanced") => {
+    setActiveTab(tab);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   const [copied, setCopied] = useState(false);
   const [displayName, setDisplayName] = useState(profile.name);
   const [avatarColorIndex, setAvatarColorIndex] = useState(profile.avatarColorIndex);
@@ -223,31 +231,33 @@ function SettingsContent() {
   return (
     <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300">
       <GlobalNav />
-      <header className="px-6 md:px-12 pt-10 pb-6 border-b border-slate-200 dark:border-white/10 max-w-6xl mx-auto w-full flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button 
-            type="button"
-            onClick={handleBack}
-            className="w-10 h-10 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shadow-sm text-slate-700 dark:text-white/80 cursor-pointer"
-            title={fromUrl?.startsWith("/tab") ? "Back to Tab" : "Back to Hub"}
-            aria-label="Go Back"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Settings</h1>
-            <p className="text-slate-500 dark:text-white/60 text-sm mt-0.5">Manage your profile, Tab Co-Pilot, and sandbox preferences</p>
+      <div className="sticky top-16 z-30 bg-[#f5f5f7]/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/10 w-full">
+        <header className="px-6 md:px-12 py-3 md:py-4 max-w-[1600px] mx-auto w-full flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button 
+              type="button"
+              onClick={handleBack}
+              className="w-10 h-10 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shadow-sm text-slate-700 dark:text-white/80 cursor-pointer shrink-0"
+              title={fromUrl?.startsWith("/tab") ? "Back to Tab" : "Back to Hub"}
+              aria-label="Go Back"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight">Settings</h1>
+              <p className="text-slate-500 dark:text-white/60 text-xs mt-0.5 truncate max-w-xs sm:max-w-md md:max-w-xl">Manage your profile, Tab Co-Pilot, and sandbox preferences</p>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      </div>
 
-      <main className="px-6 md:px-12 max-w-6xl mx-auto w-full py-8 grid grid-cols-1 md:grid-cols-4 gap-8">
+      <main className="px-6 md:px-12 max-w-[1600px] mx-auto w-full py-8 flex flex-col md:flex-row gap-8 lg:gap-12">
         
         {/* Sidebar Nav */}
-        <div className="md:col-span-1">
-          <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-2.5 shadow-sm space-y-1.5 h-fit">
+        <div className="w-full md:w-64 lg:w-72 shrink-0">
+          <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-2.5 shadow-sm space-y-1.5 h-fit sticky top-36">
             <button 
-              onClick={() => setActiveTab("profile")}
+              onClick={() => handleTabChange("profile")}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-sm font-semibold text-left ${
                 activeTab === "profile" 
                   ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20" 
@@ -257,7 +267,7 @@ function SettingsContent() {
               <User className="w-4 h-4 shrink-0" /> Profile & Theme
             </button>
             <button 
-              onClick={() => setActiveTab("copilot")}
+              onClick={() => handleTabChange("copilot")}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-sm font-semibold text-left ${
                 activeTab === "copilot" 
                   ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20" 
@@ -267,7 +277,7 @@ function SettingsContent() {
               <Bot className="w-4 h-4 shrink-0" /> Tab Co-Pilot & Faucet
             </button>
             <button 
-              onClick={() => setActiveTab("advanced")}
+              onClick={() => handleTabChange("advanced")}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-sm font-semibold text-left ${
                 activeTab === "advanced" 
                   ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20" 
@@ -280,7 +290,7 @@ function SettingsContent() {
         </div>
 
         {/* Content Area */}
-        <div className="md:col-span-3 space-y-8">
+        <div className="flex-1 space-y-8 min-w-0">
           
           {/* PROFILE & THEME TAB */}
           {activeTab === "profile" && (
@@ -316,7 +326,7 @@ function SettingsContent() {
                     e.preventDefault();
                     handleSaveChanges();
                   }}
-                  className="space-y-4 max-w-sm"
+                  className="space-y-4 max-w-lg"
                 >
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold text-slate-700 dark:text-white/70">Display Name</label>

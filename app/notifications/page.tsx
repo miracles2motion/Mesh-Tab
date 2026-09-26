@@ -135,7 +135,7 @@ function NotificationsContent() {
   return (
     <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300">
       <GlobalNav />
-      <header className="px-6 md:px-12 pt-8 pb-5 border-b border-slate-200/80 dark:border-white/10 max-w-6xl mx-auto w-full flex items-center justify-between bg-[#f5f5f7] dark:bg-[#0a0a0a] z-20">
+      <header className="px-6 md:px-12 pt-8 pb-5 border-b border-slate-200/80 dark:border-white/10 max-w-[1600px] mx-auto w-full flex items-center justify-between bg-[#f5f5f7] dark:bg-[#0a0a0a] z-20">
         <div className="flex items-center gap-4">
           <button 
             type="button"

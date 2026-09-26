@@ -474,9 +474,12 @@ export const DEFAULT_FEED: Record<string, StoredExpense[]> = {
     { id: "1", payer: "Aisha", amount: 60000, desc: "Villa booking", time: "Just now", splitType: "equal", category: "stay", originalCurrency: "EUR", originalAmount: 555.50 },
     { id: "2", payer: "Kemi", amount: 26000, desc: "Dinners & wine", time: "5h ago", splitType: "equal", category: "dining", originalCurrency: "EUR", originalAmount: 240.00 },
     { id: "3", payer: "Ben", amount: 22000, desc: "Excursions", time: "1d ago", splitType: "equal", category: "activities", originalCurrency: "EUR", originalAmount: 203.70 },
+    { id: "settle-ls-1", payer: "You", amount: 15000, desc: "Settled up with Aisha", time: "2d ago", splitType: "exact", splits: { "Aisha": 15000 }, category: "other" },
+    { id: "4", payer: "Aisha", amount: 15000, desc: "Sightseeing tickets", time: "3d ago", splitType: "exact", splits: { "You": 15000 }, category: "activities", originalCurrency: "EUR", originalAmount: 138.89 },
   ],
   "miami-boat": [
-    { id: "mb-1", payer: "You", amount: 150000, desc: "Yacht Rental", time: "2 days ago", splitType: "equal", category: "activities" }
+    { id: "mb-1", payer: "You", amount: 150000, desc: "Yacht Rental", time: "2 days ago", splitType: "equal", category: "activities" },
+    { id: "settle-mb-1", payer: "John", amount: 50000, desc: "Settled up with You", time: "1 day ago", splitType: "exact", splits: { "You": 50000 }, category: "other" }
   ]
 };
 
@@ -491,7 +494,19 @@ export function getStoredExpenses(tabId: string): StoredExpense[] {
     const raw = localStorage.getItem(storageKey);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // Auto-inject missing demo settlement into existing cached sessions
+        if (tabId === "lisbon-24" && !parsed.some(e => e.id === "settle-ls-1")) {
+          const settlement = DEFAULT_FEED["lisbon-24"].find(e => e.id === "settle-ls-1");
+          const offsetExpense = DEFAULT_FEED["lisbon-24"].find(e => e.id === "4");
+          if (settlement && offsetExpense) {
+            const updated = [...parsed, settlement, offsetExpense];
+            localStorage.setItem(storageKey, JSON.stringify(updated));
+            return updated;
+          }
+        }
+        return parsed;
+      }
     }
   } catch (e) {}
 

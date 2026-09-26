@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { X, Receipt, Clock, User, ArrowRight, Trash2, AlertTriangle, Loader2, Edit2, Check } from "lucide-react";
 import { formatCurrency } from "../../lib/utils";
-import { useUserProfile, getWorkspaceMode, getStoredTabMembers, StoredExpense, deleteStoredExpense, updateStoredExpenseDescription } from "../../lib/user";
+import { useUserProfile, getWorkspaceMode, getStoredTabMembers, getStoredExpenses, StoredExpense, deleteStoredExpense, updateStoredExpenseDescription } from "../../lib/user";
 import { pushTabStateToRedis } from "../../lib/sync";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
@@ -13,9 +13,10 @@ import { EXPENSE_CATEGORIES } from "./add-expense-form";
 interface ExpenseDetailsProps {
   onClose?: () => void;
   expenseId: string;
+  tabId: string;
 }
 
-export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
+export function ExpenseDetails({ onClose, expenseId, tabId }: ExpenseDetailsProps) {
   const profile = useUserProfile();
   const currentUserName = profile.name || "David";
   const mode = getWorkspaceMode();
@@ -23,29 +24,19 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // 1. Look up if this is a custom-created expense in localStorage
+  // 1. Look up if this is a custom-created expense in localStorage or default feed
   let foundCustomExpense: StoredExpense | null = null;
-  let tabId = mode === "blank" ? "custom-tab" : "lisbon-24";
   if (typeof window !== "undefined") {
     try {
-      const keys = Object.keys(localStorage).filter(k => 
-        mode === "blank" ? k.startsWith("meshTab_clean_expenses_") : k.startsWith("meshTab_expenses_")
-      );
-      for (const k of keys) {
-        const parsed = JSON.parse(localStorage.getItem(k) || "[]");
-        const match = parsed.find((item: any) => String(item.id) === String(expenseId));
-        if (match) {
-          foundCustomExpense = match;
-          tabId = k.replace(mode === "blank" ? "meshTab_clean_expenses_" : "meshTab_expenses_", "");
-          break;
-        }
-      }
+      const expenses = getStoredExpenses(tabId);
+      foundCustomExpense = expenses.find(e => String(e.id) === String(expenseId)) || null;
     } catch {}
   }
 
-  const isMock1 = mode === "sample" && expenseId === "1";
-  const isMock2 = mode === "sample" && expenseId === "2";
-  const isMock3 = mode === "sample" && expenseId === "3";
+  const isLisbon = mode === "sample" && tabId === "lisbon-24";
+  const isMock1 = isLisbon && expenseId === "1";
+  const isMock2 = isLisbon && expenseId === "2";
+  const isMock3 = isLisbon && expenseId === "3";
 
   const desc = foundCustomExpense?.desc || (isMock1 ? "Villa booking" : isMock2 ? "Dinners & wine" : isMock3 ? "Excursions" : "Shared Group Expense");
   const amount = foundCustomExpense?.amount || (isMock1 ? 60000 : isMock2 ? 26000 : isMock3 ? 22000 : 0);
@@ -56,7 +47,7 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
     ? EXPENSE_CATEGORIES.find(c => c.id === foundCustomExpense.category)
     : (isMock1 ? { label: "Stay", icon: "🏨" } : isMock2 ? { label: "Dining", icon: "🍽️" } : isMock3 ? { label: "Events", icon: "🎟️" } : null);
 
-  const isLisbon = mode === "sample" && (tabId === "lisbon-24" || isMock1 || isMock2 || isMock3);
+
   let dynamicSplits: { name: string; amount: number }[] = [];
   const splitType = foundCustomExpense?.splitType || "equal";
 
@@ -138,6 +129,9 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
 
   return (
     <div className="p-6 md:p-8 flex flex-col h-full bg-white dark:bg-[#0a0a0a] text-slate-900 dark:text-white">
+      <div className="flex flex-col xl:flex-row gap-8 xl:gap-12 flex-1">
+        {/* Left Column: Core Info & Actions */}
+        <div className="flex-1 flex flex-col max-w-3xl">
       {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div className="flex gap-4 items-center">
@@ -231,9 +225,10 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
           </span>
         </div>
       </div>
+      </div>
 
-      {/* Splits Breakdown */}
-      <div className="flex-1">
+      {/* Right Column: Splits Breakdown */}
+      <div className="flex-1 xl:border-l xl:border-slate-200 dark:xl:border-white/10 xl:pl-12 flex flex-col">
         <div className="flex items-center justify-between mb-4 px-2">
           <h3 className="text-slate-700 dark:text-white/80 font-semibold text-sm">Split Breakdown</h3>
           <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-white/60 font-medium">
@@ -282,9 +277,10 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
           ))}
         </div>
       </div>
-
-      {/* Delete Expense Action & Partner Credits */}
-      <div className="mt-8 pt-6 border-t border-slate-200 dark:border-white/10 space-y-4">
+      </div>
+      
+      {/* Footer Actions (Full width below columns) */}
+      <div className="mt-8 pt-6 border-t border-slate-200 dark:border-white/10 space-y-4 shrink-0">
         {showDeleteConfirm ? (
           <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-900 dark:text-rose-200 text-xs space-y-3 animate-in fade-in">
             <div className="flex items-start gap-2.5">

@@ -1031,7 +1031,7 @@ export function MeshBuddy() {
     handleAskQuestion(q);
   };
 
-  if (!buddySettings.enabled) return null;
+  if (!mounted || !buddySettings.enabled) return null;
 
   return (
     <>
