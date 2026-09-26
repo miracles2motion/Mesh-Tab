@@ -32,7 +32,7 @@ export function BalanceCard({ balance, currency, type, onSettle, onRemind, onCas
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`relative overflow-hidden rounded-3xl p-6 md:p-8 bg-white dark:bg-white/5 backdrop-blur-xl border border-slate-200 dark:border-white/10 ${
+      className={`relative overflow-hidden rounded-3xl p-6 md:p-8 bg-white dark:bg-white/5 backdrop-blur-xl border border-slate-200 dark:border-white/10 shadow-2xl shadow-slate-200/50 dark:shadow-none ${
         isSettled 
           ? 'shadow-[0_4px_30px_-5px_rgba(16,185,129,0.15)] dark:shadow-[0_0_40px_-15px_rgba(16,185,129,0.2)]'
           : type === 'debtor' 
@@ -93,23 +93,13 @@ export function BalanceCard({ balance, currency, type, onSettle, onRemind, onCas
               <Zap className="w-5 h-5 fill-current" /> Settle Debt
             </button>
          ) : (
-            <div className="flex-1 flex gap-2">
-              <button 
-                onClick={onCashOut} 
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3.5 md:py-4 rounded-2xl active:scale-95 transition-all text-xs sm:text-sm md:text-base shadow-lg shadow-emerald-500/25 flex justify-center items-center gap-2 cursor-pointer"
-                title="Transfer received funds to your bank account"
-              >
-                <ArrowDownToLine className="w-4 h-4 md:w-5 md:h-5 shrink-0" />
-                <span className="truncate">Cash Out to Bank</span>
-              </button>
-              <button 
-                onClick={onRemind} 
-                className="px-3.5 md:px-4 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-white font-semibold py-3.5 md:py-4 rounded-2xl active:scale-95 transition-all text-xs sm:text-sm flex justify-center items-center gap-1.5 border border-slate-200 dark:border-white/10 shrink-0 cursor-pointer"
-                title="Send reminders to debtors"
-              >
-                <Bell className="w-4 h-4 shrink-0" /> Remind
-              </button>
-            </div>
+            <button 
+              onClick={onRemind} 
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-2xl active:scale-95 transition-all flex justify-center items-center gap-2 text-lg shadow-lg shadow-indigo-500/25 cursor-pointer"
+              title="Send reminders to debtors"
+            >
+              <Bell className="w-5 h-5 fill-current" /> Send Reminders
+            </button>
          )}
       </div>
     </motion.div>

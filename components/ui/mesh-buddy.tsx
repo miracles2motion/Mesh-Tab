@@ -840,6 +840,11 @@ export function MeshBuddy() {
         { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet },
         { label: "🏦 How to Cash Out", action: () => handleAskQuestion("how do i cash out?") },
       ];
+    } else if (/offline|internet|wifi|pwa|airplane mode|install|download/i.test(q)) {
+      replyText = `Yes! MeshTab automatically caches your tabs for offline use. You can log expenses while on airplane mode or deep in the mountains, and they will sync to the group ledger once you reconnect.\n\nYou can also install MeshTab directly to your phone's home screen as a PWA (Progressive Web App) for a full-screen, native app experience!`;
+      actionItems = [
+        { label: "📚 Open Knowledge Base", action: () => setDrawerTab("kb") },
+      ];
     } else if (
       q.includes("mode") ||
       q.includes("demo") ||
@@ -1088,6 +1093,7 @@ export function MeshBuddy() {
 
         {/* The Living Avatar Button */}
         <button
+          suppressHydrationWarning
           onClick={() => {
             if (!isOpen) {
               sounds.playPop();
@@ -1098,7 +1104,7 @@ export function MeshBuddy() {
             setSpeechBubble(null);
           }}
           className="group relative flex items-center justify-center cursor-pointer focus:outline-none transition-transform active:scale-95 min-w-[48px] min-h-[48px]"
-          title={`${buddySettings.name} (Tab Co-Pilot)`}
+          title={mounted ? `${buddySettings.name} (Tab Co-Pilot)` : "Demo Buddy (Tab Co-Pilot)"}
           aria-label="Open Tab Co-Pilot"
         >
           {/* Subtle tactile tap ripple on summon */}

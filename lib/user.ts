@@ -114,7 +114,7 @@ export interface TabSummary {
 }
 
 export const SAMPLE_BENCHMARK_TABS: TabSummary[] = [
-  { id: "lisbon-24", name: "Lisbon Weekend", creator: "Aisha", role: "Member", balance: -18000, memberCount: 4, lastActivity: "2 hours ago" },
+  { id: "lisbon-24", name: "Lisbon Weekend", creator: "Aisha", role: "Member", balance: -27000, memberCount: 4, lastActivity: "2 hours ago" },
   { id: "house-groceries", name: "House Groceries", creator: "Alex", role: "Member", balance: 4500, memberCount: 2, lastActivity: "Yesterday" },
 ];
 
@@ -169,7 +169,7 @@ export function resetLisbonDemo() {
   // 1. Reset Lisbon tab members
   const defaultList: TabMember[] = [
     ...DEFAULT_LISBON_MEMBERS,
-    { name: activeUser, balance: -18000, type: "debtor", role: "member" }
+    { name: activeUser, balance: -27000, type: "debtor", role: "member" }
   ];
   localStorage.setItem("meshTab_members_lisbon-24", JSON.stringify(defaultList));
 
@@ -325,9 +325,9 @@ export interface TabMember {
 }
 
 export const DEFAULT_LISBON_MEMBERS: TabMember[] = [
-  { name: "Aisha", balance: 30000, type: "creditor", role: "admin" },
-  { name: "Kemi", balance: -4000, type: "debtor", role: "member" },
-  { name: "Ben", balance: -8000, type: "debtor", role: "member" },
+  { name: "Aisha", balance: 33000, type: "creditor", role: "admin" },
+  { name: "Kemi", balance: -1000, type: "debtor", role: "member" },
+  { name: "Ben", balance: -5000, type: "debtor", role: "member" },
 ];
 
 export function getStoredTabMembers(tabId: string, currentUserName?: string): TabMember[] {
@@ -338,7 +338,7 @@ export function getStoredTabMembers(tabId: string, currentUserName?: string): Ta
     if (mode === "sample" && tabId === "lisbon-24") {
       return [
         ...DEFAULT_LISBON_MEMBERS,
-        { name: activeUser, balance: -18000, type: "debtor", role: "member" }
+        { name: activeUser, balance: -27000, type: "debtor", role: "member" }
       ];
     }
     return [{ name: activeUser, balance: 0, type: "settled", role: "admin" }];
@@ -366,12 +366,10 @@ export function getStoredTabMembers(tabId: string, currentUserName?: string): Ta
           }
         }
 
-        // Enforce ledger consistency: if all debtors have settled (no negative balances), all members are settled
-        const totalDebts = members.reduce((sum, m) => sum + (m.balance < 0 ? Math.abs(m.balance) : 0), 0);
-        if (totalDebts === 0 && members.some(m => m.type === "settled" || m.balance === 0)) {
+        // Enforce ledger consistency: if all members have settled (no non-zero balances), all members are settled
+        if (members.every(m => m.balance === 0)) {
           return members.map(m => ({
             ...m,
-            balance: 0,
             type: "settled" as const
           }));
         }
@@ -385,7 +383,7 @@ export function getStoredTabMembers(tabId: string, currentUserName?: string): Ta
     if (tabId === "lisbon-24") {
       const defaultList: TabMember[] = [
         ...DEFAULT_LISBON_MEMBERS,
-        { name: activeUser, balance: -18000, type: "debtor", role: "member" }
+        { name: activeUser, balance: -27000, type: "debtor", role: "member" }
       ];
       localStorage.setItem(storageKey, JSON.stringify(defaultList));
       return defaultList;
@@ -477,6 +475,9 @@ export const DEFAULT_FEED: Record<string, StoredExpense[]> = {
     { id: "1", payer: "Aisha", amount: 60000, desc: "Villa booking", time: "Just now", splitType: "equal", category: "stay", originalCurrency: "EUR", originalAmount: 555.50 },
     { id: "2", payer: "Kemi", amount: 26000, desc: "Dinners & wine", time: "5h ago", splitType: "equal", category: "dining", originalCurrency: "EUR", originalAmount: 240.00 },
     { id: "3", payer: "Ben", amount: 22000, desc: "Excursions", time: "1d ago", splitType: "equal", category: "activities", originalCurrency: "EUR", originalAmount: 203.70 },
+  ],
+  "house-groceries": [
+    { id: "hg-1", payer: "David", amount: 9000, desc: "Whole Foods Groceries", time: "Yesterday", splitType: "equal", category: "groceries" }
   ]
 };
 
@@ -499,7 +500,7 @@ export function getStoredExpenses(tabId: string): StoredExpense[] {
   return DEFAULT_FEED[tabId] || [];
 }
 
-export function saveStoredExpense(tabId: string, expense: StoredExpense) {
+export function saveStoredExpense(tabId: string, expense: StoredExpense, skipBalanceUpdate = false) {
   if (typeof window === "undefined") return;
   
   // Tag sync status based on current connectivity
@@ -512,50 +513,44 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense) {
   localStorage.setItem(storageKey, JSON.stringify(updated));
 
   // Dynamically recalculate tab member balances
-  try {
-    const members = getStoredTabMembers(tabId);
-      if (members.length > 0) {
-        const isExact = expense.splitType === "exact" && expense.splits && Object.keys(expense.splits).length > 0;
-        const isSelectedSplit = !isExact && expense.splits && Object.keys(expense.splits).length > 0;
-        const participatingMembers = isSelectedSplit 
-          ? members.filter(m => expense.splits && expense.splits[m.name] !== undefined)
-          : members;
-        
-        const splitCount = Math.max(1, participatingMembers.length);
-        const baseShare = Math.floor(expense.amount / splitCount);
-        let remainderPennies = expense.amount - (baseShare * splitCount);
+  if (!skipBalanceUpdate) {
+    try {
+      const members = getStoredTabMembers(tabId);
+        if (members.length > 0) {
+          const hasSplits = expense.splits && Object.keys(expense.splits).length > 0;
+          
+          // Only participating members matter if splits exist
+          const participatingMembers = hasSplits 
+            ? members.filter(m => expense.splits && expense.splits[m.name] !== undefined && expense.splits[m.name] > 0)
+            : members;
+          
+          const splitCount = Math.max(1, participatingMembers.length);
+          const baseShare = Math.floor(expense.amount / splitCount);
+          let remainderPennies = expense.amount - (baseShare * splitCount);
 
-        const updatedMembers = members.map(m => {
-          let memberOwes = 0;
-          if (isExact) {
-            memberOwes = expense.splits?.[m.name] ?? 0;
-          } else if (isSelectedSplit) {
-            if (expense.splits && expense.splits[m.name] !== undefined) {
+          const updatedMembers = members.map(m => {
+            let memberOwes = 0;
+            if (hasSplits && expense.splits && expense.splits[m.name] !== undefined) {
+              memberOwes = expense.splits[m.name];
+            } else if (!hasSplits) {
               const extraPenny = remainderPennies > 0 ? 1 : 0;
               if (remainderPennies > 0) remainderPennies--;
               memberOwes = baseShare + extraPenny;
-            } else {
-              memberOwes = 0;
             }
-          } else {
-            const extraPenny = remainderPennies > 0 ? 1 : 0;
-            if (remainderPennies > 0) remainderPennies--;
-            memberOwes = baseShare + extraPenny;
-          }
 
-          let delta = -memberOwes;
-          if (m.name.toLowerCase() === expense.payer.toLowerCase()) {
-            delta += expense.amount;
-          }
-          const nextBal = m.balance + delta;
-          const nextType: "creditor" | "debtor" | "settled" =
-            nextBal === 0 ? "settled" : nextBal > 0 ? "creditor" : "debtor";
-          return {
-            ...m,
-            balance: nextBal,
-            type: nextType
-          };
-        });
+            let delta = -memberOwes;
+            if (m.name.toLowerCase() === expense.payer.toLowerCase()) {
+              delta += expense.amount;
+            }
+            const nextBal = m.balance + delta;
+            const nextType: "creditor" | "debtor" | "settled" =
+              nextBal === 0 ? "settled" : nextBal > 0 ? "creditor" : "debtor";
+            return {
+              ...m,
+              balance: nextBal,
+              type: nextType
+            };
+          });
         const membersKey = mode === "blank" ? `meshTab_clean_members_${tabId}` : `meshTab_members_${tabId}`;
         localStorage.setItem(membersKey, JSON.stringify(updatedMembers));
         window.dispatchEvent(new Event("meshTab-members-update"));
@@ -577,6 +572,7 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense) {
         }
       }
     } catch (e) {}
+  }
 
   // Live Notification Dispatch
   try {
@@ -617,10 +613,9 @@ export function deleteStoredExpense(tabId: string, expenseId: string): { success
   try {
     const members = getStoredTabMembers(tabId);
       if (members.length > 0) {
-        const isExact = target.splitType === "exact" && target.splits && Object.keys(target.splits).length > 0;
-        const isSelectedSplit = !isExact && target.splits && Object.keys(target.splits).length > 0;
-        const participatingMembers = isSelectedSplit 
-          ? members.filter(m => target.splits && target.splits[m.name] !== undefined)
+        const hasSplits = target.splits && Object.keys(target.splits).length > 0;
+        const participatingMembers = hasSplits 
+          ? members.filter(m => target.splits && target.splits[m.name] !== undefined && target.splits[m.name] > 0)
           : members;
         
         const splitCount = Math.max(1, participatingMembers.length);
@@ -629,17 +624,9 @@ export function deleteStoredExpense(tabId: string, expenseId: string): { success
 
         const updatedMembers = members.map(m => {
           let memberOwed = 0;
-          if (isExact) {
-            memberOwed = target.splits?.[m.name] ?? 0;
-          } else if (isSelectedSplit) {
-            if (target.splits && target.splits[m.name] !== undefined) {
-              const extraPenny = remainderPennies > 0 ? 1 : 0;
-              if (remainderPennies > 0) remainderPennies--;
-              memberOwed = baseShare + extraPenny;
-            } else {
-              memberOwed = 0;
-            }
-          } else {
+          if (hasSplits && target.splits && target.splits[m.name] !== undefined) {
+            memberOwed = target.splits[m.name];
+          } else if (!hasSplits) {
             const extraPenny = remainderPennies > 0 ? 1 : 0;
             if (remainderPennies > 0) remainderPennies--;
             memberOwed = baseShare + extraPenny;
@@ -782,17 +769,23 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
     window.dispatchEvent(new Event("meshTab-members-update"));
   } catch (e) {}
 
-  // 3. Add settlement entry to tab expenses
+  // 3. Add settlement entry to tab expenses (skip balance update as we just did it manually)
   saveStoredExpense(tabId, {
     id: `settle-${Date.now()}`,
     payer: currentUserName,
     amount: amount,
     desc: "Settled balance in AUSD (Monad)",
     time: "Just now"
-  });
+  }, true);
 
   // 4. Credit the accumulated settled payouts (cashable balance)
-  addSettledPayout(amount);
+  // Only add if the current user is receiving the money, not paying it.
+  // We deduce this if the currentUserName is NOT the one paying, or if we handle payout separately.
+  // Actually, settleTab is called when a user settles their own debt. So they are paying.
+  // If they are paying, their payout balance shouldn't increase.
+  // The only way it increases is if someone ELSE pays them.
+  // Since we don't have multiplayer real-time yet, we will just not add to payout here.
+  // (Removed addSettledPayout(amount) from here to fix M2)
 }
 
 // -------------------------------------------------------------

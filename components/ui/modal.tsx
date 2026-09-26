@@ -11,9 +11,22 @@ interface ModalProps {
   onClose?: () => void;
   className?: string;
   hideCloseButton?: boolean;
+  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "full";
 }
 
-export function Modal({ children, onClose, className, hideCloseButton = false }: ModalProps) {
+const sizeClasses = {
+  sm: "max-w-sm",
+  md: "max-w-md",
+  lg: "max-w-lg",
+  xl: "max-w-xl",
+  "2xl": "max-w-2xl",
+  "3xl": "max-w-3xl",
+  "4xl": "max-w-4xl",
+  "5xl": "max-w-5xl",
+  full: "max-w-full m-4",
+};
+
+export function Modal({ children, onClose, className, hideCloseButton = false, size = "lg" }: ModalProps) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
@@ -59,8 +72,9 @@ export function Modal({ children, onClose, className, hideCloseButton = false }:
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
           className={cn(
-            "relative w-full max-w-lg bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden text-slate-900 dark:text-white",
+            "relative w-full bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden text-slate-900 dark:text-white",
             "sm:rounded-3xl max-h-[92vh] sm:max-h-[88vh] h-full sm:h-auto my-auto flex flex-col",
+            sizeClasses[size],
             className
           )}
         >

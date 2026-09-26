@@ -16,7 +16,7 @@ export default function InterceptedAddExpense() {
   const memberNames = tabMembers.map(m => m.name);
 
   return (
-    <Modal>
+    <Modal size="4xl">
       <AddExpenseForm 
         tabId={tabId}
         members={memberNames} 

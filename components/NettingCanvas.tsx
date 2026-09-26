@@ -339,7 +339,7 @@ export function NettingCanvas({
           </div>
           <div className="space-y-1.5 max-w-sm mx-auto">
             <h4 className="font-bold text-base text-slate-900 dark:text-white">Awaiting Group Expenses</h4>
-            <p className="text-xs text-slate-500 dark:text-white/60 leading-relaxed">
+            <p className="text-xs text-slate-600 dark:text-white/80 leading-relaxed">
               Multilateral Netting collapses circular payment loops (A owes B, B owes C, C owes A) across multiple members.
               Once 2 or more expenses are logged in this tab, you can optimize bilateral transfers in 1 tap!
             </p>
@@ -348,7 +348,7 @@ export function NettingCanvas({
           <div className="pt-2 flex flex-col sm:flex-row gap-2.5 justify-center max-w-xs mx-auto">
             <Link
               href={`/tab/${tabId}/expense/new`}
-              className="py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md"
+              className="py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(79,70,229,0.4)] hover:shadow-[0_0_20px_rgba(79,70,229,0.6)] transition-all"
             >
               <PlusCircle className="w-4 h-4" /> Add First Expense
             </Link>
@@ -365,9 +365,9 @@ export function NettingCanvas({
   }
 
   return (
-    <div className="w-full bg-white dark:bg-[#0c0c0e] border border-slate-200 dark:border-white/10 rounded-[32px] overflow-hidden flex flex-col shadow-2xl text-slate-900 dark:text-white transition-colors max-w-xl mx-auto">
+    <div className="w-full bg-white dark:bg-[#0c0c0e] border border-slate-200 dark:border-white/10 rounded-[32px] overflow-hidden flex flex-col shadow-2xl text-slate-900 dark:text-white transition-colors">
       {/* Header with Monad Partner Accolade */}
-      <div className="p-5 sm:p-6 pr-14 sm:pr-16 border-b border-slate-100 dark:border-white/10 flex justify-between items-center bg-slate-50/70 dark:bg-black/30">
+      <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-white/10 flex justify-between items-center bg-slate-50/70 dark:bg-black/30">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
             <Network className="w-5 h-5" />

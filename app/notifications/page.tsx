@@ -25,6 +25,7 @@ import { useNotifications, formatTimeAgo, NotificationType, AppNotification } fr
 import { useWorkspaceMode } from "../../lib/user";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
+import { GlobalNav } from "../../components/ui/global-nav";
 
 function NotificationsContent() {
   const router = useRouter();
@@ -133,7 +134,8 @@ function NotificationsContent() {
 
   return (
     <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300">
-      <header className="px-6 md:px-12 pt-8 pb-5 border-b border-slate-200/80 dark:border-white/10 max-w-3xl mx-auto w-full flex items-center justify-between sticky top-0 bg-[#f5f5f7]/85 dark:bg-[#0a0a0a]/85 backdrop-blur-xl z-20">
+      <GlobalNav />
+      <header className="px-6 md:px-12 pt-8 pb-5 border-b border-slate-200/80 dark:border-white/10 max-w-6xl mx-auto w-full flex items-center justify-between bg-[#f5f5f7] dark:bg-[#0a0a0a] z-20">
         <div className="flex items-center gap-4">
           <button 
             type="button"
@@ -180,36 +182,36 @@ function NotificationsContent() {
               <Trash2 className="w-4 h-4" />
             </button>
           )}
-
-          <ThemeToggle />
         </div>
       </header>
 
-      <main className="px-6 md:px-12 max-w-3xl mx-auto w-full py-6 space-y-6">
+      <main className="px-6 md:px-12 max-w-4xl mx-auto w-full py-6 space-y-6">
         {/* Filter Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar text-xs font-semibold">
-          {[
-            { id: "all", label: `All (${notifications.length})` },
-            { id: "unread", label: `Unread (${unreadCount})` },
-            { id: "expense", label: "Expenses" },
-            { id: "settlement", label: "Settlements" },
-            { id: "netting", label: "Tangle Netting" }
-          ].map((item) => (
-            <button
-              key={item.id}
-              onClick={() => {
-                sounds.playClick();
-                setFilter(item.id as any);
-              }}
-              className={`px-3.5 py-1.5 rounded-full transition-all shrink-0 cursor-pointer ${
-                filter === item.id
-                  ? "bg-indigo-600 text-white shadow-sm"
-                  : "bg-white dark:bg-white/5 text-slate-600 dark:text-white/60 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10"
-              }`}
-            >
-              {item.label}
-            </button>
-          ))}
+        <div className="flex items-center justify-center sm:justify-start overflow-x-auto pb-1 no-scrollbar text-xs font-semibold">
+          <div className="p-1 bg-slate-200/50 dark:bg-white/5 rounded-full border border-slate-300/50 dark:border-white/10 flex gap-1">
+            {[
+              { id: "all", label: `All (${notifications.length})` },
+              { id: "unread", label: `Unread (${unreadCount})` },
+              { id: "expense", label: "Expenses" },
+              { id: "settlement", label: "Settlements" },
+              { id: "netting", label: "Tangle Netting" }
+            ].map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  sounds.playClick();
+                  setFilter(item.id as any);
+                }}
+                className={`px-3.5 py-1.5 rounded-full transition-all shrink-0 cursor-pointer ${
+                  filter === item.id
+                    ? "bg-white dark:bg-[#1a1a1a] text-indigo-600 dark:text-white shadow-sm shadow-black/5 dark:shadow-black/20"
+                    : "text-slate-600 dark:text-white/50 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50/50 dark:hover:bg-white/5"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Notification Stream */}
@@ -223,12 +225,12 @@ function NotificationsContent() {
                 <div
                   key={notif.id}
                   onClick={() => handleClickNotification(notif)}
-                  className={`group relative flex items-start gap-4 p-4 sm:p-5 rounded-2xl border transition-all shadow-sm ${
+                  className={`group relative flex items-start gap-4 p-4 sm:p-5 rounded-2xl border transition-all ${
                     isClickable ? "cursor-pointer hover:scale-[1.008] active:scale-[0.99]" : ""
                   } ${
                     notif.unread
-                      ? "bg-white dark:bg-white/5 border-indigo-200 dark:border-indigo-500/20 shadow-indigo-500/5"
-                      : "bg-white/50 dark:bg-white/[0.02] border-slate-200/80 dark:border-white/5 hover:bg-white dark:hover:bg-white/5"
+                      ? "bg-white dark:bg-white/[0.04] border-indigo-200 dark:border-indigo-500/20 shadow-md shadow-indigo-500/5 ring-1 ring-indigo-500/10"
+                      : "bg-white/80 dark:bg-white/[0.02] border-slate-200/80 dark:border-white/10 shadow-sm hover:shadow-md hover:bg-white dark:hover:bg-white/5 ring-1 ring-black/5 dark:ring-white/5"
                   }`}
                 >
                   {/* Icon Avatar */}

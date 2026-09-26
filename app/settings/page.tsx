@@ -42,6 +42,7 @@ import { sounds } from "../../lib/sounds";
 import { fireFaucetConfetti } from "../../lib/confetti";
 import { AnimatedCounter } from "../../components/ui/animated-counter";
 import { speak, stopSpeech, VoicePersona } from "../../lib/voice";
+import { GlobalNav } from "../../components/ui/global-nav";
 
 function SettingsContent() {
   const router = useRouter();
@@ -221,7 +222,8 @@ function SettingsContent() {
 
   return (
     <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300">
-      <header className="px-6 md:px-12 pt-10 pb-6 border-b border-slate-200 dark:border-white/10 max-w-4xl mx-auto w-full flex items-center justify-between">
+      <GlobalNav />
+      <header className="px-6 md:px-12 pt-10 pb-6 border-b border-slate-200 dark:border-white/10 max-w-6xl mx-auto w-full flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button 
             type="button"
@@ -237,12 +239,9 @@ function SettingsContent() {
             <p className="text-slate-500 dark:text-white/60 text-sm mt-0.5">Manage your profile, Tab Co-Pilot, and sandbox preferences</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
-        </div>
       </header>
 
-      <main className="px-6 md:px-12 max-w-4xl mx-auto w-full py-8 grid grid-cols-1 md:grid-cols-4 gap-8">
+      <main className="px-6 md:px-12 max-w-6xl mx-auto w-full py-8 grid grid-cols-1 md:grid-cols-4 gap-8">
         
         {/* Sidebar Nav */}
         <div className="md:col-span-1">

@@ -55,23 +55,7 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [currency, setCurrency] = useState<string>(() => {
-    if (defaultCurrency) return defaultCurrency;
-    if (typeof window !== "undefined") {
-      try {
-        const modes = ["meshTab_sample_tabs", "meshTab_clean_tabs"];
-        for (const key of modes) {
-          const raw = localStorage.getItem(key);
-          if (raw) {
-            const tabs = JSON.parse(raw);
-            const found = tabs.find((t: { id: string; currency?: string }) => t.id === tabId);
-            if (found?.currency) return found.currency;
-          }
-        }
-      } catch { /* ignore in demo */ }
-    }
-    return "USD";
-  });
+  const [currency, setCurrency] = useState<string>(defaultCurrency || "USD");
 
   useEffect(() => {
     if (defaultCurrency) {
@@ -93,6 +77,8 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
       }
     } catch { /* ignore in demo */ }
   }, [tabId, defaultCurrency]);
+
+
   const { rate: activeRate, isLive: isRateLive, isLoading: isRateLoading, config: activeCurrencyInfo } = usePythRate(currency);
   const [category, setCategory] = useState<ExpenseCategory>("dining");
   const [amount, setAmount] = useState("");
@@ -386,32 +372,41 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
         }
       });
     } else if (splitType === "percentage") {
+      let allocated = 0;
       normalizedMembers.forEach(m => {
         if (splitBetween.includes(m)) {
           const pct = parseFloat(percentages[m] || "0") || 0;
-          splitsMap[m] = Math.round(totalBillCents * (pct / 100));
+          const amt = Math.round(totalBillCents * (pct / 100));
+          splitsMap[m] = amt;
+          allocated += amt;
         } else {
           splitsMap[m] = 0;
         }
       });
+      if (allocated !== totalBillCents && splitBetween.length > 0) {
+        splitsMap[splitBetween[0]] += (totalBillCents - allocated);
+      }
     } else if (splitType === "shares") {
       const tShares = totalShares || 1;
+      let allocated = 0;
       normalizedMembers.forEach(m => {
         if (splitBetween.includes(m)) {
           const s = parseFloat(shares[m] || "0") || 0;
-          splitsMap[m] = Math.round(totalBillCents * (s / tShares));
+          const amt = Math.round(totalBillCents * (s / tShares));
+          splitsMap[m] = amt;
+          allocated += amt;
         } else {
           splitsMap[m] = 0;
         }
       });
+      if (allocated !== totalBillCents && splitBetween.length > 0) {
+        splitsMap[splitBetween[0]] += (totalBillCents - allocated);
+      }
     } else {
       // Equal split between selected members
+      // Omit unticked members so the ledger accurately counts only ticked members as participants
       splitBetween.forEach(m => {
         splitsMap[m] = Math.round(totalBillCents / splitBetween.length);
-      });
-      // Unticked members owe $0
-      normalizedMembers.filter(m => !splitBetween.includes(m)).forEach(m => {
-        splitsMap[m] = 0;
       });
     }
 
@@ -483,7 +478,8 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
           <p className="text-slate-500 dark:text-white/60 text-sm">Log a new expense to the shared group ledger.</p>
         </div>
 
-        <div className="space-y-6 flex-1 overflow-y-auto pr-2 pb-4">
+        <div className="flex-1 overflow-y-auto pr-2 pb-4 grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-6">
+          <div className="space-y-6">
           {entryMode === "ai" && (
             <div className="space-y-4 mb-2">
               <input 
@@ -767,6 +763,8 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
               })}
             </div>
           </div>
+          </div>
+          <div className="space-y-6">
           
           <div className="grid grid-cols-2 gap-4">
             {/* Paid By Dropdown */}
@@ -1027,9 +1025,10 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
                })}
              </div>
           </div>
+          </div>
         </div>
 
-        <div className="mt-4 pt-6 border-t border-slate-200 dark:border-white/10 flex-shrink-0">
+        <div className="mt-4 pt-6 border-t border-slate-200 dark:border-white/10 flex-shrink-0 lg:col-span-2">
           <Button 
             type="submit" 
             variant="primary" 

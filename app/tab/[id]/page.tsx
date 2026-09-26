@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { Activity, Plus, ArrowLeft, Settings, Users, Download, CheckCircle2, LayoutGrid, Sparkles, Crown, Upload, Award } from "lucide-react";
+import { Activity, Plus, ArrowLeft, Settings, SlidersHorizontal, Users, Download, CheckCircle2, LayoutGrid, Sparkles, Crown, Upload, Award } from "lucide-react";
 import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { BalanceCard } from "../../../components/tab/balance-card";
@@ -24,9 +24,10 @@ import { ThemeToggle } from "../../../components/theme-toggle";
 import { toast } from "sonner";
 import { sounds } from "../../../lib/sounds";
 import { NetworkStatusBadge } from "../../../components/ui/network-status-badge";
-import { Wifi } from "lucide-react";
+import { Wifi, MoreHorizontal } from "lucide-react";
+import { GlobalNav } from "../../../components/ui/global-nav";
 
-import { useUserProfile, useDeveloperMode, useStoredTabs, useStoredExpenses, useStoredTabMembers, useWorkspaceMode } from "../../../lib/user";
+import { useUserProfile, useDeveloperMode, useStoredTabs, useStoredExpenses, useStoredTabMembers, useWorkspaceMode, useSettledPayoutBalance } from "../../../lib/user";
 import { useTabSync } from "../../../lib/sync";
 
 function DashboardContent() {
@@ -39,6 +40,7 @@ function DashboardContent() {
   const { expenses } = useStoredExpenses(rawTabId);
   const { mode: workspaceMode } = useWorkspaceMode();
   const { isSyncing, lastSync, syncError } = useTabSync(rawTabId);
+  const { settledBalance } = useSettledPayoutBalance();
 
   const currentUser = profile.name || "David";
   const { members: activeMembers } = useStoredTabMembers(rawTabId, currentUser);
@@ -94,6 +96,7 @@ function DashboardContent() {
   const [isCertificateOpen, setIsCertificateOpen] = useState(false);
   const [isOfflineSyncOpen, setIsOfflineSyncOpen] = useState(false);
   const [isTabSettingsOpen, setIsTabSettingsOpen] = useState(false);
+  const [isMoreOptionsOpen, setIsMoreOptionsOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<any | null>(null);
   const [paymentRequest, setPaymentRequest] = useState<{ debtorName: string; amount: number } | null>(null);
   const [txState, setTxState] = useState<TransactionState>("idle");
@@ -102,6 +105,17 @@ function DashboardContent() {
   const [mounted, setMounted] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!(e.target as Element).closest('.more-options-container')) {
+        setIsMoreOptionsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -214,13 +228,13 @@ function DashboardContent() {
       messages={{
         authenticating: "Please confirm with Passkey to optimize debts.",
         processing: "Running Tangle Netting Graph Optimization...",
-        success: "Netting Complete: Saved $3,400 in redundant transfers!"
+        success: "Netting Complete: Saved $3,400 in redundant transfers! (Includes $2,700 from prior cumulative cycles)"
       }}
     />
-    <div className="flex-1 flex flex-col pb-36 sm:pb-32 md:pb-12 text-slate-900 dark:text-white transition-colors duration-300">
-      
+    <div className="flex-1 flex flex-col pb-48 lg:pb-48 text-slate-900 dark:text-white transition-colors duration-300">
+      <GlobalNav />
       {/* Header */}
-      <header className="px-4 sm:px-6 md:px-12 pt-6 sm:pt-8 pb-6 flex items-center justify-between border-b border-slate-200 dark:border-white/10 mb-8 max-w-7xl mx-auto w-full gap-4">
+      <header className="px-4 sm:px-6 md:px-12 pt-4 sm:pt-6 pb-4 flex items-center justify-between border-b border-slate-200 dark:border-white/10 mb-8 max-w-6xl mx-auto w-full gap-4 sticky top-[64px] z-30 bg-[#f5f5f7]/95 dark:bg-[#0a0a0a]/95 backdrop-blur-xl">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <Link 
             href="/home" 
@@ -263,81 +277,62 @@ function DashboardContent() {
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          {!hasOutstandingTabDebt && (
+          <div className="relative more-options-container">
             <button
-              onClick={() => setIsCertificateOpen(true)}
-              className="text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-300 hover:text-emerald-900 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 border border-emerald-200 dark:border-emerald-500/20 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
-              title="Share Settlement Certificate"
+              onClick={() => setIsMoreOptionsOpen(!isMoreOptionsOpen)}
+              className="p-2 sm:p-2.5 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-white/80 transition-colors shadow-sm cursor-pointer"
+              title="More Options"
             >
-              <Award className="w-3.5 h-3.5 text-emerald-500" />
-              <span className="hidden sm:inline">Certificate</span>
-              <span className="sm:hidden text-xs font-bold">Cert</span>
+              <MoreHorizontal className="w-5 h-5" />
             </button>
-          )}
-          <button
-            onClick={() => setIsOfflineSyncOpen(true)}
-            className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-white/70 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
-            title="Offline Mesh Sync (QR)"
-          >
-            <Wifi className="w-3.5 h-3.5 text-indigo-500" />
-            <span className="hidden sm:inline">Offline Sync</span>
-            <span className="sm:hidden text-xs font-bold">Sync</span>
-          </button>
-          <button
-            onClick={() => setIsImportModalOpen(true)}
-            className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-white/70 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
-            title="Import from Splitwise or CSV"
-          >
-            <Upload className="w-3.5 h-3.5 text-indigo-500" />
-            <span className="hidden sm:inline">Import</span>
-            <span className="sm:hidden text-xs font-bold">Import</span>
-          </button>
-          <button
-            onClick={exportLedgerCSV}
-            className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-white/70 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
-            title="Export Tab Ledger (CSV)"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Export</span>
-            <span className="sm:hidden text-xs font-bold">CSV</span>
-          </button>
-          <Link 
-            href={`/tab/${params?.id || 'default'}/members`} 
-            className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-white/70 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full transition-colors flex items-center gap-1.5 shadow-sm"
-            title="Manage Group Members"
-          >
-            <Users className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Manage Group</span>
-            <span className="sm:hidden text-xs font-bold">Members</span>
-          </Link>
-          <ThemeToggle />
-          <Link 
-            href={`/settings?from=/tab/${rawTabId}`}
-            className="p-2 sm:p-2.5 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-white/80 transition-colors shadow-sm"
-            title="Global Settings"
-            aria-label="Global Settings"
-          >
-            <Settings className="w-4 h-4" />
-          </Link>
-          <button
-            onClick={() => setIsTabSettingsOpen(true)}
-            className="p-2 sm:p-2.5 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-white/80 transition-colors shadow-sm cursor-pointer"
-            title="Tab Settings"
-            aria-label="Tab Settings"
-          >
-            <Settings className="w-4 h-4 text-indigo-500" />
-          </button>
-          <Link 
-            href={`/settings?from=/tab/${rawTabId}`}
-            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full ${profile.avatarColor} text-white flex items-center justify-center font-bold text-sm sm:text-base shadow-md hover:scale-105 active:scale-95 transition-transform`}
-            title={`Profile (${currentUser})`}
-          >
-            {currentUser ? currentUser[0].toUpperCase() : "U"}
-          </Link>
+            {isMoreOptionsOpen && (
+              <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 shadow-xl overflow-hidden z-50 flex flex-col text-sm font-semibold text-slate-700 dark:text-white/80">
+                {!hasOutstandingTabDebt && (
+                  <button
+                    onClick={() => { setIsMoreOptionsOpen(false); setIsCertificateOpen(true); }}
+                    className="w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-2 text-emerald-600 dark:text-emerald-400"
+                  >
+                    <Award className="w-4 h-4" /> Settlement Certificate
+                  </button>
+                )}
+                <button
+                  onClick={() => { setIsMoreOptionsOpen(false); setIsOfflineSyncOpen(true); }}
+                  className="w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-2"
+                >
+                  <Wifi className="w-4 h-4" /> Offline Sync
+                </button>
+                <button
+                  onClick={() => { setIsMoreOptionsOpen(false); setIsImportModalOpen(true); }}
+                  className="w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-2"
+                >
+                  <Upload className="w-4 h-4" /> Import Expenses
+                </button>
+                <button
+                  onClick={() => { setIsMoreOptionsOpen(false); exportLedgerCSV(); }}
+                  className="w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" /> Export Ledger (CSV)
+                </button>
+                <Link
+                  href={`/tab/${params?.id || 'default'}/members`}
+                  onClick={() => setIsMoreOptionsOpen(false)}
+                  className="w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-2"
+                >
+                  <Users className="w-4 h-4" /> Manage Group
+                </Link>
+                <button
+                  onClick={() => { setIsMoreOptionsOpen(false); setIsTabSettingsOpen(true); }}
+                  className="w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-2 border-t border-slate-100 dark:border-white/5"
+                >
+                  <SlidersHorizontal className="w-4 h-4" /> Tab Settings
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
-      <div className="px-6 md:px-12 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+      <div className="px-6 md:px-12 max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 pb-28 sm:pb-32">
         
         {/* Left Column (Stats & Desktop Actions) */}
         <div className="lg:col-span-4 space-y-8">
@@ -347,12 +342,11 @@ function DashboardContent() {
             type={currentUserData.type}
             onSettle={() => setIsSettlementOpen(true)}
             onCashOut={() => setIsCashOutOpen(true)}
-            onRemind={async () => {
-              setNettingTxState("authenticating");
-              await new Promise(r => setTimeout(r, 800));
-              setNettingTxState("success");
-              await new Promise(r => setTimeout(r, 1200));
-              setNettingTxState("idle");
+            onRemind={() => {
+              sounds.playClick();
+              toast.success("Reminders Sent!", {
+                description: "Nudged all debtors in the group via push notification."
+              });
             }}
           />
 
@@ -362,33 +356,7 @@ function DashboardContent() {
           {/* Smart Rebalancer */}
           <SmartRebalancer members={activeMembers} expenses={expenses} currentUserName={currentUser} />
           
-          {/* Desktop Actions */}
-          <div className="hidden lg:flex flex-col gap-4">
-            <button 
-              onClick={() => setIsNettingModalOpen(true)}
-              className={`w-full py-4 rounded-2xl font-bold border transition-all flex items-center justify-center gap-2 text-lg shadow-sm cursor-pointer ${
-                hasOutstandingTabDebt
-                  ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/20"
-                  : "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/20 hover:bg-emerald-100 dark:hover:bg-emerald-500/20"
-              }`}
-            >
-              {hasOutstandingTabDebt ? (
-                <>
-                  <Activity className="w-5 h-5" /> Run Tangle Netting
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" /> Tangle Netting (Settled)
-                </>
-              )}
-            </button>
-            <Link 
-              href={`/tab/${params?.id || 'default'}/expense/new`} 
-              className="w-full py-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:hover:bg-white/90 dark:text-black font-bold shadow-lg hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 text-lg"
-            >
-              <Plus className="w-5 h-5" /> Add New Expense
-            </Link>
-          </div>
+          {/* Desktop actions moved to sticky dock */}
         </div>
 
         {/* Right Column (Roster & Feed) */}
@@ -405,33 +373,33 @@ function DashboardContent() {
         </div>
       </div>
 
-      {/* Mobile Floating Action Bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-slate-50 via-slate-50/90 dark:from-black dark:via-black/90 to-transparent z-40 pointer-events-none pb-[env(safe-area-inset-bottom,24px)]">
-        <div className="flex gap-4 pointer-events-auto max-w-md mx-auto w-full">
+      {/* Modern Web2 Sticky Bottom Action Dock on Mobile & Desktop */}
+      <div className="fixed bottom-6 lg:bottom-10 inset-x-0 z-40 flex justify-center pointer-events-none px-4">
+        <div className="bg-white/95 dark:bg-[#121212]/95 backdrop-blur-2xl border border-slate-200/90 dark:border-white/15 rounded-full p-2 flex items-center justify-between gap-2 shadow-2xl w-full max-w-sm md:max-w-md mx-auto pointer-events-auto">
           <button 
             onClick={() => setIsNettingModalOpen(true)}
-            className={`flex-1 border font-bold py-4 rounded-2xl backdrop-blur-xl flex items-center justify-center gap-2 shadow-md cursor-pointer ${
+            className={`flex-[1.5] border font-bold py-3 sm:py-3.5 px-4 rounded-full flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all active:scale-95 text-xs sm:text-sm ${
               hasOutstandingTabDebt 
-                ? "bg-indigo-600/90 hover:bg-indigo-600 text-white border-indigo-500/30" 
-                : "bg-emerald-600/90 hover:bg-emerald-600 text-white border-emerald-500/30"
+                ? "bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30" 
+                : "bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30"
             }`}
           >
             {hasOutstandingTabDebt ? (
               <>
-                <Activity className="w-5 h-5" /> Run Netting
+                <Activity className="w-4 h-4 sm:w-5 sm:h-5" /> <span>Run Netting</span>
               </>
             ) : (
               <>
-                <CheckCircle2 className="w-5 h-5" /> Settled
+                <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 dark:text-emerald-400" /> <span>Settled</span>
               </>
             )}
           </button>
           <Link 
             href={`/tab/${params?.id || 'default'}/expense/new`} 
-            className="w-16 rounded-2xl bg-slate-900 text-white dark:bg-white dark:text-black flex items-center justify-center shadow-xl active:scale-95 transition-transform"
+            className="flex-1 bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-white/90 py-3 sm:py-3.5 px-4 rounded-full font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-transform"
             aria-label="Add Expense"
           >
-            <Plus className="w-7 h-7" />
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" /> <span>Expense</span>
           </Link>
         </div>
       </div>
@@ -447,7 +415,7 @@ function DashboardContent() {
       <CashOutDrawer 
         isOpen={isCashOutOpen}
         onClose={() => setIsCashOutOpen(false)}
-        availableAmount={Math.abs(currentUserData.balance)}
+        availableAmount={settledBalance}
         currentUserName={currentUser}
       />
 
@@ -468,6 +436,7 @@ function DashboardContent() {
           setSelectedMember(null);
           setIsSettlementOpen(true);
         }}
+        memberCount={activeMembers.length || 1}
       />
 
       {/* Payment Request Drawer */}
@@ -484,7 +453,7 @@ function DashboardContent() {
       )}
 
       {isNettingModalOpen && (
-        <Modal onClose={() => setIsNettingModalOpen(false)} className="max-w-xl bg-transparent border-0 shadow-none">
+        <Modal onClose={() => setIsNettingModalOpen(false)} size="3xl" hideCloseButton className="bg-transparent border-0 shadow-none">
           <NettingCanvas 
             tabId={rawTabId} 
             members={activeMembers} 

@@ -164,7 +164,7 @@ export function CategoryAnalytics({ expenses, currentUserName }: CategoryAnalyti
                     <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-500/8 border border-amber-100 dark:border-amber-500/15">
                       <TrendingUp className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
                       <span className="text-xs text-amber-800 dark:text-amber-300">
-                        <span className="font-bold">{analytics.topSpender[0]}</span> spent the most ({formatCurrency(analytics.topSpender[1])})
+                        <span className="font-bold">{analytics.topSpender[0]}</span> contributed the most ({formatCurrency(analytics.topSpender[1])})
                       </span>
                     </div>
                   )}

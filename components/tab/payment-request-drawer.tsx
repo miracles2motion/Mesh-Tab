@@ -75,13 +75,7 @@ export function PaymentRequestDrawer({
   return (
     <Sheet isOpen={isOpen} onClose={onClose}>
       <div className="p-6 md:p-8 flex flex-col items-center text-center max-w-md mx-auto w-full bg-white dark:bg-[#0a0a0a] text-slate-900 dark:text-white relative">
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-6 right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 text-slate-500 hover:text-slate-800 dark:text-white/60 dark:hover:text-white flex items-center justify-center transition-colors"
-        >
-          <X className="w-4 h-4" />
-        </button>
+
 
         {/* Debtor Profile Pill */}
         <div className="w-16 h-16 rounded-full bg-rose-500/10 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold text-2xl mb-4 border border-rose-500/20">

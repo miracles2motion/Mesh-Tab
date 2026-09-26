@@ -198,14 +198,7 @@ export function ExpenseDetails({ onClose, expenseId }: ExpenseDetailsProps) {
             </div>
           </div>
         </div>
-        {onClose && (
-          <button 
-            onClick={onClose}
-            className="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 dark:bg-white/5 dark:hover:bg-white/10 dark:text-white/70 dark:hover:text-white flex items-center justify-center transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        )}
+
       </div>
 
       {/* Total & Payer */}

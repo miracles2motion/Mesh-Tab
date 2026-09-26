@@ -71,7 +71,7 @@ export default function RootLayout({
             `,
           }}
         />
-        <main className="flex-1 flex flex-col w-full min-h-[100dvh] relative overflow-x-hidden">
+        <main className="flex-1 flex flex-col w-full min-h-[100dvh] relative overflow-x-clip">
           {children}
         </main>
         <PwaRegister />

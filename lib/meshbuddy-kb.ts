@@ -5,6 +5,7 @@ export type KBCategoryId =
   | "expenses" 
   | "groups" 
   | "sandbox" 
+  | "offline"
   | "security";
 
 export interface KBCategory {
@@ -73,6 +74,12 @@ export const KB_CATEGORIES: KBCategory[] = [
     description: "Lisbon '24 sample trip, Clean Slate mode, and demo guide."
   },
   {
+    id: "offline",
+    label: "Offline Mode & PWA",
+    icon: "📶",
+    description: "Install MeshTab as an app and sync expenses offline."
+  },
+  {
     id: "security",
     label: "Security & Passkeys",
     icon: "🔒",
@@ -104,7 +111,7 @@ export const KB_ARTICLES: KBArticle[] = [
     title: "The Lisbon '24 Netting Benchmark Explained",
     keywords: ["lisbon", "benchmark", "75%", "reduction", "aisha", "villa", "12", "3 payments"],
     summary: "The benchmark demonstrates 4 international travelers who spent $1,200 across 12 crisscrossing debts. Netting reduces this to 3 direct payments.",
-    detailedContent: "In the pre-loaded Lisbon trip:\n1. Total Expenses: $1,200 spent across 4 friends (Aisha, Kemi, Ben, and You).\n2. Gross Debt Matrix: 12 separate peer-to-peer transfers totaling $1,200.\n3. Netting Algorithm: Collapses all mutual counter-claims.\n4. Result: Only 3 direct payments totaling $300 are required (all paid to Aisha who covered the $600 villa). $900 in international payment volume is cleared instantly with zero transfer fees.",
+    detailedContent: "In the pre-loaded Lisbon trip:\n1. Total Expenses: $1,200 spent across 4 friends (Aisha, Kemi, Ben, and You).\n2. Gross Debt Matrix: 12 separate peer-to-peer transfers totaling $1,200.\n3. Netting Algorithm: Collapses all mutual counter-claims.\n4. Result: Only 3 direct payments totaling $300 are required (all paid to Aisha who covered the $600 villa). $900 in international payment volume is cleared instantly with zero transfer fees. *Note: Efficiency claims showing larger savings (e.g., $3,400) represent historical cumulative cycles.*",
     contextAdvice: {
       demo: "You are currently viewing this exact benchmark! Check the Netting graph and tap 'Run Tangle Netting'.",
       customTab: "This benchmark is separate from your custom tab. You can view it anytime from the Demo Selector.",
@@ -296,6 +303,26 @@ export const KB_ARTICLES: KBArticle[] = [
       { label: "Switch Mode Now", type: "toggle-mode" },
       { label: "Go to /demo", type: "navigate", destination: "/demo" }
     ]
+  },
+
+  // --- Offline Mode & PWA ---
+  {
+    id: "offline-pwa-install",
+    categoryId: "offline",
+    title: "How do I install MeshTab as an app (PWA)?",
+    keywords: ["install", "pwa", "app", "home screen", "download", "ios", "android"],
+    summary: "MeshTab can be installed directly to your phone's home screen without an app store.",
+    detailedContent: "On iOS Safari: Tap the Share button, then select 'Add to Home Screen'.\nOn Android Chrome: Tap the three dots menu, then select 'Install App'.\nOnce installed, MeshTab functions like a native app with full screen view, fast loading, and offline capabilities.",
+    actions: []
+  },
+  {
+    id: "offline-sync",
+    categoryId: "offline",
+    title: "Does MeshTab work offline? How does sync work?",
+    keywords: ["offline", "sync", "no internet", "airplane mode", "connection", "wifi"],
+    summary: "Yes! MeshTab automatically caches your tabs. You can log expenses while on airplane mode, and they will sync once you reconnect.",
+    detailedContent: "When you lose connection, MeshTab enters Offline Mode. You can still view ledgers, add new expenses, and calculate balances. When your connection is restored, the Background Sync API automatically uploads pending expenses and resolves any conflicts with the group ledger.",
+    actions: []
   },
 
   // --- Security & Privacy ---

@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { AnimatedCounter } from "../../components/ui/animated-counter";
 import { NetworkStatusBadge } from "../../components/ui/network-status-badge";
+import { GlobalNav } from "../../components/ui/global-nav";
 
 export default function GlobalHub() {
   const router = useRouter();
@@ -133,9 +134,10 @@ export default function GlobalHub() {
         success: "Joined successfully!"
       }}
     />
-    <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300 pb-28 md:pb-16">
+    <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300 pb-36 lg:pb-36">
+      <GlobalNav />
       {/* Header */}
-      <header className="px-6 md:px-12 pt-10 pb-6 flex items-center justify-between max-w-5xl mx-auto w-full">
+      <header className="px-6 md:px-12 pt-10 pb-6 flex items-center justify-between max-w-6xl mx-auto w-full">
         <div>
           <div className="flex items-center gap-2 mb-1.5 flex-wrap">
             <NetworkStatusBadge compact />
@@ -202,7 +204,6 @@ export default function GlobalHub() {
               </span>
             </button>
           )}
-          <ThemeToggle />
           <Link 
             href="/notifications?from=/home" 
             className="relative w-10 h-10 md:w-12 md:h-12 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shadow-sm text-slate-700 dark:text-white/80"
@@ -215,28 +216,10 @@ export default function GlobalHub() {
               </span>
             )}
           </Link>
-          <Link 
-            href="/settings?from=/home" 
-            className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shadow-sm text-slate-700 dark:text-white/80"
-            title="Settings"
-          >
-            <Settings className="w-5 h-5" />
-          </Link>
-          {!mounted ? (
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-slate-200 dark:bg-white/10 animate-pulse" />
-          ) : (
-            <Link 
-              href="/settings?from=/home" 
-              className={`w-10 h-10 md:w-12 md:h-12 rounded-full ${profile.avatarColor} text-white flex items-center justify-center shadow-md hover:scale-105 transition-transform text-lg font-bold`}
-              title={`Profile (${profile.name})`}
-            >
-              {profile.name ? profile.name[0].toUpperCase() : "U"}
-            </Link>
-          )}
         </div>
       </header>
 
-      <main className="px-6 md:px-12 max-w-5xl mx-auto w-full space-y-10">
+      <main className="px-6 md:px-12 max-w-6xl mx-auto w-full space-y-10">
         {/* Unified Overall Balance & Payout Hub */}
         <div className="bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-indigo-500/15 dark:from-indigo-500/20 dark:to-purple-500/10 border border-indigo-200/80 dark:border-indigo-500/20 rounded-3xl p-6 md:p-8 relative overflow-hidden shadow-sm">
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -475,51 +458,27 @@ export default function GlobalHub() {
           </div>
         </div>
 
-        {/* Desktop Actions */}
-        <div className="hidden md:flex gap-4">
-          <Link 
-            href="/tab/new" 
-            className="flex-1 bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:hover:bg-white/90 dark:text-black px-6 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-md"
-          >
-            <Plus className="w-5 h-5" />
-            <span>Create New Tab</span>
-          </Link>
-          <button 
-            onClick={() => setShowJoinModal(true)}
-            className="flex-1 bg-white dark:bg-indigo-500/10 hover:bg-slate-100 dark:hover:bg-indigo-500/20 border border-slate-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-300 px-6 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] shadow-sm cursor-pointer"
-          >
-            <QrCode className="w-5 h-5" />
-            <span>Join via Code</span>
-          </button>
-        </div>
+        {/* Desktop floating dock was moved */}
       </main>
 
-      {/* Modern Web2 Sticky Bottom Action Dock on Mobile */}
-      <div className="md:hidden fixed bottom-6 inset-x-4 z-40">
-        <div className="bg-white/95 dark:bg-[#121212]/95 backdrop-blur-2xl border border-slate-200/90 dark:border-white/15 rounded-full p-2 flex items-center justify-between gap-2 shadow-2xl max-w-sm mx-auto">
+      {/* Modern Web2 Sticky Bottom Action Dock on Mobile & Desktop */}
+      <div className="fixed bottom-6 lg:bottom-10 inset-x-0 z-40 flex justify-center pointer-events-none px-4">
+        <div className="bg-white/95 dark:bg-[#121212]/95 backdrop-blur-2xl border border-slate-200/90 dark:border-white/15 rounded-full p-2 flex items-center justify-between gap-2 shadow-2xl w-full max-w-sm md:max-w-md mx-auto pointer-events-auto">
           <Link 
             href="/tab/new" 
-            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-4 rounded-full font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-indigo-500/25 active:scale-95 transition-transform"
+            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-4 rounded-full font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md shadow-indigo-500/25 active:scale-95 transition-transform"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
             <span>New Tab</span>
           </Link>
 
           <button 
             onClick={() => setShowJoinModal(true)}
-            className="flex-1 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-800 dark:text-white py-3 px-4 rounded-full font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-transform cursor-pointer"
+            className="flex-1 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-800 dark:text-white py-3 px-4 rounded-full font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-transform cursor-pointer"
           >
-            <QrCode className="w-4 h-4" />
+            <QrCode className="w-4 h-4 sm:w-5 sm:h-5" />
             <span>Join Code</span>
           </button>
-
-          <Link 
-            href="/settings?from=/home"
-            className="p-3 rounded-full bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-white/80 hover:bg-slate-200 dark:hover:bg-white/15 transition-colors"
-            title="Settings"
-          >
-            <Settings className="w-4 h-4" />
-          </Link>
         </div>
       </div>
 

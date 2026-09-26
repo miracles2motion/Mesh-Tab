@@ -79,9 +79,12 @@ export function RosterCarousel({
   return (
     <div className="space-y-4">
       {/* Group Roster Header Row */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-white/80">Group Roster</h3>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white/80 flex items-center gap-2">
+            Group Roster
+            <span className="text-xs text-slate-500 dark:text-white/40 font-mono font-normal bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-md border border-slate-200 dark:border-white/10">Gross Vol: {formatCurrency(grossVolume)}</span>
+          </h3>
 
           {/* Ping Button: Available ONLY when a debt is not yet settled by one or more members */}
           {debtorsToPing.length > 0 ? (
@@ -115,8 +118,6 @@ export function RosterCarousel({
             </span>
           )}
         </div>
-
-        <span className="text-xs text-slate-500 dark:text-white/40 font-mono">Gross Vol: {formatCurrency(grossVolume)}</span>
       </div>
       
       {/* Roster Cards Carousel */}

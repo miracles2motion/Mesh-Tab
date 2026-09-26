@@ -23,6 +23,7 @@ interface MemberDetailsDrawerProps {
   expenses: StoredExpense[];
   onRequestPayment?: (debtorName: string, amount: number) => void;
   onSettleSelf?: () => void;
+  memberCount: number;
 }
 
 export function MemberDetailsDrawer({
@@ -34,7 +35,8 @@ export function MemberDetailsDrawer({
   currentUserName,
   expenses,
   onRequestPayment,
-  onSettleSelf
+  onSettleSelf,
+  memberCount
 }: MemberDetailsDrawerProps) {
   if (!member) return null;
 
@@ -60,7 +62,7 @@ export function MemberDetailsDrawer({
         memberShare = exp.splits[member.name] || 0;
       } else {
         // Equal split estimation
-        const splitCount = exp.splits ? Object.keys(exp.splits).length : 4;
+        const splitCount = exp.splits ? Object.keys(exp.splits).length : memberCount;
         memberShare = Math.round(exp.amount / Math.max(1, splitCount));
       }
 
@@ -79,13 +81,7 @@ export function MemberDetailsDrawer({
   return (
     <Sheet isOpen={isOpen} onClose={onClose}>
       <div className="p-6 md:p-8 flex flex-col max-w-md mx-auto w-full bg-white dark:bg-[#0a0a0a] text-slate-900 dark:text-white relative max-h-[85vh] overflow-y-auto">
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-6 right-6 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 text-slate-500 hover:text-slate-800 dark:text-white/60 dark:hover:text-white flex items-center justify-center transition-colors z-10"
-        >
-          <X className="w-4 h-4" />
-        </button>
+
 
         {/* Member Profile Header */}
         <div className="flex items-center gap-4 mb-6">
