@@ -159,9 +159,13 @@ export function OfflineMeshSyncModal({ isOpen, onClose, tabId }: OfflineMeshSync
     toast.success("Demo payload generated!");
   };
 
+  if (!isOpen) return null;
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Offline Mesh Sync">
-      <div className="flex bg-slate-100 dark:bg-white/5 p-1 rounded-xl mb-6">
+    <Modal onClose={onClose}>
+      <div className="p-6">
+        <h2 className="text-xl font-bold mb-4 text-slate-900 dark:text-white">Offline Mesh Sync</h2>
+        <div className="flex bg-slate-100 dark:bg-white/5 p-1 rounded-xl mb-6">
         <button
           onClick={() => { setActiveTab("share"); sounds.playClick(); }}
           className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors ${
@@ -288,6 +292,7 @@ export function OfflineMeshSyncModal({ isOpen, onClose, tabId }: OfflineMeshSync
           )}
         </div>
       )}
+      </div>
     </Modal>
   );
 }

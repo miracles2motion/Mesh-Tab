@@ -715,7 +715,9 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
                   {(isRateLive && isEffectivelyOnline) ? (
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" title="Live Pyth Hermes stream active" />
                   ) : (
-                    <CloudUpload className="w-3 h-3 ml-0.5 text-amber-500" title="Offline - Using cached Pyth rate" />
+                    <span title="Offline - Using cached Pyth rate">
+                      <CloudUpload className="w-3 h-3 ml-0.5 text-amber-500" />
+                    </span>
                   )}
                 </div>
               </div>
