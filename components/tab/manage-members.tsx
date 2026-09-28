@@ -17,6 +17,7 @@ interface MemberItem {
 
 import { useUserProfile, saveStoredTabMembers, useWorkspaceMode, seedDemoExpenses } from "../../lib/user";
 import { pushTabStateToRedis } from "../../lib/sync";
+import { isEffectivelyOnline } from "../../lib/network";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 
@@ -241,8 +242,10 @@ export function ManageMembers({
     toast.info("Deleting tab from network...");
 
     try {
-      // API call to wipe from Redis
-      await fetch(`/api/sync/${tabId}?mode=${workspaceMode}`, { method: "DELETE" });
+      // API call to wipe from Redis if online
+      if (isEffectivelyOnline()) {
+        await fetch(`/api/sync/${tabId}?mode=${workspaceMode}`, { method: "DELETE" }).catch(() => {});
+      }
 
       // Wipe local storage
       const mode = workspaceMode;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { isEffectivelyOnline } from "./network";
 
 export interface CurrencyConfig {
   code: string;
@@ -114,8 +115,8 @@ export async function getLivePythRate(currencyCode: string): Promise<{ rate: num
     return { rate: cached.rate, isLive: true };
   }
 
-  // If no Pyth feed ID is registered, use configured benchmark rate
-  if (!config.pythFeedId) {
+  // If no Pyth feed ID is registered or we are effectively offline (airplane mode), use configured benchmark rate
+  if (!config.pythFeedId || !isEffectivelyOnline()) {
     return { rate: config.fallbackRate, isLive: false };
   }
 

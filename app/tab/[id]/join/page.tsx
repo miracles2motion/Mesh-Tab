@@ -6,6 +6,7 @@ import { Sparkles, Fingerprint, ArrowRight, UserPlus, CheckCircle2 } from "lucid
 import { toast } from "sonner";
 import { getStoredTabMembers, saveStoredTabMembers, type TabMember, saveNewTab, saveStoredUser } from "../../../../lib/user";
 import { pushTabStateToRedis } from "../../../../lib/sync";
+import { isEffectivelyOnline } from "../../../../lib/network";
 import { sounds } from "../../../../lib/sounds";
 import confetti from "canvas-confetti";
 import { DynamicLogo } from "../../../../components/ui/partner-logo";
@@ -36,19 +37,21 @@ export default function JoinTabPage() {
     // Simulate biometric authentication delay
     await new Promise(r => setTimeout(r, 1800));
     
-    // Fetch live member roster from Redis so cold joiner starts with full group state
+    // Fetch live member roster from Redis so cold joiner starts with full group state if online
     let members = getStoredTabMembers(tabId);
-    try {
-      const mode = typeof window !== "undefined" ? (localStorage.getItem("meshTab_workspaceMode") || "blank") : "blank";
-      const res = await fetch(`/api/sync/${tabId}?mode=${mode}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.members && Array.isArray(data.members) && data.members.length > 0) {
-          members = data.members;
+    if (isEffectivelyOnline()) {
+      try {
+        const mode = typeof window !== "undefined" ? (localStorage.getItem("meshTab_workspaceMode") || "blank") : "blank";
+        const res = await fetch(`/api/sync/${tabId}?mode=${mode}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.members && Array.isArray(data.members) && data.members.length > 0) {
+            members = data.members;
+          }
         }
+      } catch (e) {
+        console.error("Failed to fetch server tab members on join:", e);
       }
-    } catch (e) {
-      console.error("Failed to fetch server tab members on join:", e);
     }
 
     const existing = members.find(m => m.name.toLowerCase() === trimmedName.toLowerCase());

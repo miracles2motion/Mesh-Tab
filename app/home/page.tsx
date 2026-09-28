@@ -232,7 +232,7 @@ export default function GlobalHub() {
               {!mounted ? (
                 <div className="h-10 w-44 bg-slate-200 dark:bg-white/10 rounded-2xl animate-pulse mt-1 mb-2" />
               ) : (
-                <div className={`text-3xl sm:text-4xl md:text-5xl font-bold mt-1 tracking-tight break-words min-w-0 ${netBalance < 0 ? "text-rose-600 dark:text-rose-400" : netBalance > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-900 dark:text-white"}`}>
+                <div className={`text-3xl sm:text-4xl md:text-5xl font-bold mt-1 tracking-tight break-words min-w-0 ${netBalance < 0 ? "text-rose-600 dark:text-rose-400" : netBalance > 0 ? "text-amber-500 dark:text-amber-400" : "text-slate-900 dark:text-white"}`}>
                   {netBalance < 0 ? "-" : netBalance > 0 ? "+" : ""}<AnimatedCounter value={Math.abs(netBalance) / 100} prefix="$" decimals={2} />
                 </div>
               )}
@@ -277,7 +277,7 @@ export default function GlobalHub() {
               </div>
               <div className="w-px h-8 bg-slate-200 dark:bg-white/10" />
               <div className="space-y-0.5">
-                <div className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                <div className="flex items-center gap-1 text-amber-500 dark:text-amber-400 font-semibold">
                   <TrendingUp className="w-3.5 h-3.5" />
                   <span>You're Owed</span>
                 </div>
@@ -285,7 +285,7 @@ export default function GlobalHub() {
                   {!mounted ? <span className="inline-block h-4 w-14 bg-slate-200 dark:bg-white/10 rounded animate-pulse" /> : formatCurrency(totalOwedToYou)}
                 </div>
               </div>
-              {settledBalance > 0 && (
+              {mounted && settledBalance > 0 && (
                 <>
                   <div className="w-px h-8 bg-slate-200 dark:bg-white/10" />
                   <div className="space-y-0.5">
@@ -343,7 +343,7 @@ export default function GlobalHub() {
                 </button>
                 <button 
                   onClick={() => setActiveFilter("owed")}
-                  className={`px-3 py-1 rounded-lg font-semibold transition-colors ${activeFilter === "owed" ? "bg-white dark:bg-white/10 text-emerald-600 dark:text-emerald-400 shadow-sm" : "text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"}`}
+                  className={`px-3 py-1 rounded-lg font-semibold transition-colors ${activeFilter === "owed" ? "bg-white dark:bg-white/10 text-amber-500 dark:text-amber-400 shadow-sm" : "text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"}`}
                 >
                   Owed
                 </button>
@@ -409,7 +409,7 @@ export default function GlobalHub() {
                       </span>
                     </div>
                   </div>
-                  <div className={`px-3 py-1.5 rounded-xl text-sm font-bold tabular-nums shrink-0 whitespace-nowrap ${tab.balance >= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
+                  <div className={`px-3 py-1.5 rounded-xl text-sm font-bold tabular-nums shrink-0 whitespace-nowrap ${tab.balance > 0 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : tab.balance < 0 ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' : 'bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-400'}`}>
                     {tab.balance > 0 ? '+' : ''}{formatCurrency(tab.balance)}
                   </div>
                 </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { cn } from "../../lib/utils";
@@ -48,12 +49,12 @@ export function Sheet({ isOpen, onClose, children, className, size = "full" }: S
     }
   }, [isOpen, onClose]);
 
-  if (!mounted) return null;
+  if (!mounted || typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-6">
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-6">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -100,6 +101,7 @@ export function Sheet({ isOpen, onClose, children, className, size = "full" }: S
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

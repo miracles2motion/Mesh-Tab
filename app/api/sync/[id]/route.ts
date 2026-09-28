@@ -55,34 +55,61 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const pipeline = redis.pipeline();
     
-    // 2. Smart Merge Members (by Name)
-    if (members && Array.isArray(members)) {
-      const mergedMembers = [...serverMembers];
-      members.forEach(m => {
-        const idx = mergedMembers.findIndex(sm => sm.name.toLowerCase() === m.name.toLowerCase());
-        if (idx === -1) {
-          mergedMembers.push(m);
-        } else {
-          // If already exists, client's balance calculation takes precedence 
-          mergedMembers[idx] = { ...mergedMembers[idx], ...m };
-        }
-      });
-      pipeline.set(membersKey, JSON.stringify(mergedMembers), { ex: 60 * 60 * 24 });
-    }
+    let mergedExpenses = [...serverExpenses];
     
-    // 3. Smart Merge Expenses (by ID)
+    // 2. Append-Only Smart Merge Expenses (Prevent History Rewriting)
     if (expenses && Array.isArray(expenses)) {
-      const mergedExpenses = [...serverExpenses];
       expenses.forEach(e => {
         const idx = mergedExpenses.findIndex(se => se.id === e.id);
         if (idx === -1) {
+          // Only allow appending new expenses
           mergedExpenses.push(e);
-        } else {
-          mergedExpenses[idx] = { ...mergedExpenses[idx], ...e };
         }
       });
-      // Sort by time or leave as is (assume newer items are appended or prepended correctly)
       pipeline.set(expensesKey, JSON.stringify(mergedExpenses), { ex: 60 * 60 * 24 });
+    }
+    
+    // 3. Server-Side Deterministic Balance Recalculation
+    if (members && Array.isArray(members)) {
+      // Create a fresh list of members from the client's submitted roster
+      // (This properly supports removing members with $0 balance)
+      let calculatedMembers = members.map(m => ({ ...m, balance: 0, type: "settled" }));
+      
+      // Zero-sum mathematical pass over the immutable expense log
+      mergedExpenses.forEach(exp => {
+        const hasSplits = exp.splits && Object.keys(exp.splits).length > 0;
+        const participatingMembers = hasSplits 
+          ? calculatedMembers.filter(m => exp.splits && exp.splits[m.name] !== undefined && exp.splits[m.name] > 0)
+          : calculatedMembers;
+        
+        const splitCount = Math.max(1, participatingMembers.length);
+        const baseShare = Math.floor(exp.amount / splitCount);
+        let remainderPennies = exp.amount - (baseShare * splitCount);
+
+        calculatedMembers.forEach(m => {
+          let memberOwes = 0;
+          if (hasSplits && exp.splits && exp.splits[m.name] !== undefined) {
+            memberOwes = exp.splits[m.name];
+          } else if (!hasSplits) {
+            const extraPenny = remainderPennies > 0 ? 1 : 0;
+            if (remainderPennies > 0) remainderPennies--;
+            memberOwes = baseShare + extraPenny;
+          }
+
+          let delta = -memberOwes;
+          if (m.name.toLowerCase() === exp.payer.toLowerCase()) {
+            delta += exp.amount;
+          }
+          m.balance += delta;
+        });
+      });
+
+      // Assign type tags based on server-verified mathematics
+      calculatedMembers.forEach(m => {
+        m.type = m.balance === 0 ? "settled" : m.balance > 0 ? "creditor" : "debtor";
+      });
+
+      pipeline.set(membersKey, JSON.stringify(calculatedMembers), { ex: 60 * 60 * 24 });
     }
     
     await pipeline.exec();

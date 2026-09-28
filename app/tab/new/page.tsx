@@ -64,7 +64,7 @@ export default function CreateTab() {
 
       <motion.div 
         layout
-        className="w-full max-w-full px-4 md:px-12 bg-white dark:bg-white/5 backdrop-blur-xl border border-slate-200 dark:border-white/10 p-8 md:p-12 lg:p-16 rounded-3xl relative z-10 shadow-2xl flex-1 flex flex-col mb-12"
+        className="w-full max-w-xl mx-auto px-4 bg-white dark:bg-white/5 backdrop-blur-xl border border-slate-200 dark:border-white/10 p-6 md:p-8 rounded-2xl relative z-10 shadow-2xl flex flex-col my-auto"
       >
         <AnimatePresence mode="wait">
           {step === 1 && (
@@ -74,45 +74,44 @@ export default function CreateTab() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
               onSubmit={handleCreate}
-              className="space-y-6"
+              className="space-y-5"
             >
-              <div className="text-center mb-8">
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Create Group Space</h1>
-                <p className="text-slate-500 dark:text-white/60 text-sm">Set up a shared tab for your friends.</p>
+              <div className="text-center mb-6">
+                <h1 className="text-xl font-bold text-slate-900 dark:text-white mb-1.5">Create Group Space</h1>
+                <p className="text-slate-500 dark:text-white/60 text-xs">Set up a shared tab for your friends.</p>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 dark:text-white/80 ml-1">Tab Name</label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 dark:text-white/80 ml-1">Tab Name</label>
                 <input
                   autoFocus
                   type="text"
                   placeholder="e.g., Lisbon Weekend"
                   value={tabName}
                   onChange={e => setTabName(e.target.value)}
-                  className="w-full bg-[#f5f5f7] dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-5 py-4 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-lg font-medium"
+                  className="w-full bg-[#f5f5f7] dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-base font-medium"
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 dark:text-white/80 ml-1">Trip Currency</label>
-                <div className="grid grid-cols-5 gap-1.5">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-700 dark:text-white/80 ml-1">Trip Currency</label>
+                <div className="grid grid-cols-5 gap-2">
                   {SUPPORTED_CURRENCIES.slice(0, 5).map(curr => (
                     <button
                       key={curr.code}
                       type="button"
                       onClick={() => setCurrency(curr.code)}
-                      className={`py-2.5 px-1.5 rounded-2xl border text-xs font-bold transition-all flex flex-col items-center gap-0.5 cursor-pointer ${
+                      className={`py-2 px-2 rounded-xl border text-xs font-bold transition-all flex flex-row items-center justify-center gap-1.5 cursor-pointer ${
                         currency === curr.code
-                          ? "bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20"
+                          ? "bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-600/20"
                           : "bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-700 dark:text-white/70 hover:bg-slate-100 dark:hover:bg-white/10"
                       }`}
                     >
-                      <span className="text-sm">{curr.flag}</span>
-                      <span className="text-[11px] font-mono">{curr.code}</span>
+                      <span className="text-[13px] font-mono leading-none">{curr.code}</span>
                     </button>
                   ))}
                 </div>
-                <p className="text-[11px] text-slate-400 dark:text-white/40 ml-1 leading-relaxed">
+                <p className="text-[10px] text-slate-400 dark:text-white/40 ml-1 leading-relaxed pt-1">
                   Settlements clear in digital USD (AUSD). Foreign currencies convert automatically with 0% bank markup via Pyth Network mid-market rates.
                 </p>
               </div>

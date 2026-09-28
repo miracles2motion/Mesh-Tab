@@ -125,7 +125,8 @@ export function FreshDemoModal({ isOpen, onClose }: FreshDemoModalProps) {
   };
 
   return (
-    <Modal onClose={onClose} hideCloseButton={true} size="full" className="bg-white dark:bg-[#121212] border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-10 text-slate-900 dark:text-white shadow-2xl relative overflow-hidden">
+    <Modal onClose={onClose} hideCloseButton={true} size="2xl" className="bg-white dark:bg-[#121212] border border-slate-200 dark:border-white/10 rounded-3xl text-slate-900 dark:text-white shadow-2xl relative overflow-hidden">
+      <div className="p-6 md:p-10 h-full flex flex-col">
       {/* Top Header & Progress */}
       <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-4 mb-6">
         <div className="flex items-center gap-2">
@@ -440,6 +441,7 @@ export function FreshDemoModal({ isOpen, onClose }: FreshDemoModalProps) {
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </Modal>
   );
 }

@@ -247,6 +247,17 @@ export function useTabSync(tabId: string) {
     window.addEventListener("pointerdown", handleActivity, { passive: true });
     window.addEventListener("keydown", handleActivity, { passive: true });
     
+    const handleNetworkChange = () => {
+      const isSimulatedOffline = localStorage.getItem("meshTab_simulatedOffline") === "true";
+      if (navigator.onLine && !isSimulatedOffline) {
+        markUserActive();
+        // Force push before the next poll can overwrite our pending offline data
+        pushTabStateToRedis(tabId);
+        pullFromRedis();
+      }
+    };
+    window.addEventListener("meshTab-network-change", handleNetworkChange);
+    
     // Initial start
     if (document.visibilityState === "visible") {
       startAdaptivePolling();
@@ -270,6 +281,7 @@ export function useTabSync(tabId: string) {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("pointerdown", handleActivity);
       window.removeEventListener("keydown", handleActivity);
+      window.removeEventListener("meshTab-network-change", handleNetworkChange);
       window.removeEventListener("meshTab-members-update", handleLocalUpdate);
       window.removeEventListener("meshTab-expenses-update", handleLocalUpdate);
     };
