@@ -67,7 +67,7 @@ export default function GlobalHub() {
     async function fetchBalance() {
       if (!isTestnetMode) return;
       
-      const primaryWallet = wallets.find(w => w.chain === "eip155") || wallets[0];
+      const primaryWallet = wallets.find(w => w.chainId?.includes("eip155")) || wallets[0];
       if (!primaryWallet || !primaryWallet.address) return;
 
       setIsFetchingBalance(true);
