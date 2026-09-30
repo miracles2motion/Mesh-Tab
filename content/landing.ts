@@ -16,12 +16,10 @@ export const LANDING_CONTENT = {
     text: "Powered by next-generation Web3 infrastructure",
     partners: [
       { name: "Monad", src: "/logos/monad.svg" },
-      { name: "Dynamic", src: "/logos/dynamic.svg" },
-      { name: "Pimlico", src: "/logos/pimlico.svg" },
+      { name: "Privy", src: "https://mintcdn.com/privy-c2af3412/Ih_Fo3QYM486gzWq/logo/privy-logo-dark.png" },
       { name: "Envio", src: "/logos/envio.svg" },
       { name: "Agora", src: "/logos/agora.svg" },
-      { name: "Alchemy", src: "/logos/alchemy.svg" },
-      { name: "Mera", src: "/logos/mera.svg" }
+      { name: "Alchemy", src: "/logos/alchemy.svg" }
     ],
   },
   problemAgitation: {

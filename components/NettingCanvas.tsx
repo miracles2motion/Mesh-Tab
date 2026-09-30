@@ -294,6 +294,7 @@ export function NettingCanvas({
       });
 
       try {
+        // Send a general notification about the optimization
         addNotification({
           type: "netting",
           title: "Tangle Netting Optimized",
@@ -304,6 +305,23 @@ export function NettingCanvas({
           amount: Math.round(totalActiveDebt * 0.75),
           link: `/tab/${tabId}`
         });
+
+        // Send a specific payment request notification to each debtor based on the calculated optimal routes
+        simplifiedEdges.forEach(edge => {
+          if (currentUserName && edge.from.name.toLowerCase() === currentUserName.toLowerCase()) {
+            addNotification({
+              type: "payment_request",
+              title: "Settlement Required",
+              desc: `You need to settle ${formatCurrency(edge.amount)} with ${edge.to.name}.`,
+              actor: edge.to.name,
+              tabId,
+              tabName: tabId === "lisbon-24" ? "Lisbon Weekend" : "Group Tab",
+              amount: edge.amount,
+              link: `/tab/${tabId}` // This link can trigger the drawer
+            });
+          }
+        });
+
       } catch (e) {}
     }, 1800);
   };
@@ -779,7 +797,7 @@ export function NettingCanvas({
 
           <div className="flex items-center gap-2">
             <span className="font-semibold text-slate-600 dark:text-white/60">Sponsor:</span>
-            <span className="font-medium text-slate-700 dark:text-white/80">Pimlico Paymaster</span>
+            <span className="font-medium text-slate-700 dark:text-white/80">Alchemy Paymaster</span>
           </div>
         </div>
       </div>

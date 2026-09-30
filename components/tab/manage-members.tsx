@@ -97,7 +97,7 @@ export function ManageMembers({
     const nextName = candidateNames.find(n => !existingNames.has(n)) || `Guest_${memberList.length + 1}`;
 
     toast.info("Simulating QR Scan...", {
-      description: `${nextName} is authenticating with Mera WebAuthn passkey...`
+      description: `${nextName} is authenticating with WebAuthn passkey...`
     });
 
     await new Promise(r => setTimeout(r, 1200));

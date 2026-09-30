@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getWorkspaceMode } from "./user";
+import { getWorkspaceMode, WorkspaceMode } from "./user";
 
-export type NotificationType = "expense" | "settlement" | "netting" | "tab_created" | "faucet" | "cashout";
+export type NotificationType = "expense" | "settlement" | "netting" | "tab_created" | "faucet" | "cashout" | "payment_request";
 
 export interface AppNotification {
   id: string;
@@ -100,9 +100,9 @@ export const BLANK_NOTIFICATIONS: AppNotification[] = [
   }
 ];
 
-function getNotificationsStorageKey(mode?: "sample" | "blank"): string {
+function getNotificationsStorageKey(mode?: WorkspaceMode): string {
   const activeMode = mode || getWorkspaceMode();
-  return activeMode === "blank" ? "meshTab_clean_notifications" : "meshTab_sample_notifications";
+  return activeMode === "testnet" ? "meshTab_testnet_notifications" : activeMode === "blank" ? "meshTab_clean_notifications" : "meshTab_sample_notifications";
 }
 
 export function getStoredNotifications(): AppNotification[] {
@@ -114,7 +114,7 @@ export function getStoredNotifications(): AppNotification[] {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        if (mode === "blank") {
+        if (mode === "blank" || mode === "testnet") {
           return parsed.filter((n) => n.tabId !== "lisbon-24");
         }
         return parsed;
@@ -125,7 +125,7 @@ export function getStoredNotifications(): AppNotification[] {
   return mode === "blank" ? BLANK_NOTIFICATIONS : SAMPLE_NOTIFICATIONS;
 }
 
-export function saveStoredNotifications(notifs: AppNotification[], mode?: "sample" | "blank") {
+export function saveStoredNotifications(notifs: AppNotification[], mode?: WorkspaceMode) {
   if (typeof window === "undefined") return;
   const key = getNotificationsStorageKey(mode);
   try {
@@ -172,7 +172,7 @@ export function clearAllNotifications() {
   saveStoredNotifications([], mode);
 }
 
-export function resetNotificationsToMode(mode: "sample" | "blank") {
+export function resetNotificationsToMode(mode: WorkspaceMode) {
   if (typeof window === "undefined") return;
   const notifs = mode === "sample" ? SAMPLE_NOTIFICATIONS : BLANK_NOTIFICATIONS;
   saveStoredNotifications(notifs, mode);

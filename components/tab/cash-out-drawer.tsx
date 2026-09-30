@@ -6,13 +6,14 @@ import { Sheet } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { formatCurrency } from "../../lib/utils";
 import Image from "next/image";
-import { DynamicLogo, AgoraLogo } from "../ui/partner-logo";
+import { AgoraLogo } from "../ui/partner-logo";
 
 import { DEFAULT_USER_NAME, useSettledPayoutBalance } from "../../lib/user";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
 import { fireSettlementConfetti } from "../../lib/confetti";
 import { addNotification } from "../../lib/notifications";
+import { TransactionOverlay, TransactionState } from "../ui/transaction-overlay";
 
 interface CashOutDrawerProps {
   isOpen: boolean;
@@ -35,11 +36,18 @@ export function CashOutDrawer({
   const [method, setMethod] = useState<"card" | "bank">("card");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [txState, setTxState] = useState<TransactionState>("idle");
+  const [withdrawnAmount, setWithdrawnAmount] = useState(0);
 
   const handleCashOut = async () => {
     setIsProcessing(true);
-    // Simulate Dynamic Off-ramp withdrawal
-    await new Promise((r) => setTimeout(r, 1800));
+    setWithdrawnAmount(withdrawableAmount);
+    
+    // Passkey Authentication Flow
+    setTxState("authenticating");
+    await new Promise((r) => setTimeout(r, 1500));
+    setTxState("processing");
+    await new Promise((r) => setTimeout(r, 2000));
     withdrawPayout(withdrawableAmount);
     sounds.playSuccessChime();
     fireSettlementConfetti();
@@ -58,6 +66,10 @@ export function CashOutDrawer({
       });
     } catch (e) {}
 
+    setTxState("success");
+    await new Promise((r) => setTimeout(r, 1000));
+    setTxState("idle");
+    
     setIsProcessing(false);
     setIsSuccess(true);
   };
@@ -68,6 +80,7 @@ export function CashOutDrawer({
   };
 
   return (
+    <>
     <Sheet isOpen={isOpen} onClose={handleClose} size="full">
       <div className="p-6 md:p-8 flex flex-col items-center bg-white dark:bg-[#0a0a0a] text-slate-900 dark:text-white">
         {!isSuccess ? (
@@ -113,9 +126,7 @@ export function CashOutDrawer({
                 </div>
               )}
             </div>
-
               </div>
-
               {/* Right Column: Methods & Actions */}
               <div>
                 {/* Payout Method Selection */}
@@ -194,7 +205,7 @@ export function CashOutDrawer({
                 {/* Security Guarantee */}
                 <div className="w-full flex items-center gap-2 p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 mb-6 text-xs text-slate-600 dark:text-white/60">
                   <ShieldCheck className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                  <span>Institutional 1:1 reserve cashout backed by Agora & Dynamic.</span>
+                  <span>Institutional 1:1 reserve cashout backed by Agora.</span>
                 </div>
 
                 <Button
@@ -215,11 +226,10 @@ export function CashOutDrawer({
                   )}
                 </Button>
 
-                {/* Dynamic Partner Badge */}
+                {/* Off-ramp Partner Badge */}
                 <div className="mt-6 flex items-center justify-center gap-3 text-slate-500 dark:text-white/50 text-xs font-medium">
                   <span>Off-ramp powered by</span>
                   <div className="flex items-center gap-2.5 opacity-90 hover:opacity-100 transition-opacity text-slate-800 dark:text-white">
-                    <DynamicLogo className="h-4 w-auto" />
                     <AgoraLogo className="h-4 w-auto" />
                   </div>
                 </div>
@@ -235,9 +245,9 @@ export function CashOutDrawer({
             <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
               Transfer Initiated!
             </h3>
-            <p className="text-slate-500 dark:text-white/60 text-sm max-w-xs mb-6 leading-relaxed">
+            <p className="text-slate-500 dark:text-white/60 text-sm max-w-xs mb-6 leading-relaxed text-center">
               <span className="font-semibold text-slate-900 dark:text-white">
-                {formatCurrency(withdrawableAmount)}
+                {formatCurrency(withdrawnAmount)}
               </span>{" "}
               is on its way to your {method === "card" ? "Debit Card" : "Bank Account"}.
             </p>
@@ -268,5 +278,14 @@ export function CashOutDrawer({
         )}
       </div>
     </Sheet>
+    <TransactionOverlay 
+      state={txState} 
+      messages={{
+        authenticating: "Awaiting biometric authentication to authorize withdrawal...",
+        processing: "Processing off-ramp transfer...",
+        success: "Transfer initiated!"
+      }}
+    />
+    </>
   );
 }

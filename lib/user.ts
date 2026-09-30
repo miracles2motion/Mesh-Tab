@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { addNotification, resetNotificationsToMode } from "./notifications";
 import { isEffectivelyOnline } from "./network";
+import { usePrivy } from "@privy-io/react-auth";
 
 export interface UserProfile {
   name: string;
@@ -37,8 +38,8 @@ export function getStoredUser(): UserProfile {
   };
 }
 
-export function saveStoredUser(name: string, colorIndex?: number) {
-  if (typeof window === "undefined") return;
+export async function saveStoredUser(name: string, colorIndex?: number, walletAddress?: string): Promise<{ error?: string }> {
+  if (typeof window === "undefined") return {};
   const trimmed = name.trim();
   if (trimmed) {
     localStorage.setItem("meshTab_displayName", trimmed);
@@ -47,11 +48,31 @@ export function saveStoredUser(name: string, colorIndex?: number) {
     localStorage.setItem("meshTab_avatarColorIndex", String(colorIndex));
   }
   window.dispatchEvent(new Event("meshTab-profile-update"));
+
+  if (walletAddress) {
+    try {
+      const res = await fetch("/api/user/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wallet: walletAddress, name: trimmed, avatarColorIndex: colorIndex })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { error: data.error };
+      }
+    } catch (e) {
+      console.error("Failed to sync profile to Upstash", e);
+    }
+  }
+  return {};
 }
 
 export function useUserProfile() {
   const [profile, setProfile] = useState<UserProfile>(getStoredUser);
+  const { user, authenticated } = usePrivy();
+  const walletAddress = user?.wallet?.address;
 
+  // Sync from localStorage changes
   useEffect(() => {
     const sync = () => {
       setProfile(getStoredUser());
@@ -67,6 +88,24 @@ export function useUserProfile() {
       window.removeEventListener("storage", sync);
     };
   }, []);
+
+  // Sync from Upstash Redis when authenticated
+  useEffect(() => {
+    if (authenticated && walletAddress) {
+      fetch(`/api/user/profile?wallet=${walletAddress}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.name) {
+            // Update local storage so it feels instant next time, but do NOT push back to Redis
+            const trimmed = data.name.trim();
+            localStorage.setItem("meshTab_displayName", trimmed);
+            localStorage.setItem("meshTab_avatarColorIndex", String(data.avatarColorIndex));
+            window.dispatchEvent(new Event("meshTab-profile-update"));
+          }
+        })
+        .catch(console.error);
+    }
+  }, [authenticated, walletAddress]);
 
   return profile;
 }
@@ -120,18 +159,22 @@ export const SAMPLE_BENCHMARK_TABS: TabSummary[] = [
 
 export const DEFAULT_TABS: TabSummary[] = [];
 
-export type WorkspaceMode = "sample" | "blank";
+export type WorkspaceMode = "sample" | "blank" | "testnet";
 
 export function getWorkspaceMode(): WorkspaceMode {
   if (typeof window === "undefined") return "sample";
-  const mode = localStorage.getItem("meshTab_workspaceMode");
+  const mode = localStorage.getItem("meshTab_workspaceMode") as WorkspaceMode | null;
   // Default to "sample" during demo phase so Lisbon Weekend demo trip data is loaded by default
-  return mode === "blank" ? "blank" : "sample";
+  return mode === "blank" ? "blank" : mode === "testnet" ? "testnet" : "sample";
 }
 
 function getTabsStorageKey(mode?: WorkspaceMode): string {
   const activeMode = mode || getWorkspaceMode();
-  return activeMode === "sample" ? "meshTab_sample_tabs" : "meshTab_clean_tabs";
+  return activeMode === "sample" 
+    ? "meshTab_sample_tabs" 
+    : activeMode === "testnet" 
+      ? "meshTab_testnet_tabs" 
+      : "meshTab_clean_tabs";
 }
 
 export function setWorkspaceMode(mode: WorkspaceMode) {
@@ -236,17 +279,19 @@ export function getStoredTabs(): TabSummary[] {
           return t;
         });
 
-        if (mode === "blank") {
-          // Clean Slate: guaranteed no sample demo tabs ever leak into clean slate
+        if (mode === "blank" || mode === "testnet") {
+          // Clean Slate & Testnet: guaranteed no sample demo tabs ever leak into these modes
           return normalized.filter(t => t.id !== "lisbon-24");
         }
         
         // Sample Mode: ensure Lisbon benchmark is present
-        const hasLisbon = normalized.some(t => t.id === "lisbon-24");
-        if (!hasLisbon) {
-          const merged = [...SAMPLE_BENCHMARK_TABS, ...normalized.filter(t => t.id !== "lisbon-24")];
-          localStorage.setItem(key, JSON.stringify(merged));
-          return merged;
+        if (mode === "sample") {
+          const hasLisbon = normalized.some(t => t.id === "lisbon-24");
+          if (!hasLisbon) {
+            const merged = [...SAMPLE_BENCHMARK_TABS, ...normalized.filter(t => t.id !== "lisbon-24")];
+            localStorage.setItem(key, JSON.stringify(merged));
+            return merged;
+          }
         }
         return normalized;
       }
@@ -343,7 +388,11 @@ export function getStoredTabMembers(tabId: string, currentUserName?: string): Ta
   }
 
   // Use workspace-isolated key prefix for clean slate vs sample mode
-  const storageKey = mode === "blank" ? `meshTab_clean_members_${tabId}` : `meshTab_members_${tabId}`;
+  const storageKey = mode === "sample" 
+    ? `meshTab_members_${tabId}` 
+    : mode === "testnet"
+      ? `meshTab_testnet_members_${tabId}`
+      : `meshTab_clean_members_${tabId}`;
 
   try {
     const raw = localStorage.getItem(storageKey);
@@ -409,7 +458,11 @@ export function getStoredTabMembers(tabId: string, currentUserName?: string): Ta
 export function saveStoredTabMembers(tabId: string, members: TabMember[]) {
   if (typeof window === "undefined") return;
   const mode = getWorkspaceMode();
-  const storageKey = mode === "blank" ? `meshTab_clean_members_${tabId}` : `meshTab_members_${tabId}`;
+  const storageKey = mode === "sample" 
+    ? `meshTab_members_${tabId}` 
+    : mode === "testnet"
+      ? `meshTab_testnet_members_${tabId}`
+      : `meshTab_clean_members_${tabId}`;
   localStorage.setItem(storageKey, JSON.stringify(members));
 
   // Sync member count in stored tabs
@@ -486,17 +539,21 @@ export const DEFAULT_FEED: Record<string, StoredExpense[]> = {
 export function getStoredExpenses(tabId: string): StoredExpense[] {
   const mode = getWorkspaceMode();
   if (typeof window === "undefined") {
-    return mode === "blank" ? [] : (DEFAULT_FEED[tabId] || []);
+    return mode === "blank" || mode === "testnet" ? [] : (DEFAULT_FEED[tabId] || []);
   }
 
-  const storageKey = mode === "blank" ? `meshTab_clean_expenses_${tabId}` : `meshTab_expenses_${tabId}`;
+  const storageKey = mode === "sample"
+    ? `meshTab_expenses_${tabId}`
+    : mode === "testnet"
+      ? `meshTab_testnet_expenses_${tabId}`
+      : `meshTab_clean_expenses_${tabId}`;
   try {
     const raw = localStorage.getItem(storageKey);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        // Auto-inject missing demo settlement into existing cached sessions
-        if (tabId === "lisbon-24" && !parsed.some(e => e.id === "settle-ls-1")) {
+        // Auto-inject missing demo settlement into existing cached sessions (only in sample mode)
+        if (mode === "sample" && tabId === "lisbon-24" && !parsed.some(e => e.id === "settle-ls-1")) {
           const settlement = DEFAULT_FEED["lisbon-24"].find(e => e.id === "settle-ls-1");
           const offsetExpense = DEFAULT_FEED["lisbon-24"].find(e => e.id === "4");
           if (settlement && offsetExpense) {
@@ -510,7 +567,7 @@ export function getStoredExpenses(tabId: string): StoredExpense[] {
     }
   } catch (e) {}
 
-  if (mode === "blank") return [];
+  if (mode === "blank" || mode === "testnet") return [];
   return DEFAULT_FEED[tabId] || [];
 }
 
@@ -521,7 +578,11 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense, skipBal
   expense.syncStatus = isEffectivelyOnline() ? "synced" : "pending";
   
   const mode = getWorkspaceMode();
-  const storageKey = mode === "blank" ? `meshTab_clean_expenses_${tabId}` : `meshTab_expenses_${tabId}`;
+  const storageKey = mode === "sample"
+    ? `meshTab_expenses_${tabId}`
+    : mode === "testnet"
+      ? `meshTab_testnet_expenses_${tabId}`
+      : `meshTab_clean_expenses_${tabId}`;
   const current = getStoredExpenses(tabId);
   const updated = [expense, ...current];
   localStorage.setItem(storageKey, JSON.stringify(updated));
@@ -565,7 +626,11 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense, skipBal
               type: nextType
             };
           });
-        const membersKey = mode === "blank" ? `meshTab_clean_members_${tabId}` : `meshTab_members_${tabId}`;
+        const membersKey = mode === "sample"
+          ? `meshTab_members_${tabId}`
+          : mode === "testnet"
+            ? `meshTab_testnet_members_${tabId}`
+            : `meshTab_clean_members_${tabId}`;
         localStorage.setItem(membersKey, JSON.stringify(updatedMembers));
         window.dispatchEvent(new Event("meshTab-members-update"));
 
@@ -614,7 +679,11 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense, skipBal
 export function deleteStoredExpense(tabId: string, expenseId: string): { success: boolean; error?: string } {
   if (typeof window === "undefined") return { success: false, error: "Window undefined" };
   const mode = getWorkspaceMode();
-  const storageKey = mode === "blank" ? `meshTab_clean_expenses_${tabId}` : `meshTab_expenses_${tabId}`;
+  const storageKey = mode === "sample"
+    ? `meshTab_expenses_${tabId}`
+    : mode === "testnet"
+      ? `meshTab_testnet_expenses_${tabId}`
+      : `meshTab_clean_expenses_${tabId}`;
   const current = getStoredExpenses(tabId);
   const target = current.find(e => e.id === expenseId);
   if (!target) return { success: false, error: "Expense not found" };
@@ -662,7 +731,11 @@ export function deleteStoredExpense(tabId: string, expenseId: string): { success
           };
         });
 
-        const membersKey = mode === "blank" ? `meshTab_clean_members_${tabId}` : `meshTab_members_${tabId}`;
+        const membersKey = mode === "sample"
+          ? `meshTab_members_${tabId}`
+          : mode === "testnet"
+            ? `meshTab_testnet_members_${tabId}`
+            : `meshTab_clean_members_${tabId}`;
         localStorage.setItem(membersKey, JSON.stringify(updatedMembers));
         window.dispatchEvent(new Event("meshTab-members-update"));
 
@@ -695,7 +768,11 @@ export function deleteStoredExpense(tabId: string, expenseId: string): { success
 export function updateStoredExpenseDescription(tabId: string, expenseId: string, newDesc: string): { success: boolean; error?: string } {
   if (typeof window === "undefined") return { success: false, error: "Window undefined" };
   const mode = getWorkspaceMode();
-  const storageKey = mode === "blank" ? `meshTab_clean_expenses_${tabId}` : `meshTab_expenses_${tabId}`;
+  const storageKey = mode === "sample"
+    ? `meshTab_expenses_${tabId}`
+    : mode === "testnet"
+      ? `meshTab_testnet_expenses_${tabId}`
+      : `meshTab_clean_expenses_${tabId}`;
   const current = getStoredExpenses(tabId);
   const targetIndex = current.findIndex(e => String(e.id) === String(expenseId));
   if (targetIndex === -1) return { success: false, error: "Expense not found" };
@@ -768,6 +845,21 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
         const deduct = Math.min(m.balance, remainingToDeduct);
         const newBal = m.balance - deduct;
         remainingToDeduct -= deduct;
+        
+        // If the creditor getting paid is the main user (David/You), credit their payout balance
+        const activeUser = getStoredUser().name || DEFAULT_USER_NAME;
+        if (m.name.toLowerCase() === activeUser.toLowerCase() || m.name.toLowerCase() === "you") {
+          const currentPayout = getSettledPayoutBalance();
+          const mode = getWorkspaceMode();
+          const payoutKey = mode === "sample" 
+            ? "meshTab_settledPayoutBalance" 
+            : mode === "testnet" 
+              ? "meshTab_testnet_settledPayoutBalance" 
+              : "meshTab_clean_settledPayoutBalance";
+          localStorage.setItem(payoutKey, String(currentPayout + deduct));
+          window.dispatchEvent(new Event("meshTab-payout-update"));
+        }
+
         return {
           ...m,
           balance: newBal,
@@ -778,7 +870,11 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
     });
 
     const mode = getWorkspaceMode();
-    const membersKey = mode === "blank" ? `meshTab_clean_members_${tabId}` : `meshTab_members_${tabId}`;
+    const membersKey = mode === "sample" 
+      ? `meshTab_members_${tabId}` 
+      : mode === "testnet" 
+        ? `meshTab_testnet_members_${tabId}` 
+        : `meshTab_clean_members_${tabId}`;
     localStorage.setItem(membersKey, JSON.stringify(updatedMembers));
     window.dispatchEvent(new Event("meshTab-members-update"));
   } catch (e) {}
@@ -808,14 +904,22 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
 export function getSettledPayoutBalance(): number {
   if (typeof window === "undefined") return 0;
   const mode = getWorkspaceMode();
-  if (mode === "blank") {
-    const val = localStorage.getItem("meshTab_clean_settledPayoutBalance");
+  
+  if (mode === "blank" || mode === "testnet") {
+    const key = mode === "testnet" ? "meshTab_testnet_settledPayoutBalance" : "meshTab_clean_settledPayoutBalance";
+    const val = localStorage.getItem(key);
     if (val === null) return 0;
     const parsed = parseInt(val, 10);
     return isNaN(parsed) ? 0 : Math.max(0, parsed);
   }
+  
   const val = localStorage.getItem("meshTab_settledPayoutBalance");
-  if (val === null) return 0;
+  if (val === null) {
+    // In sample mode, the mock data starts with John having already settled $500 with you.
+    // So the default payout balance must match the ledger.
+    localStorage.setItem("meshTab_settledPayoutBalance", "50000");
+    return 50000;
+  }
   const parsed = parseInt(val, 10);
   return isNaN(parsed) ? 0 : Math.max(0, parsed);
 }
@@ -823,7 +927,11 @@ export function getSettledPayoutBalance(): number {
 export function addSettledPayout(amountCents: number) {
   if (typeof window === "undefined") return;
   const mode = getWorkspaceMode();
-  const key = mode === "blank" ? "meshTab_clean_settledPayoutBalance" : "meshTab_settledPayoutBalance";
+  const key = mode === "sample" 
+    ? "meshTab_settledPayoutBalance" 
+    : mode === "testnet" 
+      ? "meshTab_testnet_settledPayoutBalance" 
+      : "meshTab_clean_settledPayoutBalance";
   const current = getSettledPayoutBalance();
   const next = current + amountCents;
   localStorage.setItem(key, String(next));
@@ -833,7 +941,11 @@ export function addSettledPayout(amountCents: number) {
 export function withdrawSettledPayout(amountCents?: number): number {
   if (typeof window === "undefined") return 0;
   const mode = getWorkspaceMode();
-  const key = mode === "blank" ? "meshTab_clean_settledPayoutBalance" : "meshTab_settledPayoutBalance";
+  const key = mode === "sample" 
+    ? "meshTab_settledPayoutBalance" 
+    : mode === "testnet" 
+      ? "meshTab_testnet_settledPayoutBalance" 
+      : "meshTab_clean_settledPayoutBalance";
   const current = getSettledPayoutBalance();
   
   // Calculate max available based on cross-tab liability

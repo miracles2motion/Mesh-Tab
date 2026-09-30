@@ -17,7 +17,8 @@ import {
   Sparkles, 
   FolderPlus,
   Filter,
-  ExternalLink
+  ExternalLink,
+  HandCoins
 } from "lucide-react";
 import { ThemeToggle } from "../../components/theme-toggle";
 import { MeshBuddy } from "../../components/ui/mesh-buddy";
@@ -112,6 +113,11 @@ function NotificationsContent() {
         return {
           icon: <Sparkles className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
           bg: "bg-amber-500/10 border-amber-500/20"
+        };
+      case "payment_request":
+        return {
+          icon: <HandCoins className="w-5 h-5 text-rose-600 dark:text-rose-400" />,
+          bg: "bg-rose-500/10 border-rose-500/20"
         };
       default:
         return {
@@ -276,15 +282,24 @@ function NotificationsContent() {
                     </p>
 
                     {/* 1-Tap Quick Actions */}
-                    {(notif.type === "settlement" || notif.type === "expense") && notif.tabId && (
+                    {(notif.type === "payment_request" || notif.type === "expense") && notif.tabId && (
                       <div className="mt-3 flex items-center gap-2 flex-wrap">
-                        {notif.type === "settlement" && (
+                        {notif.type === "payment_request" && (
                           <Link
                             href={`/tab/${notif.tabId}?settle=true`}
                             onClick={(e) => e.stopPropagation()}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-black text-[11px] font-bold shadow-sm hover:bg-slate-800 dark:hover:bg-white/90 transition-all active:scale-95"
                           >
                             <Zap className="w-3 h-3" /> Settle Now
+                          </Link>
+                        )}
+                        {notif.type === "payment_request" && (
+                          <Link
+                            href={`/tab/${notif.tabId}?netting=true`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-[11px] font-bold shadow-sm hover:bg-indigo-700 transition-all active:scale-95"
+                          >
+                            <Activity className="w-3 h-3" /> Verify Netting
                           </Link>
                         )}
                         <Link
@@ -298,7 +313,7 @@ function NotificationsContent() {
                     )}
 
                     {/* Footer link cue if clickable */}
-                    {notif.link && !(notif.type === "settlement" || notif.type === "expense") && (
+                    {notif.link && !(notif.type === "payment_request" || notif.type === "expense") && (
                       <div className="mt-2.5 flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 group-hover:underline">
                         <span>Open tab details</span>
                         <ExternalLink className="w-3 h-3" />

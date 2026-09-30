@@ -1,3 +1,5 @@
+import { WorkspaceMode } from "./user";
+
 export type KBCategoryId = 
   | "netting" 
   | "monad-web3" 
@@ -53,7 +55,7 @@ export const KB_CATEGORIES: KBCategory[] = [
     id: "settlement",
     label: "Settlement & Bank Off-Ramp",
     icon: "💸",
-    description: "1-click settlements, virtual faucet, and Dynamic Visa/bank cash out."
+    description: "1-click settlements, virtual faucet, and Monad/bank cash out."
   },
   {
     id: "expenses",
@@ -158,7 +160,7 @@ export const KB_ARTICLES: KBArticle[] = [
     ]
   },
   {
-    id: "web3-mera-passkeys",
+    id: "web3-passkeys",
     categoryId: "monad-web3",
     title: "How does Touch ID & Face ID sign-in work?",
     keywords: ["touchid", "faceid", "passkey", "biometric", "login", "fingerprint", "security", "sign in", "no password"],
@@ -185,9 +187,9 @@ export const KB_ARTICLES: KBArticle[] = [
     id: "settlement-cash-out",
     categoryId: "settlement",
     title: "How do I Cash Out AUSD to my Bank or Visa Debit Card?",
-    keywords: ["cash out", "bank", "offramp", "visa", "direct", "debit", "withdraw", "dynamic", "ach"],
-    summary: "When group members settle debts to you, tap 'Cash Out to Bank' on your balance card to route funds to your debit card or bank via Dynamic off-ramp.",
-    detailedContent: "Steps to cash out:\n1. Check your net balance on the Tab Dashboard or Hub. When positive (+), you have funds to withdraw.\n2. Tap 'Cash Out to Bank' on your balance card.\n3. The Dynamic Off-Ramp drawer opens.\n4. Select Visa Direct (funds arrive in ~30 seconds) or Bank Transfer (ACH / SEPA).\n5. Confirm and receive local fiat directly in your checking account.",
+    keywords: ["cash out", "bank", "offramp", "visa", "direct", "debit", "withdraw", "privy", "ach"],
+    summary: "When group members settle debts to you, tap 'Cash Out to Bank' on your balance card to route funds to your debit card or bank via our off-ramp.",
+    detailedContent: "Steps to cash out:\n1. Check your net balance on the Tab Dashboard or Hub. When positive (+), you have funds to withdraw.\n2. Tap 'Cash Out to Bank' on your balance card.\n3. The Off-Ramp drawer opens.\n4. Select Visa Direct (funds arrive in ~30 seconds) or Bank Transfer (ACH / SEPA).\n5. Confirm and receive local fiat directly in your checking account.",
     actions: [
       { label: "Go to Dashboard", type: "navigate", destination: "/home" }
     ]
@@ -354,7 +356,7 @@ export interface SearchOptions {
   currentTabId?: string | null;
   isDemoTab?: boolean;
   isCustomTab?: boolean;
-  workspaceMode?: "sample" | "blank";
+  workspaceMode?: WorkspaceMode;
   tabDisplayName?: string;
 }
 
@@ -382,7 +384,7 @@ export function searchKnowledgeBase(
 
   const results: KBSearchResult[] = [];
 
-  const isBlank = options.workspaceMode === "blank";
+  const isBlank = options.workspaceMode === "blank" || options.workspaceMode === "testnet";
 
   for (const article of KB_ARTICLES) {
     // In Clean Slate mode, completely exclude benchmark-specific and sample restoration articles
@@ -442,7 +444,7 @@ export function searchKnowledgeBase(
     if (options.isCustomTab && (article.id.includes("create") || article.id.includes("split") || article.categoryId === "expenses" || article.categoryId === "groups")) {
       score += 10;
     }
-    if (options.workspaceMode === "blank" && (article.id.includes("create") || article.categoryId === "groups" || article.categoryId === "expenses")) {
+    if (isBlank && (article.id.includes("create") || article.categoryId === "groups" || article.categoryId === "expenses")) {
       score += 10;
     }
 
@@ -453,7 +455,7 @@ export function searchKnowledgeBase(
           contextAdviceText = article.contextAdvice.demo;
         } else if (options.isCustomTab && article.contextAdvice.customTab) {
           contextAdviceText = article.contextAdvice.customTab;
-        } else if (options.workspaceMode === "blank" && article.contextAdvice.cleanSlate) {
+        } else if (isBlank && article.contextAdvice.cleanSlate) {
           contextAdviceText = article.contextAdvice.cleanSlate;
         }
       }
@@ -494,9 +496,9 @@ export function searchKnowledgeBase(
 /**
  * Get articles for a specific category, optionally filtered by workspace mode
  */
-export function getArticlesByCategory(categoryId: KBCategoryId, mode?: "sample" | "blank"): KBArticle[] {
+export function getArticlesByCategory(categoryId: KBCategoryId, mode?: WorkspaceMode): KBArticle[] {
   let list = KB_ARTICLES.filter((a) => a.categoryId === categoryId);
-  if (mode === "blank") {
+  if (mode === "blank" || mode === "testnet") {
     list = list.filter((a) => a.id !== "netting-lisbon-benchmark" && a.id !== "sandbox-restore-lisbon");
   }
   return list;
@@ -505,8 +507,8 @@ export function getArticlesByCategory(categoryId: KBCategoryId, mode?: "sample" 
 /**
  * Get all available articles filtered by workspace mode
  */
-export function getAllArticles(mode?: "sample" | "blank"): KBArticle[] {
-  if (mode === "blank") {
+export function getAllArticles(mode?: WorkspaceMode): KBArticle[] {
+  if (mode === "blank" || mode === "testnet") {
     return KB_ARTICLES.filter((a) => a.id !== "netting-lisbon-benchmark" && a.id !== "sandbox-restore-lisbon");
   }
   return KB_ARTICLES;
@@ -515,8 +517,8 @@ export function getAllArticles(mode?: "sample" | "blank"): KBArticle[] {
 /**
  * Get categories filtered by workspace mode
  */
-export function getKBCategories(mode?: "sample" | "blank"): KBCategory[] {
-  if (mode === "blank") {
+export function getKBCategories(mode?: WorkspaceMode): KBCategory[] {
+  if (mode === "blank" || mode === "testnet") {
     // In clean slate, hide the Interactive Sandbox category
     return KB_CATEGORIES.filter((c) => c.id !== "sandbox");
   }
@@ -526,14 +528,14 @@ export function getKBCategories(mode?: "sample" | "blank"): KBCategory[] {
 /**
  * Get popular/featured articles
  */
-export function getPopularArticles(mode?: "sample" | "blank"): KBArticle[] {
-  const popularIds = mode === "blank"
+export function getPopularArticles(mode?: WorkspaceMode): KBArticle[] {
+  const popularIds = mode === "blank" || mode === "testnet"
     ? [
         "group-create-tab",
         "netting-how-it-works",
         "settlement-cash-out",
         "web3-zero-gas-paymaster",
-        "web3-mera-passkeys",
+        "web3-passkeys",
         "expense-smart-scan"
       ]
     : [
@@ -541,7 +543,7 @@ export function getPopularArticles(mode?: "sample" | "blank"): KBArticle[] {
         "netting-lisbon-benchmark",
         "settlement-cash-out",
         "web3-zero-gas-paymaster",
-        "web3-mera-passkeys",
+        "web3-passkeys",
         "sandbox-sample-vs-clean",
         "expense-smart-scan"
       ];

@@ -14,6 +14,7 @@ import { Network, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Metadata } from "next";
 import Image from "next/image";
+import { TestnetLoginButton } from "../components/landing/testnet-login-button";
 
 export const metadata: Metadata = {
   title: LANDING_CONTENT.metadata.title,
@@ -66,10 +67,7 @@ export default function LandingPage() {
               <Link href="/demo" className="bg-white text-indigo-600 px-8 py-4 rounded-full font-bold text-lg hover:scale-105 transition-transform shadow-xl inline-block">
                 {finalCta.cta}
               </Link>
-              <div className="inline-flex items-center gap-2 px-5 py-3.5 rounded-full border border-white/20 text-white/90 text-sm font-semibold backdrop-blur-sm">
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                <span>Explore Testnet (Coming Soon)</span>
-              </div>
+              <TestnetLoginButton />
             </div>
           </div>
         </section>

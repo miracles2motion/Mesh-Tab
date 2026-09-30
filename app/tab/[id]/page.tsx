@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { Activity, Plus, ArrowLeft, Settings, SlidersHorizontal, Users, Download, CheckCircle2, LayoutGrid, Sparkles, Crown, Upload, Award } from "lucide-react";
+import { Activity, Plus, ArrowLeft, Settings, SlidersHorizontal, Users, Download, CheckCircle2, LayoutGrid, Sparkles, Crown, Upload, Award, Bell, Wifi, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { BalanceCard } from "../../../components/tab/balance-card";
@@ -24,11 +24,14 @@ import { ThemeToggle } from "../../../components/theme-toggle";
 import { toast } from "sonner";
 import { sounds } from "../../../lib/sounds";
 import { NetworkStatusBadge } from "../../../components/ui/network-status-badge";
-import { Wifi, MoreHorizontal } from "lucide-react";
-import { GlobalNav } from "../../../components/ui/global-nav";
 
-import { useUserProfile, useDeveloperMode, useStoredTabs, useStoredExpenses, useStoredTabMembers, useWorkspaceMode, useSettledPayoutBalance } from "../../../lib/user";
+import { GlobalNav } from "../../../components/ui/global-nav";
+import { PaymentDrawer } from "../../../components/ui/payment-drawer";
+
+import { useUserProfile, useDeveloperMode, useStoredTabs, useStoredExpenses, useStoredTabMembers, useWorkspaceMode, useSettledPayoutBalance, settleTab, useVirtualBalance } from "../../../lib/user";
 import { useTabSync } from "../../../lib/sync";
+import { useNotifications } from "../../../lib/notifications";
+import { fireSettlementConfetti } from "../../../lib/confetti";
 
 function DashboardContent() {
   const params = useParams();
@@ -41,6 +44,8 @@ function DashboardContent() {
   const { mode: workspaceMode } = useWorkspaceMode();
   const { isSyncing, lastSync, syncError } = useTabSync(rawTabId);
   const { settledBalance, totalOutstandingDebt, withdrawableAmount } = useSettledPayoutBalance();
+  const { deduct } = useVirtualBalance();
+  const { unreadCount } = useNotifications();
 
   const currentUser = profile.name || "David";
   const { members: activeMembers } = useStoredTabMembers(rawTabId, currentUser);
@@ -84,6 +89,7 @@ function DashboardContent() {
   const hasOutstandingTabDebt = activeMembers.some(m => (m.balance ?? 0) < 0);
 
   const [isSettlementOpen, setIsSettlementOpen] = useState(false);
+  const [isPaymentDrawerOpen, setIsPaymentDrawerOpen] = useState(false);
   const [isCashOutOpen, setIsCashOutOpen] = useState(false);
   const [isNettingModalOpen, setIsNettingModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -96,6 +102,27 @@ function DashboardContent() {
   const [txState, setTxState] = useState<TransactionState>("idle");
 
   const [nettingTxState, setNettingTxState] = useState<TransactionState>("idle");
+  const [paymentTxState, setPaymentTxState] = useState<TransactionState>("idle");
+
+  const handlePayment = async () => {
+    setIsPaymentDrawerOpen(false);
+    setPaymentTxState("authenticating");
+    await new Promise(r => setTimeout(r, 1500));
+    setPaymentTxState("processing");
+    await new Promise(r => setTimeout(r, 2000));
+    
+    // Clear the debt in the local store
+    const debtAmount = Math.abs(currentUserData.balance || 0);
+    deduct(debtAmount);
+    settleTab(rawTabId, currentUser, debtAmount);
+    
+    setPaymentTxState("success");
+    await new Promise(r => setTimeout(r, 1000));
+    setPaymentTxState("idle");
+    sounds.playSuccessChime();
+    fireSettlementConfetti();
+    toast.success("Debt Settled", { description: `Your payment of $${(debtAmount / 100).toFixed(2)} AUSD was confirmed on Monad.` });
+  };
   const [mounted, setMounted] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -118,6 +145,9 @@ function DashboardContent() {
   useEffect(() => {
     if (searchParams.get("settle") === "true") {
       setIsSettlementOpen(true);
+    }
+    if (searchParams.get("netting") === "true") {
+      setIsNettingModalOpen(true);
     }
   }, [searchParams]);
 
@@ -225,6 +255,14 @@ function DashboardContent() {
         success: "Netting Complete: Saved $3,400 in redundant transfers! (Includes $2,700 from prior cumulative cycles)"
       }}
     />
+    <TransactionOverlay 
+      state={paymentTxState} 
+      messages={{
+        authenticating: "Awaiting biometric authentication...",
+        processing: "Processing secure payment...",
+        success: "Payment settled!"
+      }}
+    />
     <div className="flex-1 flex flex-col pb-48 lg:pb-48 text-slate-900 dark:text-white transition-colors duration-300">
       <GlobalNav />
       {/* Header */}
@@ -252,6 +290,18 @@ function DashboardContent() {
                 </span>
               )}
               <NetworkStatusBadge compact />
+              <Link 
+                href={`/notifications?from=/tab/${rawTabId}`} 
+                className="relative w-8 h-8 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shadow-sm text-slate-700 dark:text-white/80 shrink-0"
+                title={`Notifications ${mounted && unreadCount > 0 ? `(${unreadCount} unread)` : ""}`}
+              >
+                <Bell className="w-4 h-4" />
+                {mounted && unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-0.5 bg-rose-500 text-white text-[9px] font-extrabold rounded-full flex items-center justify-center border-2 border-[#f5f5f7] dark:border-[#0a0a0a] shadow-sm">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </Link>
               {workspaceMode === "sample" && rawTabId === "lisbon-24" && (
                 <Link
                   href={`/demo?from=/tab/${rawTabId}`}
@@ -271,6 +321,18 @@ function DashboardContent() {
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <Link 
+            href={`/notifications?from=/tab/${rawTabId}`}
+            className="relative p-2 sm:p-2.5 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-white/80 transition-colors shadow-sm cursor-pointer"
+            title="Notifications"
+          >
+            <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute top-0 right-0 -mt-1 -mr-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[10px] font-bold rounded-full border-2 border-[#f5f5f7] dark:border-[#0a0a0a]">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            )}
+          </Link>
           <div className="relative more-options-container">
             <button
               onClick={() => setIsMoreOptionsOpen(!isMoreOptionsOpen)}
@@ -398,9 +460,22 @@ function DashboardContent() {
         </div>
       </div>
 
+      <PaymentDrawer 
+        isOpen={isPaymentDrawerOpen} 
+        onClose={() => setIsPaymentDrawerOpen(false)} 
+        onPay={handlePayment}
+        debtor={currentUser} 
+        creditor="Alice" 
+        amount={Math.abs(currentUserData.balance || 50)} 
+      />
+
       <SettlementDrawer 
         isOpen={isSettlementOpen} 
         onClose={() => setIsSettlementOpen(false)} 
+        onConfirmPayment={() => {
+          setIsSettlementOpen(false);
+          setTimeout(() => setIsPaymentDrawerOpen(true), 400); // Wait for the drawer to close
+        }}
         debtAmount={Math.abs(currentUserData.balance)} 
         tabId={rawTabId}
         currentUserName={currentUser}

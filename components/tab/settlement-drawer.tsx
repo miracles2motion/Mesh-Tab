@@ -6,13 +6,37 @@ import { Sheet } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { formatCurrency } from "../../lib/utils";
 import { ReceiptView } from "../ReceiptView";
-import { MonadLogo, AgoraLogo, DynamicLogo, PythLogo } from "../ui/partner-logo";
+import { MonadLogo, AgoraLogo, PythLogo } from "../ui/partner-logo";
 
 import { useUserProfile, settleTab, useVirtualBalance, useStoredTabMembers, useWorkspaceMode } from "../../lib/user";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { fireSettlementConfetti, fireFaucetConfetti } from "../../lib/confetti";
 import { SUPPORTED_CURRENCIES, usePythRate } from "../../lib/pyth";
+import { erc20Abi, createWalletClient, custom, createPublicClient, http } from "viem";
+import { useWallets } from "@privy-io/react-auth";
+
+const monadTestnet = {
+  id: 10143,
+  name: 'Monad Testnet',
+  network: 'monad-testnet',
+  nativeCurrency: { name: 'MONAD', symbol: 'MONAD', decimals: 18 },
+  rpcUrls: { default: { http: [process.env.NEXT_PUBLIC_MONAD_RPC_URL || 'https://testnet-rpc.monad.xyz'] } }
+} as const;
+
+const MeshTabLedgerABI = [
+  {
+    "inputs": [
+      { "internalType": "string", "name": "groupId", "type": "string" },
+      { "internalType": "address", "name": "creditor", "type": "address" },
+      { "internalType": "uint256", "name": "amount", "type": "uint256" }
+    ],
+    "name": "payNettedDebt",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+];
 
 interface SettlementDrawerProps {
   isOpen: boolean;
@@ -20,15 +44,17 @@ interface SettlementDrawerProps {
   debtAmount: number; // in cents
   tabId?: string;
   currentUserName?: string;
+  onConfirmPayment?: () => void;
 }
 
-export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-24", currentUserName }: SettlementDrawerProps) {
+export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-24", currentUserName, onConfirmPayment }: SettlementDrawerProps) {
   const profile = useUserProfile();
   const { mode: workspaceMode } = useWorkspaceMode();
+  const { wallets } = useWallets();
   const { balance: virtualBalance, deduct, topUp } = useVirtualBalance();
   const activeUser = currentUserName || profile.name || "David";
   const { members: tabMembers } = useStoredTabMembers(tabId, activeUser);
-
+  
   // Dynamically identify who paid for the expenses (creditor with positive balance)
   const primaryCreditor = tabMembers.find(m => m.balance > 0)?.name || (workspaceMode === "sample" && tabId === "lisbon-24" ? "Aisha" : undefined);
 
@@ -47,13 +73,82 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
     ? Math.round(convertedAmount).toLocaleString() 
     : convertedAmount.toFixed(2);
 
-  const hasEnoughVirtual = virtualBalance >= debtAmount;
+  const hasEnoughVirtual = workspaceMode === "testnet" ? true : virtualBalance >= debtAmount;
 
   const handleSettle = async () => {
-    setIsProcessing(true);
-    await new Promise((r) => setTimeout(r, 1800));
+    if (onConfirmPayment) {
+      onConfirmPayment();
+      return;
+    }
 
-    if (paymentMethod === "ausd" && hasEnoughVirtual) {
+    setIsProcessing(true);
+
+    if (workspaceMode === "testnet" && paymentMethod === "ausd") {
+      try {
+        const privyWallet = wallets.find(w => w.walletClientType === 'privy');
+        if (!privyWallet) throw new Error("Could not find connected embedded wallet.");
+
+        const ausdAddress = (process.env.NEXT_PUBLIC_MOCK_AUSD_ADDRESS || "0xF9bA02Cd0aFc210e0867852eEb0E994B07d9957F") as `0x${string}`;
+        const ledgerAddress = (process.env.NEXT_PUBLIC_MESH_TAB_LEDGER_ADDRESS || "0x43405B9D8E30ff76910009E79131200c862fCA7d") as `0x${string}`;
+        
+        // debtAmount is in cents. AUSD has 6 decimals.
+        // e.g. 1500 cents ($15.00) -> 15 * 10^4 = 150,000, which is 15 * 10^6 when factoring in cents
+        // Wait, 1500 cents is 15 dollars. 15 dollars in 6 decimals is 15 * 10^6. 1500 * 10^4 = 15,000,000. Correct.
+        const amountWei = BigInt(debtAmount) * BigInt(10 ** 4); 
+
+        // We use a mock creditor address for the demo since users aren't mapped to on-chain addresses in the local state
+        const mockCreditorAddress = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"; // vitalik.eth
+
+        const provider = await privyWallet.getEthereumProvider();
+        const walletClient = createWalletClient({
+          account: privyWallet.address as `0x${string}`,
+          chain: monadTestnet,
+          transport: custom(provider)
+        });
+
+        const publicClient = createPublicClient({
+          chain: monadTestnet,
+          transport: http()
+        });
+
+        toast.loading("Approving AUSD...", { id: "tx-toast" });
+
+        // 1. Approve AUSD
+        const approveHash = await walletClient.writeContract({
+          address: ausdAddress,
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [ledgerAddress, amountWei],
+          account: privyWallet.address as `0x${string}`
+        });
+        await publicClient.waitForTransactionReceipt({ hash: approveHash });
+
+        toast.loading("Executing Settlement...", { id: "tx-toast" });
+
+        // 2. Call payNettedDebt
+        const payHash = await walletClient.writeContract({
+          address: ledgerAddress,
+          abi: MeshTabLedgerABI,
+          functionName: "payNettedDebt",
+          args: [tabId, mockCreditorAddress, amountWei],
+          account: privyWallet.address as `0x${string}`
+        });
+        await publicClient.waitForTransactionReceipt({ hash: payHash });
+        
+        toast.dismiss("tx-toast");
+
+      } catch (err: any) {
+        toast.dismiss("tx-toast");
+        console.error("Testnet Settlement Error:", err);
+        toast.error("Payment failed", { description: err.message || "We couldn't process your payment at this time. Please try again." });
+        setIsProcessing(false);
+        return;
+      }
+    } else {
+      await new Promise((r) => setTimeout(r, 1800));
+    }
+
+    if (paymentMethod === "ausd" && hasEnoughVirtual && workspaceMode !== "testnet") {
       deduct(debtAmount);
     }
 
@@ -64,8 +159,8 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
     // Smooth celebrations
     sounds.playSuccessChime();
     fireSettlementConfetti();
-    toast.success("Debt Settled Successfully!", {
-      description: `Your balance of ${formatCurrency(debtAmount)} has been cleared on Monad.`
+    toast.success("Payment Successful!", {
+      description: `Your balance of ${formatCurrency(debtAmount)} has been cleared.`
     });
   };
 
@@ -171,7 +266,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
                   </div>
                 </button>
 
-                {/* Option B: Apple Pay / Debit Card (Dynamic) */}
+                {/* Option B: Apple Pay / Debit Card */}
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("apple-pay")}
@@ -187,7 +282,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
                     </div>
                     <div>
                       <h4 className="font-semibold text-sm text-slate-900 dark:text-white">
-                        Apple Pay / Card (Dynamic)
+                        Apple Pay / Card
                       </h4>
                       <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5">
                         Instant card checkout with 0 FX fees
@@ -206,31 +301,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
                 </button>
               </div>
 
-              {/* Faucet Top-up if balance is low or on demand */}
-              {paymentMethod === "ausd" && !hasEnoughVirtual && (
-                <div className="w-full p-4 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-2xl mb-6 text-left">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-bold text-amber-900 dark:text-amber-200">
-                        Insufficient Virtual Balance
-                      </p>
-                      <p className="text-xs text-amber-700 dark:text-amber-300/80 mt-0.5">
-                        Claim test dollars from the sandbox faucet.
-                      </p>
-                    </div>
-                    <Button onClick={handleQuickFaucet} variant="secondary" size="sm" className="gap-1.5 shrink-0">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                      <span>+ $500 Faucet</span>
-                    </Button>
-                  </div>
-                </div>
-              )}
 
-              {justToppedUp && (
-                <div className="w-full p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center justify-center gap-1.5 mb-4 animate-in fade-in">
-                  <Check className="w-4 h-4" /> Added +$500.00 Test AUSD!
-                </div>
-              )}
 
               {paymentMethod === "apple-pay" && (
                 <div className="w-full space-y-3 mb-6 text-left">
@@ -265,7 +336,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
                   {/* Live Pyth Mid-Market Rate Box */}
                   <div className="p-3.5 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 rounded-2xl flex items-center justify-between text-xs">
                     <div className="space-y-0.5">
-                      <span className="text-slate-500 dark:text-white/60 text-[11px]">Dynamic Card Charge:</span>
+                      <span className="text-slate-500 dark:text-white/60 text-[11px]">Card Charge:</span>
                       <p className="font-bold text-slate-900 dark:text-white text-sm">
                         {pythConfig?.symbol || "$"}{formattedConverted} {payCurrency}
                       </p>
@@ -300,8 +371,6 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
              <MonadLogo className="h-3.5 w-auto" />
              <span className="text-slate-300 dark:text-white/20">×</span>
              <AgoraLogo className="h-3.5 w-auto" />
-             <span className="text-slate-300 dark:text-white/20">×</span>
-             <DynamicLogo className="h-3.5 w-auto" />
              <span className="text-slate-300 dark:text-white/20">×</span>
              <PythLogo className="h-3.5 w-auto" />
            </div>

@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Fingerprint, Loader2 } from "lucide-react";
 import { Button } from "../../components/ui/button";
-import { DynamicLogo } from "../../components/ui/partner-logo";
 
 import { ThemeToggle } from "../../components/theme-toggle";
 import { setWorkspaceMode, saveStoredUser } from "../../lib/user";
@@ -91,14 +90,6 @@ function LoginContent() {
           </Link>
         </div>
       </motion.div>
-
-      {/* Powered by Dynamic branding in bottom left */}
-      <div className="fixed bottom-6 left-6 flex items-center gap-2 text-slate-500 dark:text-white/50 text-xs font-medium">
-        <span>Powered by</span>
-        <div className="opacity-90 hover:opacity-100 transition-all text-slate-800 dark:text-white">
-          <DynamicLogo className="h-4 w-auto" />
-        </div>
-      </div>
     </div>
   );
 }

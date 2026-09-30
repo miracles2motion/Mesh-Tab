@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode, Settings, Search, Filter, Crown, CheckCircle2, TrendingDown, TrendingUp, ArrowDownToLine, Coins, Sparkles, Award } from "lucide-react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode, Settings, Search, Filter, Crown, CheckCircle2, TrendingDown, TrendingUp, ArrowDownToLine, Coins, Sparkles, Award, Fingerprint } from "lucide-react";
 import { useState, useEffect } from "react";
 import { TransactionOverlay, TransactionState } from "../../components/ui/transaction-overlay";
 import { formatCurrency } from "../../lib/utils";
@@ -10,7 +10,6 @@ import { ThemeToggle } from "../../components/theme-toggle";
 import { useUserProfile, useStoredTabs, useVirtualBalance, useWorkspaceMode, useSettledPayoutBalance, getStoredTabMembers } from "../../lib/user";
 import { useNotifications } from "../../lib/notifications";
 import { CashOutDrawer } from "../../components/tab/cash-out-drawer";
-import { FaucetModal } from "../../components/tab/faucet-modal";
 import { PitchModal } from "../../components/home/pitch-modal";
 import { MeshBuddy } from "../../components/ui/mesh-buddy";
 import { toast } from "sonner";
@@ -18,19 +17,32 @@ import { sounds } from "../../lib/sounds";
 import { AnimatedCounter } from "../../components/ui/animated-counter";
 import { NetworkStatusBadge } from "../../components/ui/network-status-badge";
 import { GlobalNav } from "../../components/ui/global-nav";
+import { createPublicClient, http, formatUnits, erc20Abi } from "viem";
+import { useWallets, usePrivy } from "@privy-io/react-auth";
+import { SecuritySettingsModal } from "../../components/ui/security-settings-modal";
 
 export default function GlobalHub() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isTestnetMode = searchParams.get("mode") === "testnet";
+  
   const profile = useUserProfile();
   const { tabs: mockTabs, saveTab } = useStoredTabs();
   const { balance: virtualBalance } = useVirtualBalance();
-  const { mode: workspaceMode } = useWorkspaceMode();
+  const { mode: workspaceMode, setMode: setWorkspaceMode } = useWorkspaceMode();
   const { settledBalance, totalOutstandingDebt, withdrawableAmount } = useSettledPayoutBalance();
   const { unreadCount } = useNotifications();
 
+  const { wallets } = useWallets();
+  const { user, linkPasskey } = usePrivy();
+  const [testnetBalance, setTestnetBalance] = useState<number>(0);
+  const [isFetchingBalance, setIsFetchingBalance] = useState(false);
+  const [dismissPasskeyPrompt, setDismissPasskeyPrompt] = useState(false);
+
+  const hasPasskey = user?.linkedAccounts?.some(account => account.type === 'passkey') || false;
+
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showCashOutModal, setShowCashOutModal] = useState(false);
-  const [showFaucetModal, setShowFaucetModal] = useState(false);
   const [showPitchModal, setShowPitchModal] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [txState, setTxState] = useState<TransactionState>("idle");
@@ -41,6 +53,51 @@ export default function GlobalHub() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Sync URL testnet mode to workspace storage mode
+  useEffect(() => {
+    if (isTestnetMode && workspaceMode !== "testnet") {
+      setWorkspaceMode("testnet");
+    } else if (!isTestnetMode && workspaceMode === "testnet") {
+      setWorkspaceMode("blank"); // default fallback if they remove the param
+    }
+  }, [isTestnetMode, workspaceMode, setWorkspaceMode]);
+
+  useEffect(() => {
+    async function fetchBalance() {
+      if (!isTestnetMode) return;
+      
+      const primaryWallet = wallets.find(w => w.chain === "eip155") || wallets[0];
+      if (!primaryWallet || !primaryWallet.address) return;
+
+      setIsFetchingBalance(true);
+      try {
+        const client = createPublicClient({
+          transport: http(process.env.NEXT_PUBLIC_MONAD_RPC_URL || "https://testnet-rpc.monad.xyz")
+        });
+
+        const balance = await client.readContract({
+          address: (process.env.NEXT_PUBLIC_MOCK_AUSD_ADDRESS as `0x${string}`) || "0xF9bA02Cd0aFc210e0867852eEb0E994B07d9957F",
+          abi: erc20Abi,
+          functionName: "balanceOf",
+          args: [primaryWallet.address as `0x${string}`],
+        });
+
+        const formatted = parseFloat(formatUnits(balance as bigint, 6));
+        setTestnetBalance(formatted);
+      } catch (err) {
+        console.error("Error fetching Monad AUSD balance:", err);
+      } finally {
+        setIsFetchingBalance(false);
+      }
+    }
+
+    fetchBalance();
+    
+    // Poll every 5 seconds for live updates
+    const interval = setInterval(fetchBalance, 5000);
+    return () => clearInterval(interval);
+  }, [isTestnetMode, wallets]);
 
   const currentUserName = profile.name || "David";
 
@@ -72,9 +129,13 @@ export default function GlobalHub() {
         };
       });
 
-  const netBalance = syncedTabs.reduce((acc, tab) => acc + tab.balance, 0);
   const totalYouOwe = syncedTabs.filter(t => t.balance < 0).reduce((acc, t) => acc + Math.abs(t.balance), 0);
   const totalOwedToYou = syncedTabs.filter(t => t.balance > 0).reduce((acc, t) => acc + t.balance, 0);
+
+  // The user's mental model for "Total Net Balance":
+  // If they have withdrawable cash, show it (e.g. +230).
+  // If they have withdrawn it all, their liquid net is just their active debt (e.g. -270).
+  const netBalance = withdrawableAmount > 0 ? withdrawableAmount : -totalYouOwe;
 
   // Dynamic Greeting Logic
   const hour = new Date().getHours();
@@ -136,6 +197,34 @@ export default function GlobalHub() {
     />
     <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300 pb-36 lg:pb-36">
       <GlobalNav />
+      
+      {/* Passkey Link Prompt */}
+      {mounted && user && !hasPasskey && !dismissPasskeyPrompt && (
+        <div className="bg-indigo-600 dark:bg-indigo-500/10 text-white dark:text-indigo-200 px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-indigo-700 dark:border-indigo-500/20 animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-3">
+            <Fingerprint className="w-5 h-5 text-indigo-200 dark:text-indigo-400" />
+            <span className="text-sm font-medium">Secure your account with device biometrics (Face ID, Fingerprint) for frictionless access.</span>
+          </div>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <button 
+              onClick={() => {
+                sounds.playClick();
+                linkPasskey();
+              }}
+              className="bg-white dark:bg-indigo-500 text-indigo-600 dark:text-white px-4 py-1.5 rounded-full text-xs font-bold hover:scale-105 transition-transform whitespace-nowrap shadow-sm"
+            >
+              Link Passkey
+            </button>
+            <button 
+              onClick={() => setDismissPasskeyPrompt(true)}
+              className="text-indigo-200 dark:text-indigo-400 hover:text-white text-xs font-medium px-2"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="px-6 md:px-12 pt-10 pb-6 flex items-center justify-between max-w-[1600px] mx-auto w-full">
         <div>
@@ -156,9 +245,9 @@ export default function GlobalHub() {
             </div>
             <div className="flex items-center gap-2 flex-wrap order-1 md:order-2 md:pb-1">
               <NetworkStatusBadge compact />
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Demo Sandbox (Monad Testnet)
+              <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${isTestnetMode ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20" : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"}`}>
+                <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isTestnetMode ? "bg-purple-500" : "bg-emerald-500"}`} />
+                {isTestnetMode ? "Monad Testnet" : "Demo Sandbox"}
               </span>
               <Link 
                 href="/demo?from=/home"
@@ -195,16 +284,23 @@ export default function GlobalHub() {
           {!mounted ? (
             <div className="h-8 w-24 bg-slate-200 dark:bg-white/10 rounded-full animate-pulse" />
           ) : (
-            <button
-              onClick={() => setShowFaucetModal(true)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold text-xs hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors shadow-sm"
-              title="Sandbox Virtual Faucet"
+            <div
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-full border font-bold text-xs shadow-sm transition-colors ${
+                isTestnetMode 
+                  ? "bg-purple-50 dark:bg-purple-500/10 border-purple-200 dark:border-purple-500/20 text-purple-700 dark:text-purple-300" 
+                  : "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-300"
+              }`}
+              title={isTestnetMode ? "Monad Testnet AUSD Balance" : "Sandbox Virtual Balance"}
             >
               <Coins className="w-3.5 h-3.5" />
               <span className="tabular-nums">
-                <AnimatedCounter value={virtualBalance / 100} prefix="$" decimals={2} />
+                {isTestnetMode && isFetchingBalance && testnetBalance === 0 ? (
+                  <span className="w-8 h-3 bg-purple-200 dark:bg-purple-500/20 rounded animate-pulse inline-block" />
+                ) : (
+                  <AnimatedCounter value={isTestnetMode ? testnetBalance : virtualBalance / 100} prefix="$" decimals={2} />
+                )}
               </span>
-            </button>
+            </div>
           )}
           <Link 
             href="/notifications?from=/home" 
@@ -218,6 +314,7 @@ export default function GlobalHub() {
               </span>
             )}
           </Link>
+          <SecuritySettingsModal />
         </div>
       </header>
 
@@ -232,7 +329,7 @@ export default function GlobalHub() {
               {!mounted ? (
                 <div className="h-10 w-44 bg-slate-200 dark:bg-white/10 rounded-2xl animate-pulse mt-1 mb-2" />
               ) : (
-                <div className={`text-3xl sm:text-4xl md:text-5xl font-bold mt-1 tracking-tight break-words min-w-0 ${netBalance < 0 ? "text-rose-600 dark:text-rose-400" : netBalance > 0 ? "text-amber-500 dark:text-amber-400" : "text-slate-900 dark:text-white"}`}>
+                <div className={`text-3xl sm:text-4xl md:text-5xl font-bold mt-1 tracking-tight break-words min-w-0 ${netBalance < 0 ? "text-rose-600 dark:text-rose-400" : netBalance > 0 ? "text-emerald-500 dark:text-emerald-400" : "text-slate-900 dark:text-white"}`}>
                   {netBalance < 0 ? "-" : netBalance > 0 ? "+" : ""}<AnimatedCounter value={Math.abs(netBalance) / 100} prefix="$" decimals={2} />
                 </div>
               )}
@@ -244,24 +341,36 @@ export default function GlobalHub() {
                 )}
               </p>
 
-              {mounted && settledBalance > 0 && (
+              {mounted && (
                 <div className="mt-4 flex items-center gap-3 flex-wrap">
                   <button 
                     onClick={() => {
-                      sounds.playClick();
-                      setShowCashOutModal(true);
+                      if (withdrawableAmount > 0) {
+                        sounds.playClick();
+                        setShowCashOutModal(true);
+                      }
                     }}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-md shadow-emerald-500/25 transition-all cursor-pointer"
-                    title="Withdraw settled funds to your bank account"
+                    disabled={withdrawableAmount <= 0}
+                    className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-white text-xs font-bold shadow-md transition-all ${
+                      withdrawableAmount > 0 
+                        ? "bg-emerald-600 hover:bg-emerald-700 active:scale-95 shadow-emerald-500/25 cursor-pointer" 
+                        : "bg-slate-300 dark:bg-white/10 text-slate-500 dark:text-white/40 shadow-none cursor-not-allowed"
+                    }`}
+                    title={withdrawableAmount > 0 ? "Withdraw settled funds to your bank account" : "You need a positive settled balance to withdraw"}
                   >
                     <ArrowDownToLine className="w-4 h-4" /> Cash Out to Bank
                   </button>
-                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-3 py-1.5 rounded-full flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                    <span>{formatCurrency(settledBalance)} Ready for Transfer</span>
+                  <span className={`text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 border ${
+                    withdrawableAmount > 0 
+                      ? "text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20"
+                      : "text-slate-500 dark:text-white/50 bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10"
+                  }`}>
+                    <CheckCircle2 className={`w-3.5 h-3.5 ${withdrawableAmount > 0 ? "text-emerald-500" : "text-slate-400"}`} />
+                    <span>{formatCurrency(withdrawableAmount)} Ready for Transfer</span>
                   </span>
                 </div>
               )}
+
             </div>
 
             {/* Split Breakdown */}
@@ -285,15 +394,15 @@ export default function GlobalHub() {
                   {!mounted ? <span className="inline-block h-4 w-14 bg-slate-200 dark:bg-white/10 rounded animate-pulse" /> : formatCurrency(totalOwedToYou)}
                 </div>
               </div>
-              {mounted && settledBalance > 0 && (
+              {mounted && (
                 <>
                   <div className="w-px h-8 bg-slate-200 dark:bg-white/10" />
                   <div className="space-y-0.5">
-                    <div className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-semibold">
+                    <div className={`flex items-center gap-1 font-semibold ${settledBalance > 0 ? "text-indigo-600 dark:text-indigo-400" : "text-slate-500 dark:text-white/50"}`}>
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>Settled Payouts</span>
                     </div>
-                    <div className="font-bold text-emerald-600 dark:text-emerald-400 text-base">
+                    <div className={`font-bold text-base ${settledBalance > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-white/40"}`}>
                       {formatCurrency(settledBalance)}
                     </div>
                   </div>
@@ -531,11 +640,6 @@ export default function GlobalHub() {
         currentUserName={profile.name} 
       />
 
-      {/* Faucet Modal */}
-      <FaucetModal
-        isOpen={showFaucetModal}
-        onClose={() => setShowFaucetModal(false)}
-      />
 
       {/* Monad Metropolis Pitch Presentation Modal */}
       <PitchModal 

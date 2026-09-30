@@ -22,15 +22,34 @@ import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import Image from "next/image";
-import { DynamicLogo } from "../../components/ui/partner-logo";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { createWalletClient, custom } from "viem";
 
+const MockAUSD_ABI = [
+  {
+    "inputs": [],
+    "name": "claimWelcomeBonus",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+];
+
+const monadTestnet = {
+  id: 10143,
+  name: 'Monad Testnet',
+  network: 'monad-testnet',
+  nativeCurrency: { name: 'MONAD', symbol: 'MONAD', decimals: 18 },
+  rpcUrls: { default: { http: [process.env.NEXT_PUBLIC_MONAD_RPC_URL || 'https://testnet-rpc.monad.xyz'] } }
+} as const;
 function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isInvite = searchParams.get("invite") === "true";
   const inviteTab = searchParams.get("tab");
   const isFresh = searchParams.get("fresh") === "true";
-
+  const { user } = usePrivy();
+  const { wallets } = useWallets();
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
   // Step 1: Passkey enrollment
@@ -77,7 +96,13 @@ function OnboardingContent() {
     sounds.playClick();
 
     const finalName = name.trim();
-    saveStoredUser(finalName, selectedColorIdx);
+    const result = await saveStoredUser(finalName, selectedColorIdx, user?.wallet?.address);
+    if (result.error) {
+      toast.error("Error", { description: result.error });
+      setIsSubmitting(false);
+      return;
+    }
+    
     saveBuddySettings({
       enabled: enableBuddy,
       name: `${finalName}'s Buddy`,
@@ -95,8 +120,32 @@ function OnboardingContent() {
 
     setStep(3);
 
-    // Simulate smart account creation on Monad with Pimlico
-    await new Promise((resolve) => setTimeout(resolve, 1600));
+    // Trigger Welcome Bonus Gasless Transaction
+    toast.info("Funding Smart Account", { description: "Minting 5,000 AUSD welcome bonus via Alchemy Paymaster..." });
+    try {
+      const privyWallet = wallets.find(w => w.walletClientType === 'privy');
+      if (privyWallet) {
+        const provider = await privyWallet.getEthereumProvider();
+        const walletClient = createWalletClient({
+          account: privyWallet.address as `0x${string}`,
+          chain: monadTestnet,
+          transport: custom(provider)
+        });
+
+        // Call the smart contract silently (Alchemy pays gas)
+        await walletClient.writeContract({
+          address: process.env.NEXT_PUBLIC_MOCK_AUSD_ADDRESS as `0x${string}`,
+          abi: MockAUSD_ABI,
+          functionName: "claimWelcomeBonus",
+          account: privyWallet.address as `0x${string}`
+        });
+        // Short delay to let the TX broadcast smoothly
+        await new Promise((resolve) => setTimeout(resolve, 800));
+      }
+    } catch (err) {
+      console.warn("Welcome bonus failed or already claimed:", err);
+      // We don't block onboarding if this fails, they might be logging in again
+    }
 
     sounds.playSuccessChime();
     try {
@@ -357,13 +406,6 @@ function OnboardingContent() {
         </AnimatePresence>
       </motion.div>
 
-      {/* Partner Attribution */}
-      <div className="mt-8 flex items-center gap-2 text-slate-500 dark:text-white/50 text-xs font-medium relative z-10">
-        <span>Protected by</span>
-        <div className="opacity-90 hover:opacity-100 transition-all text-slate-800 dark:text-white">
-          <DynamicLogo className="h-4 w-auto" />
-        </div>
-      </div>
     </div>
   );
 }

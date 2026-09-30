@@ -43,11 +43,13 @@ import { fireFaucetConfetti } from "../../lib/confetti";
 import { AnimatedCounter } from "../../components/ui/animated-counter";
 import { speak, stopSpeech, VoicePersona } from "../../lib/voice";
 import { GlobalNav } from "../../components/ui/global-nav";
+import { usePrivy } from "@privy-io/react-auth";
 
 function SettingsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromUrl = searchParams.get("from");
+  const { user } = usePrivy();
 
   const profile = useUserProfile();
   const { showAddress: showAddressOnDashboard, toggleAddress } = useDeveloperMode();
@@ -149,16 +151,26 @@ function SettingsContent() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSaveChanges = () => {
-    saveStoredUser(displayName, avatarColorIndex);
+  const handleSaveChanges = async () => {
+    const result = await saveStoredUser(displayName, avatarColorIndex, user?.wallet?.address);
+    if (result.error) {
+      toast.error("Error", { description: result.error });
+      return;
+    }
     sounds.playSuccessChime();
     toast.success("Profile Updated", { description: "Changes synced across all shared groups." });
   };
 
-  const handleChangeAvatar = () => {
+  const handleChangeAvatar = async () => {
     const nextIdx = (avatarColorIndex + 1) % AVATAR_COLORS.length;
     setAvatarColorIndex(nextIdx);
-    saveStoredUser(displayName, nextIdx);
+    const result = await saveStoredUser(displayName, nextIdx, user?.wallet?.address);
+    if (result.error) {
+      // Revert if rate limited
+      setAvatarColorIndex(avatarColorIndex);
+      toast.error("Error", { description: result.error });
+      return;
+    }
     sounds.playClick();
   };
 

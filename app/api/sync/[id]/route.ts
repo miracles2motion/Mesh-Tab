@@ -11,8 +11,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const mode = req.nextUrl.searchParams.get("mode") || "blank";
     
-    // Namespace keys based on mode (demo vs testnet/blank)
-    const namespace = mode === "sample" ? "demo" : "clean";
+    // Namespace keys based on mode (demo vs testnet vs clean)
+    const namespace = mode === "sample" ? "demo" : mode === "testnet" ? "testnet" : "clean";
     const membersKey = `meshtab:${namespace}:members:${id}`;
     const expensesKey = `meshtab:${namespace}:expenses:${id}`;
 
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const body = await req.json();
     const { mode = "blank", members, expenses } = body;
     
-    const namespace = mode === "sample" ? "demo" : "clean";
+    const namespace = mode === "sample" ? "demo" : mode === "testnet" ? "testnet" : "clean";
     const membersKey = `meshtab:${namespace}:members:${id}`;
     const expensesKey = `meshtab:${namespace}:expenses:${id}`;
 
@@ -126,7 +126,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const { id } = await params;
     const mode = req.nextUrl.searchParams.get("mode") || "blank";
     
-    const namespace = mode === "sample" ? "demo" : "clean";
+    const namespace = mode === "sample" ? "demo" : mode === "testnet" ? "testnet" : "clean";
     const membersKey = `meshtab:${namespace}:members:${id}`;
     const expensesKey = `meshtab:${namespace}:expenses:${id}`;
 

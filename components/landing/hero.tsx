@@ -3,17 +3,29 @@
 import { LANDING_CONTENT } from "../../content/landing";
 import Link from "next/link";
 import { ChevronRight, Sparkles } from "lucide-react";
-import { toast } from "sonner";
+import { usePrivy } from "@privy-io/react-auth";
 import { sounds } from "../../lib/sounds";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export function Hero() {
   const { hero } = LANDING_CONTENT;
+  const { login, authenticated, ready } = usePrivy();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (ready && authenticated) {
+      router.push("/home?mode=testnet");
+    }
+  }, [ready, authenticated, router]);
 
   const handleTestnetClick = () => {
     sounds.playPop();
-    toast.info("Testnet Release Coming Soon!", {
-      description: "Live on-chain testnet deployment is scheduled for the upcoming phase. Click 'Explore Demo Tab' to test the full app today!"
-    });
+    if (authenticated) {
+      router.push("/home?mode=testnet");
+    } else {
+      login();
+    }
   };
 
   return (
@@ -48,12 +60,10 @@ export function Hero() {
         <button 
           type="button"
           onClick={handleTestnetClick}
-          className="btn-secondary flex items-center justify-center gap-2.5 text-lg px-8 py-4 cursor-pointer"
+          className="btn-secondary flex items-center justify-center gap-2.5 text-lg px-8 py-4 cursor-pointer hover:bg-white/10"
         >
-          <span>{hero.secondaryCta}</span>
-          <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-            Coming Soon
-          </span>
+          <span>{authenticated ? "Enter App" : hero.secondaryCta}</span>
+          <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse ml-1" />
         </button>
       </div>
     </section>

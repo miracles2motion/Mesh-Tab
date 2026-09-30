@@ -9,7 +9,6 @@ import { pushTabStateToRedis } from "../../../../lib/sync";
 import { isEffectivelyOnline } from "../../../../lib/network";
 import { sounds } from "../../../../lib/sounds";
 import confetti from "canvas-confetti";
-import { DynamicLogo } from "../../../../components/ui/partner-logo";
 
 export default function JoinTabPage() {
   const params = useParams();
@@ -171,13 +170,6 @@ export default function JoinTabPage() {
             )}
           </div>
 
-          {/* Partner Attribution */}
-          <div className="pt-2 flex items-center justify-center gap-2 text-slate-400 dark:text-white/40 text-xs font-medium">
-            <span>Protected by</span>
-            <div className="opacity-80 hover:opacity-100 transition-opacity text-slate-600 dark:text-white/70">
-              <DynamicLogo className="h-3.5 w-auto" />
-            </div>
-          </div>
         </div>
       </div>
     </div>

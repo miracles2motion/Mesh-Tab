@@ -71,7 +71,7 @@ export function SettlementDrawer({
                   </div>
                   <div className="text-left">
                     <p className="text-white font-semibold text-lg leading-tight">Apple Pay</p>
-                    <p className="text-white/40 text-sm">Powered by Dynamic</p>
+                    <p className="text-white/40 text-sm">Powered by Monad</p>
                   </div>
                 </div>
                 {method === "apple" && <CheckCircle2 className="w-5 h-5 text-white" />}

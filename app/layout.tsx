@@ -3,6 +3,7 @@ import { Outfit, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { PwaRegister } from "../components/pwa-register";
+import { Web3Provider } from "../components/providers/web3-provider";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -71,9 +72,11 @@ export default function RootLayout({
             `,
           }}
         />
-        <main className="flex-1 flex flex-col w-full min-h-[100dvh] relative overflow-x-clip">
-          {children}
-        </main>
+        <Web3Provider>
+          <main className="flex-1 flex flex-col w-full min-h-[100dvh] relative overflow-x-clip">
+            {children}
+          </main>
+        </Web3Provider>
         <PwaRegister />
         <Toaster position="top-right" richColors closeButton />
       </body>

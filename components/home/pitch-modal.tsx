@@ -101,7 +101,7 @@ export function PitchModal({ isOpen, onClose }: PitchModalProps) {
           <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-1.5">
             <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 font-bold text-sm">
               <Key className="w-4 h-4" />
-              <span>2. Mera WebAuthn Passkeys</span>
+              <span>2. Passkey Authentication</span>
             </div>
             <p className="text-xs text-slate-600 dark:text-white/60 leading-relaxed">
               Signatures verified cryptographically via device biometric Face ID / Touch ID (P-256 curve). Zero seed phrases, zero extensions needed.
@@ -112,7 +112,7 @@ export function PitchModal({ isOpen, onClose }: PitchModalProps) {
           <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-1.5">
             <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-sm">
               <ShieldCheck className="w-4 h-4" />
-              <span>3. Pimlico ERC-4337 Paymaster</span>
+              <span>3. Alchemy ERC-4337 Paymaster</span>
             </div>
             <p className="text-xs text-slate-600 dark:text-white/60 leading-relaxed">
               100% gas sponsorship. Gas fees, nonces, and chain IDs are completely hidden behind smooth Web2 notifications and one-tap confirmations.

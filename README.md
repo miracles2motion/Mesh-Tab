@@ -18,8 +18,8 @@
 **The Solution:** MeshTab replaces manual notebooks with an automated, zero-friction settlement protocol:
 - **Multilateral Netting Engine ("The Tangle"):** An off-chain graph algorithm cancels out circular debt loops ($A \to B \to C \to A$), reducing total payment volume and cross-transfers by up to **75%**.
 - **Smart Receipt OCR & Voice Recognition:** Snap receipt photos via mobile camera OCR or dictate expenses with live voice recognition. The parser extracts line items into an editable staging card for human verification before signing.
-- **Biometric Passkeys (Mera):** One-tap FaceID/TouchID onboarding using hardware-secured WebAuthn (P-256). Zero seed phrases, extensions, or wallet popups.
-- **Sub-Second Digital Dollar Settlement:** Direct, gasless debt settlement in **Agora AUSD** powered by **Monad's 10,000 TPS** and **Pimlico Account Abstraction**.
+- **Biometric Passkeys:** One-tap FaceID/TouchID onboarding using hardware-secured WebAuthn (P-256). Zero seed phrases, extensions, or wallet popups.
+- **Sub-Second Digital Dollar Settlement:** Direct, gasless debt settlement in **Agora AUSD** powered by **Monad's 10,000 TPS** and **Alchemy Account Abstraction**.
 - **Radical Web3→Web2 Abstraction:** Complex blockchain mechanics (gas, nonces, RPCs, hex signatures) are completely abstracted into a clean, modern consumer fintech UI.
 
 ---
@@ -46,13 +46,13 @@ graph TD
         PARSER["Smart Receipt & Voice Parser (OCR + Web Speech)"]
     end
 
-    subgraph Auth ["Biometric Auth (Mera)"]
+    subgraph Auth ["Biometric Auth"]
         Passkey["Hardware Secure Enclave (WebAuthn P-256)"]
     end
 
     subgraph AA ["Account Abstraction (ERC-4337)"]
-        Bundler["Pimlico Alto Bundler"]
-        Paymaster["Pimlico Verifying Paymaster (Gas Sponsorship)"]
+        Bundler["Alchemy Bundler"]
+        Paymaster["Alchemy Verifying Paymaster (Gas Sponsorship)"]
         SmartAccount["Monad Smart Account"]
     end
 
@@ -80,7 +80,7 @@ Users interact with MeshTab as a normal consumer payments app:
 
 | Web3 Concept | User-Facing Experience | Architecture |
 |---|---|---|
-| `Gas Fee / Gwei` | **Free / Sponsored** | Pimlico Verifying Paymasters absorb all network fees. |
+| `Gas Fee / Gwei` | **Free / Sponsored** | Alchemy Verifying Paymasters absorb all network fees. |
 | `Private Key / Seed Phrase` | **Passkey (FaceID / TouchID)** | Hardware WebAuthn Secure Enclave (P-256). |
 | `Smart Contract Call` | **Save / Confirm** | UserOperations executed gaslessly in background. |
 | `ERC-20 Token` | **US Dollars (AUSD)** | Agora AUSD represents 1:1 digital USD value. |
@@ -116,11 +116,10 @@ npm run build
 Copy `.env.example` to `.env.local` to connect live production services:
 
 ```env
-# Dynamic Authentication & On-Ramp
-NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID=your_dynamic_environment_id
 
-# Pimlico Account Abstraction (Gas Sponsorship)
-NEXT_PUBLIC_PIMLICO_API_KEY=your_pimlico_api_key
+
+# Alchemy Account Abstraction (Gas Sponsorship)
+NEXT_PUBLIC_ALCHEMY_API_KEY=your_alchemy_api_key
 
 # Monad Network RPC
 NEXT_PUBLIC_MONAD_RPC_URL=https://rpc-mainnet.monad.xyz

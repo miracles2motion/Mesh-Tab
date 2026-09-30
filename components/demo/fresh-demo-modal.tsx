@@ -52,7 +52,7 @@ export function FreshDemoModal({ isOpen, onClose }: FreshDemoModalProps) {
     setIsScanning(true);
     sounds.playClick();
 
-    toast.info("Mera WebAuthn Prompt", {
+    toast.info("WebAuthn Prompt", {
       description: "Requesting Touch ID / Face ID hardware passkey creation..."
     });
 
@@ -160,7 +160,7 @@ export function FreshDemoModal({ isOpen, onClose }: FreshDemoModalProps) {
                 Create Your Device Passkey
               </h2>
               <p className="text-xs md:text-sm text-slate-500 dark:text-white/60 mt-1">
-                MeshTab uses Mera WebAuthn passkeys. No passwords, no seed phrases, no private keys to manage.
+                MeshTab uses WebAuthn passkeys. No passwords, no seed phrases, no private keys to manage.
               </p>
             </div>
 
@@ -207,7 +207,7 @@ export function FreshDemoModal({ isOpen, onClose }: FreshDemoModalProps) {
             <div className="p-3.5 rounded-2xl bg-indigo-50/70 dark:bg-indigo-500/5 border border-indigo-200/70 dark:border-indigo-500/20 flex items-center gap-3 text-left text-xs">
               <ShieldCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0" />
               <div className="text-slate-600 dark:text-white/70 leading-relaxed">
-                Cryptographic signatures are signed inside your phone or laptop&apos;s Secure Enclave via Mera.
+                Cryptographic signatures are signed inside your phone or laptop&apos;s Secure Enclave.
               </div>
             </div>
 

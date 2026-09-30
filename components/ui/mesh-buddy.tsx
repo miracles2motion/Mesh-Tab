@@ -141,7 +141,7 @@ export function MeshBuddy() {
     : null;
   const isDemoTab = currentTabId === "lisbon-24" && workspaceMode === "sample";
   const isCustomTab = currentTabId !== null && !isDemoTab;
-
+  const isCleanMode = workspaceMode === "blank" || workspaceMode === "testnet";
   const activeTab = storedTabs.find((t) => t.id === currentTabId);
   const tabDisplayName = activeTab?.name || (currentTabId ? currentTabId.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "Custom Group Tab");
 
@@ -184,7 +184,7 @@ export function MeshBuddy() {
     if (pathname === "/demo") {
       tip = "Interactive Sandbox: Choose between the pre-loaded Lisbon '24 trip to explore netting, or start with a Clean Slate to test a fresh tab!";
     } else if (pathname === "/home") {
-      tip = workspaceMode === "blank"
+      tip = isCleanMode
         ? "Clean Slate Active: Tap + to create your first shared group tab."
         : "Sample Trip Mode: Explore Lisbon Weekend with pre-loaded group netting.";
     } else if (pathname === "/tab/new") {
@@ -330,7 +330,7 @@ export function MeshBuddy() {
           { label: "❓ How does Netting work?", action: () => handleAskQuestion("How does netting work on custom tabs?") },
           { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet }
         ];
-      } else if (workspaceMode === "blank") {
+      } else if (isCleanMode) {
         welcomeText = `Hey ${profile.name || "there"}! I'm ${buddySettings.name}. You're in Clean Slate mode with a fresh workspace. Ready to create your first tab?`;
         welcomeActions = [
           { label: "➕ Create New Tab", action: () => router.push("/tab/new") },
@@ -351,7 +351,7 @@ export function MeshBuddy() {
         ? `Hey ${profile.name || "there"}, ready to explore the Lisbon tab.`
         : isCustomTab
           ? `Hey ${profile.name || "there"}, ready to check ${tabDisplayName}.`
-          : workspaceMode === "blank"
+          : isCleanMode
             ? `Hey ${profile.name || "there"}, ready to create your new tab.`
             : `Hey ${profile.name || "there"}, ready to assist you.`;
 
@@ -539,7 +539,7 @@ export function MeshBuddy() {
 
         replyText =
           `Here is a recap of your **Main Hub**:\n\n` +
-          `🏢 **Workspace Mode**: ${workspaceMode === "blank" ? "Clean Slate (Main App)" : "Sample Trip (Demo Mode)"}\n` +
+          `🏢 **Workspace Mode**: ${workspaceMode === "testnet" ? "Live Web3 Testnet" : workspaceMode === "blank" ? "Clean Slate (Main App)" : "Sample Trip (Demo Mode)"}\n` +
           `📁 **Active Tabs (${totalTabs})**:\n` +
           (totalTabs > 0
             ? tabs.map((t) => `• **${t.name}**: ${t.balance < 0 ? `You owe ${formatCurrency(Math.abs(t.balance))}` : t.balance > 0 ? `You are owed +${formatCurrency(t.balance)}` : "Settled ($0.00)"} (${t.memberCount} members)`).join("\n") + "\n\n"
@@ -580,7 +580,7 @@ export function MeshBuddy() {
           `• ⌨️ **Manual Entry**: Type the amount, description, and select who paid and how to split.`;
 
         actionItems = [
-          { label: "Back to Tab", action: () => router.push(currentTabId ? `/tab/${currentTabId}` : workspaceMode === "blank" ? "/home" : "/tab/lisbon-24") },
+          { label: "Back to Tab", action: () => router.push(currentTabId ? `/tab/${currentTabId}` : isCleanMode ? "/home" : "/tab/lisbon-24") },
         ];
       } else if (pathname?.includes("/members")) {
         const stats = currentTabId ? getLiveTabStats(currentTabId, userName, tabDisplayName) : null;
@@ -598,7 +598,7 @@ export function MeshBuddy() {
           `• They sign in with Face ID or Touch ID in seconds—no passwords or app downloads needed!`;
 
         actionItems = [
-          { label: "Back to Tab", action: () => router.push(currentTabId ? `/tab/${currentTabId}` : workspaceMode === "blank" ? "/home" : "/tab/lisbon-24") },
+          { label: "Back to Tab", action: () => router.push(currentTabId ? `/tab/${currentTabId}` : isCleanMode ? "/home" : "/tab/lisbon-24") },
         ];
       } else if (pathname === "/settings") {
         spokenPunchline = "Here are your account and security settings.";
@@ -719,14 +719,14 @@ export function MeshBuddy() {
       // 4. Core Intent: "What expenses were logged?" / Expense History Breakdown
       /(what expenses( were| have been)? logged|expense (history|breakdown|list)|recent (expenses|purchases)|who paid for what|show (me )?expenses|list expenses|what did we buy|what was bought|cost breakdown)/i.test(q)
     ) {
-      if (!currentTabId && workspaceMode === "blank") {
+      if (!currentTabId && isCleanMode) {
         replyText = "You are in Clean Slate mode with no tab selected. Create or open a tab to view its expense ledger!";
         actionItems = [
           { label: "➕ Create New Tab", action: () => router.push("/tab/new") },
           { label: "🏠 Go to Hub", action: () => router.push("/home") },
         ];
       } else {
-        const activeTabKey = currentTabId || (workspaceMode === "blank" ? "" : "lisbon-24");
+        const activeTabKey = currentTabId || (isCleanMode ? "" : "lisbon-24");
         const expenses = activeTabKey ? getStoredExpenses(activeTabKey) : [];
         const total = expenses.reduce((s, e) => s + (e.amount || 0), 0);
 
@@ -828,7 +828,7 @@ export function MeshBuddy() {
         { label: "🏆 Open Pitch Presentation", action: () => router.push("/home") },
         { label: "🌀 Learn About Netting", action: () => handleAskQuestion("how does netting work") },
       ];
-    } else if (/passkey|passkeys|mera|biometric|webauthn|touch id|face id/i.test(q)) {
+    } else if (/passkey|passkeys|privy|biometric|webauthn|touch id|face id/i.test(q)) {
       replyText = `MeshTab uses Touch ID and Face ID passkeys built right into your phone or laptop. You approve group expenses with your fingerprint or face just like Apple Pay—no passwords to forget, no 2FA text codes, and no account setup hassle!`;
       actionItems = [
         { label: "🔑 Test Passkey in Settings", action: () => router.push(pathname ? `/settings?from=${encodeURIComponent(pathname)}` : "/settings") },
@@ -937,7 +937,7 @@ export function MeshBuddy() {
           { label: "Go to Hub", action: () => router.push("/home") }
         ];
       }
-    } else if (q.includes("fee") || q.includes("pimlico") || q.includes("gas")) {
+    } else if (q.includes("fee") || q.includes("alchemy") || q.includes("gas")) {
       spokenPunchline = "Routine group actions and settlements in MeshTab are sponsored with zero network fees.";
       replyText = "You never pay transaction fees in MeshTab! Routine group actions—logging expenses, creating tabs, and claiming seats—are 100% free and sponsored by the platform. You never have to pay transfer fees to split a bill with friends.";
       actionItems = [
