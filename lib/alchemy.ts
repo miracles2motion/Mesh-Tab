@@ -1,5 +1,5 @@
 import { createModularAccountAlchemyClient } from "@alchemy/aa-alchemy";
-import { walletClientToSmartAccountSigner } from "@alchemy/aa-core";
+import { WalletClientSigner } from "@alchemy/aa-core";
 import { createWalletClient, custom } from "viem";
 
 export const monadTestnet = {
@@ -23,7 +23,7 @@ export async function getAlchemySmartAccountClient(privyWallet: any) {
   });
 
   // 2. Convert to aa-core Smart Account Signer
-  const privySigner = walletClientToSmartAccountSigner(privyClient);
+  const privySigner = new WalletClientSigner(privyClient, "privy");
   
   const apiKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || "";
   const policyId = process.env.NEXT_PUBLIC_ALCHEMY_POLICY_ID || "";
