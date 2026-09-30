@@ -10,31 +10,34 @@ import { Button } from "../../components/ui/button";
 import { ThemeToggle } from "../../components/theme-toggle";
 import { setWorkspaceMode, saveStoredUser } from "../../lib/user";
 
+import { usePrivy, useLogin } from "@privy-io/react-auth";
+
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const { ready, authenticated } = usePrivy();
 
   const isInvite = searchParams.get("invite") === "true";
   const inviteTab = searchParams.get("tab");
 
-  const handleLogin = async () => {
-    setIsAuthenticating(true);
-    // Mock Passkey / FaceID delay
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    
-    // Lock in sample mode during demo phase so Lisbon Weekend & demo data are loaded
-    if (typeof window !== "undefined" && localStorage.getItem("meshTab_workspaceMode") !== "blank") {
-      setWorkspaceMode("sample");
-    }
+  const { login } = useLogin({
+    onComplete: (user, isNewUser) => {
+      // Lock in sample mode during demo phase so Lisbon Weekend & demo data are loaded
+      if (typeof window !== "undefined" && localStorage.getItem("meshTab_workspaceMode") !== "blank") {
+        setWorkspaceMode("sample");
+      }
 
-    // Check if user has an existing profile; if not, initialize default demo profile
-    const hasProfile = typeof window !== "undefined" && Boolean(localStorage.getItem("meshTab_displayName"));
-    if (!hasProfile) {
-      saveStoredUser("David", 0);
-    }
+      const hasProfile = typeof window !== "undefined" && Boolean(localStorage.getItem("meshTab_displayName"));
+      if (!hasProfile || isNewUser) {
+        router.push("/onboarding?fresh=true");
+      } else {
+        router.push(isInvite ? `/tab/${inviteTab}?invite=true` : "/home");
+      }
+    },
+  });
 
-    router.push(isInvite ? `/tab/${inviteTab}?invite=true` : "/home");
+  const handleLogin = () => {
+    login();
   };
 
   return (
@@ -61,14 +64,14 @@ function LoginContent() {
 
         <Button
           onClick={handleLogin}
-          disabled={isAuthenticating}
+          disabled={!ready || authenticated}
           variant="primary"
           size="lg"
           className="w-full relative overflow-hidden"
         >
-          {isAuthenticating ? (
+          {(!ready) ? (
             <span className="flex items-center gap-2">
-              <Loader2 className="w-5 h-5 animate-spin" /> Authenticating...
+              <Loader2 className="w-5 h-5 animate-spin" /> Loading...
             </span>
           ) : (
             "Continue with Passkey"
