@@ -11,16 +11,26 @@ export function TestnetLoginButton() {
 
   useEffect(() => {
     if (ready && authenticated) {
-      router.push("/home?mode=testnet");
+      const hasProfile = typeof window !== "undefined" && Boolean(localStorage.getItem("meshTab_displayName"));
+      if (!hasProfile) {
+        router.push("/onboarding?fresh=true");
+      } else {
+        router.push("/home?mode=testnet");
+      }
     }
   }, [ready, authenticated, router]);
 
   const handleTestnetLogin = () => {
     sounds.playClick();
     if (authenticated) {
-      router.push("/home?mode=testnet");
+      const hasProfile = typeof window !== "undefined" && Boolean(localStorage.getItem("meshTab_displayName"));
+      if (!hasProfile) {
+        router.push("/onboarding?fresh=true");
+      } else {
+        router.push("/home?mode=testnet");
+      }
     } else {
-      login();
+      router.push("/login");
     }
   };
 
