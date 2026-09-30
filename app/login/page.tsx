@@ -21,7 +21,7 @@ function LoginContent() {
   const inviteTab = searchParams.get("tab");
 
   const { login } = useLogin({
-    onComplete: (user, isNewUser) => {
+    onComplete: ({ user, isNewUser }) => {
       // Lock in sample mode during demo phase so Lisbon Weekend & demo data are loaded
       if (typeof window !== "undefined" && localStorage.getItem("meshTab_workspaceMode") !== "blank") {
         setWorkspaceMode("sample");
