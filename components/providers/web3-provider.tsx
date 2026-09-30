@@ -39,7 +39,7 @@ export function Web3Provider({ children }: { children: ReactNode }) {
         supportedChains: [monadTestnet],
         embeddedWallets: {
           ethereum: {
-            createOnLogin: 'all-users',
+            createOnLogin: 'off',
           }
         }
       }}
