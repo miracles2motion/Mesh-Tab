@@ -79,7 +79,7 @@ export function MemberDetailsDrawer({
   }, [expenses, member.name]);
 
   return (
-    <Sheet isOpen={isOpen} onClose={onClose} size="full">
+    <Sheet isOpen={isOpen} onClose={onClose} size="4xl">
       <div className="p-6 md:p-8 flex flex-col w-full bg-white dark:bg-[#0a0a0a] text-slate-900 dark:text-white relative">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
           {/* LEFT COLUMN */}

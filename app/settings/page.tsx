@@ -50,6 +50,7 @@ function SettingsContent() {
   const searchParams = useSearchParams();
   const fromUrl = searchParams.get("from");
   const { user } = usePrivy();
+  const hasPasskey = user?.linkedAccounts?.some(account => account.type === 'passkey') || false;
 
   const profile = useUserProfile();
   const { showAddress: showAddressOnDashboard, toggleAddress } = useDeveloperMode();
@@ -244,7 +245,7 @@ function SettingsContent() {
     <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300">
       <GlobalNav />
       <div className="sticky top-16 z-30 bg-[#f5f5f7]/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/10 w-full">
-        <header className="px-6 md:px-12 py-3 md:py-4 max-w-[1600px] mx-auto w-full flex items-center justify-between">
+        <header className="px-6 md:px-12 py-3 md:py-4 max-w-5xl mx-auto w-full flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button 
               type="button"
@@ -263,7 +264,7 @@ function SettingsContent() {
         </header>
       </div>
 
-      <main className="px-6 md:px-12 max-w-[1600px] mx-auto w-full py-8 flex flex-col md:flex-row gap-8 lg:gap-12">
+      <main className="px-6 md:px-12 max-w-5xl mx-auto w-full py-8 flex flex-col md:flex-row gap-8 lg:gap-12">
         
         {/* Sidebar Nav */}
         <div className="w-full md:w-64 lg:w-72 shrink-0">
@@ -286,7 +287,7 @@ function SettingsContent() {
                   : "text-slate-600 dark:text-white/60 hover:bg-slate-50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
-              <Bot className="w-4 h-4 shrink-0" /> Tab Co-Pilot & Faucet
+              <Bot className="w-4 h-4 shrink-0" /> {workspaceMode === "testnet" ? "Tab Co-Pilot" : "Tab Co-Pilot & Faucet"}
             </button>
             <button 
               onClick={() => handleTabChange("advanced")}
@@ -437,16 +438,30 @@ function SettingsContent() {
                       <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
                         <Smartphone className="w-4 h-4 text-indigo-500" /> Passkey Hardware Key
                       </h3>
-                      <p className="text-xs text-slate-500 dark:text-white/50 mt-1">1 active hardware passkey (Apple Secure Enclave P-256)</p>
+                      {hasPasskey ? (
+                        <p className="text-xs text-slate-500 dark:text-white/50 mt-1">1 active hardware passkey (Apple Secure Enclave P-256)</p>
+                      ) : (
+                        <p className="text-xs text-rose-500 dark:text-rose-400 mt-1">No passkey linked to this device.</p>
+                      )}
                     </div>
-                    <Button 
-                      onClick={handleManagePasskey} 
-                      variant="secondary" 
-                      size="sm"
-                      isLoading={isManagingPasskey}
-                    >
-                      Verify Passkey
-                    </Button>
+                    {hasPasskey ? (
+                      <Button 
+                        onClick={handleManagePasskey} 
+                        variant="secondary" 
+                        size="sm"
+                        isLoading={isManagingPasskey}
+                      >
+                        Verify Passkey
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={() => user?.linkPasskey?.()} 
+                        variant="primary" 
+                        size="sm"
+                      >
+                        Set Up Passkey
+                      </Button>
+                    )}
                   </div>
                   {passkeyNotice && (
                     <div className="p-3 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 rounded-xl text-xs font-semibold text-indigo-700 dark:text-indigo-300 animate-in fade-in">
@@ -636,111 +651,115 @@ function SettingsContent() {
               </div>
 
               {/* Sandbox Virtual Faucet Card */}
-              <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                      <Coins className="w-5 h-5" />
+              {workspaceMode !== "testnet" && (
+                <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                        <Coins className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-bold text-slate-900 dark:text-white">Sandbox Virtual Faucet</h2>
+                        <p className="text-xs text-slate-500 dark:text-white/50">Instant play-money AUSD for simulating debt settlements</p>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="text-lg font-bold text-slate-900 dark:text-white">Sandbox Virtual Faucet</h2>
-                      <p className="text-xs text-slate-500 dark:text-white/50">Instant play-money AUSD for simulating debt settlements</p>
-                    </div>
+
+                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                      🟢 Monad Sandbox
+                    </span>
                   </div>
 
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                    🟢 Monad Sandbox
-                  </span>
-                </div>
+                  <div className="p-6 bg-slate-50 dark:bg-black/30 rounded-2xl border border-slate-200 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-6">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-medium text-slate-500 dark:text-white/50 mb-1 uppercase tracking-wider">
+                        Available Sandbox Balance
+                      </div>
+                      <div className="text-3xl font-extrabold text-slate-900 dark:text-white font-mono">
+                        <AnimatedCounter value={virtualBalance / 100} prefix="$" decimals={2} />
+                        <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 ml-2">Test AUSD</span>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-white/40 mt-1 max-w-sm">
+                        Deducted when paying tab debts in demo mode. Top up whenever you want to test more multilateral settlements.
+                      </p>
+                    </div>
 
-                <div className="p-6 bg-slate-50 dark:bg-black/30 rounded-2xl border border-slate-200 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-6">
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium text-slate-500 dark:text-white/50 mb-1 uppercase tracking-wider">
-                      Available Sandbox Balance
-                    </div>
-                    <div className="text-3xl font-extrabold text-slate-900 dark:text-white font-mono">
-                      <AnimatedCounter value={virtualBalance / 100} prefix="$" decimals={2} />
-                      <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 ml-2">Test AUSD</span>
-                    </div>
-                    <p className="text-xs text-slate-500 dark:text-white/40 mt-1 max-w-sm">
-                      Deducted when paying tab debts in demo mode. Top up whenever you want to test more multilateral settlements.
-                    </p>
+                    <Button 
+                      onClick={handleClaimFaucet}
+                      variant="primary"
+                      className="shrink-0 whitespace-nowrap gap-2 bg-emerald-600 hover:bg-emerald-500 text-white w-full sm:w-auto h-12 px-6 shadow-md shadow-emerald-600/20 text-sm font-bold"
+                    >
+                      <Plus className="w-4 h-4" /> Claim $500.00 AUSD
+                    </Button>
                   </div>
-
-                  <Button 
-                    onClick={handleClaimFaucet}
-                    variant="primary"
-                    className="shrink-0 whitespace-nowrap gap-2 bg-emerald-600 hover:bg-emerald-500 text-white w-full sm:w-auto h-12 px-6 shadow-md shadow-emerald-600/20 text-sm font-bold"
-                  >
-                    <Plus className="w-4 h-4" /> Claim $500.00 AUSD
-                  </Button>
                 </div>
-              </div>
+              )}
 
               {/* Workspace Sandbox Mode */}
-              <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 shadow-sm">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-2xl bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-                    <Sparkles className="w-5 h-5" />
+              {workspaceMode !== "testnet" && (
+                <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 shadow-sm">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-2xl bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-slate-900 dark:text-white">Workspace Sandbox Mode</h2>
+                      <p className="text-xs text-slate-500 dark:text-white/50">Switch between pre-populated hackathon trip data and a fresh blank state</p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">Workspace Sandbox Mode</h2>
-                    <p className="text-xs text-slate-500 dark:text-white/50">Switch between pre-populated hackathon trip data and a fresh blank state</p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setWorkspaceMode("sample");
+                        sounds.playClick();
+                        toast.info("Switched to Sample Trip Mode", {
+                          description: "Loaded Lisbon '24 and Lake Tahoe demo tabs."
+                        });
+                      }}
+                      className={`p-5 rounded-2xl border text-left transition-all ${
+                        workspaceMode === "sample"
+                          ? "bg-indigo-50/80 dark:bg-indigo-500/10 border-indigo-500 shadow-md shadow-indigo-500/10 text-indigo-900 dark:text-indigo-300"
+                          : "bg-slate-50 dark:bg-black/20 border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-2xl">🏖️</span>
+                        {workspaceMode === "sample" && <Check className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />}
+                      </div>
+                      <div className="font-bold text-slate-900 dark:text-white text-sm">Sample Trip Mode</div>
+                      <p className="text-xs text-slate-500 dark:text-white/50 mt-1 leading-relaxed">
+                        Pre-loads the Lisbon &apos;24 and Lake Tahoe tabs with multilateral debts ready to visualize and settle.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setWorkspaceMode("blank");
+                        sounds.playClick();
+                        toast.info("Switched to Blank Slate Mode", {
+                          description: "Workspace cleared for custom tab testing."
+                        });
+                      }}
+                      className={`p-5 rounded-2xl border text-left transition-all ${
+                        workspaceMode === "blank"
+                          ? "bg-emerald-50/80 dark:bg-emerald-500/10 border-emerald-500 shadow-md shadow-emerald-500/10 text-emerald-900 dark:text-emerald-300"
+                          : "bg-slate-50 dark:bg-black/20 border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-2xl">✨</span>
+                        {workspaceMode === "blank" && <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
+                      </div>
+                      <div className="font-bold text-slate-900 dark:text-white text-sm">Clean Slate Mode</div>
+                      <p className="text-xs text-slate-500 dark:text-white/50 mt-1 leading-relaxed">
+                        Clears pre-loaded tabs so you can test creating fresh custom tabs, adding expenses, and inviting members.
+                      </p>
+                    </button>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setWorkspaceMode("sample");
-                      sounds.playClick();
-                      toast.info("Switched to Sample Trip Mode", {
-                        description: "Loaded Lisbon '24 and Lake Tahoe demo tabs."
-                      });
-                    }}
-                    className={`p-5 rounded-2xl border text-left transition-all ${
-                      workspaceMode === "sample"
-                        ? "bg-indigo-50/80 dark:bg-indigo-500/10 border-indigo-500 shadow-md shadow-indigo-500/10 text-indigo-900 dark:text-indigo-300"
-                        : "bg-slate-50 dark:bg-black/20 border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-2xl">🏖️</span>
-                      {workspaceMode === "sample" && <Check className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />}
-                    </div>
-                    <div className="font-bold text-slate-900 dark:text-white text-sm">Sample Trip Mode</div>
-                    <p className="text-xs text-slate-500 dark:text-white/50 mt-1 leading-relaxed">
-                      Pre-loads the Lisbon &apos;24 and Lake Tahoe tabs with multilateral debts ready to visualize and settle.
-                    </p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setWorkspaceMode("blank");
-                      sounds.playClick();
-                      toast.info("Switched to Blank Slate Mode", {
-                        description: "Workspace cleared for custom tab testing."
-                      });
-                    }}
-                    className={`p-5 rounded-2xl border text-left transition-all ${
-                      workspaceMode === "blank"
-                        ? "bg-emerald-50/80 dark:bg-emerald-500/10 border-emerald-500 shadow-md shadow-emerald-500/10 text-emerald-900 dark:text-emerald-300"
-                        : "bg-slate-50 dark:bg-black/20 border-slate-200 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-2xl">✨</span>
-                      {workspaceMode === "blank" && <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
-                    </div>
-                    <div className="font-bold text-slate-900 dark:text-white text-sm">Clean Slate Mode</div>
-                    <p className="text-xs text-slate-500 dark:text-white/50 mt-1 leading-relaxed">
-                      Clears pre-loaded tabs so you can test creating fresh custom tabs, adding expenses, and inviting members.
-                    </p>
-                  </button>
-                </div>
-              </div>
+              )}
 
             </div>
           )}

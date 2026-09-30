@@ -266,7 +266,7 @@ function DashboardContent() {
     <div className="flex-1 flex flex-col pb-48 lg:pb-48 text-slate-900 dark:text-white transition-colors duration-300">
       <GlobalNav />
       {/* Header */}
-      <header className="px-4 sm:px-6 md:px-12 pt-4 sm:pt-6 pb-4 flex items-center justify-between border-b border-slate-200 dark:border-white/10 mb-8 max-w-[1600px] mx-auto w-full gap-4 sticky top-[64px] z-30 bg-[#f5f5f7]/95 dark:bg-[#0a0a0a]/95 backdrop-blur-xl">
+      <header className="px-4 sm:px-6 md:px-12 pt-4 sm:pt-6 pb-4 flex items-center justify-between border-b border-slate-200 dark:border-white/10 mb-8 max-w-7xl mx-auto w-full gap-4 sticky top-[64px] z-30 bg-[#f5f5f7]/95 dark:bg-[#0a0a0a]/95 backdrop-blur-xl">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <Link 
             href="/home" 
@@ -388,7 +388,7 @@ function DashboardContent() {
         </div>
       </header>
 
-      <div className="px-6 md:px-12 max-w-[1600px] mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 pb-28 sm:pb-32">
+      <div className="px-6 md:px-12 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 pb-28 sm:pb-32">
         
         {/* Left Column (Stats & Desktop Actions) */}
         <div className="lg:col-span-4 space-y-8">

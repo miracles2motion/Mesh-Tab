@@ -20,7 +20,7 @@ export default function ExpenseDetailsFallbackPage({
       <GlobalNav />
       
       <div className="sticky top-16 z-30 bg-[#f5f5f7]/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/10 w-full">
-        <header className="px-6 md:px-12 py-3 md:py-4 max-w-[1600px] mx-auto w-full flex items-center justify-between">
+        <header className="px-6 md:px-12 py-3 md:py-4 max-w-5xl mx-auto w-full flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link 
               href={`/tab/${routeParams.id || resolvedParams.id}`} 
@@ -39,7 +39,7 @@ export default function ExpenseDetailsFallbackPage({
         </header>
       </div>
       
-      <main className="flex-1 w-full max-w-[1600px] mx-auto py-8 flex flex-col">
+      <main className="flex-1 w-full max-w-5xl mx-auto py-8 flex flex-col">
         <ExpenseDetails expenseId={resolvedParams.expenseId} tabId={resolvedParams.id || "lisbon-24"} />
       </main>
     </div>

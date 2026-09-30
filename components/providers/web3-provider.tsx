@@ -39,16 +39,18 @@ export function Web3Provider({ children }: { children: ReactNode }) {
         supportedChains: [monadTestnet],
         embeddedWallets: {
           ethereum: {
-            createOnLogin: 'off',
+            createOnLogin: 'users-without-wallets',
           }
         }
       }}
     >
-      <QueryClientProvider client={queryClient}>
-        <SecurityProvider>
-          {children}
-        </SecurityProvider>
-      </QueryClientProvider>
+      <SmartWalletsProvider>
+        <QueryClientProvider client={queryClient}>
+          <SecurityProvider>
+            {children}
+          </SecurityProvider>
+        </QueryClientProvider>
+      </SmartWalletsProvider>
     </PrivyProvider>
   );
 }

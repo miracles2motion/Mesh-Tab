@@ -13,16 +13,9 @@ import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { fireSettlementConfetti, fireFaucetConfetti } from "../../lib/confetti";
 import { SUPPORTED_CURRENCIES, usePythRate } from "../../lib/pyth";
-import { erc20Abi, createWalletClient, custom, createPublicClient, http } from "viem";
+import { erc20Abi, encodeFunctionData } from "viem";
 import { useWallets } from "@privy-io/react-auth";
-
-const monadTestnet = {
-  id: 10143,
-  name: 'Monad Testnet',
-  network: 'monad-testnet',
-  nativeCurrency: { name: 'MONAD', symbol: 'MONAD', decimals: 18 },
-  rpcUrls: { default: { http: [process.env.NEXT_PUBLIC_MONAD_RPC_URL || 'https://testnet-rpc.monad.xyz'] } }
-} as const;
+import { getAlchemySmartAccountClient } from "../../lib/alchemy";
 
 const MeshTabLedgerABI = [
   {
@@ -99,41 +92,32 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
         // We use a mock creditor address for the demo since users aren't mapped to on-chain addresses in the local state
         const mockCreditorAddress = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"; // vitalik.eth
 
-        const provider = await privyWallet.getEthereumProvider();
-        const walletClient = createWalletClient({
-          account: privyWallet.address as `0x${string}`,
-          chain: monadTestnet,
-          transport: custom(provider)
+        const smartAccountClient = await getAlchemySmartAccountClient(privyWallet);
+
+        toast.loading("Executing Gasless Settlement via Alchemy...", { id: "tx-toast" });
+
+        const result = await smartAccountClient.sendUserOperation({
+          uo: [
+            {
+              target: ausdAddress,
+              data: encodeFunctionData({
+                abi: erc20Abi,
+                functionName: "approve",
+                args: [ledgerAddress, amountWei]
+              })
+            },
+            {
+              target: ledgerAddress,
+              data: encodeFunctionData({
+                abi: MeshTabLedgerABI,
+                functionName: "payNettedDebt",
+                args: [tabId, mockCreditorAddress, amountWei]
+              })
+            }
+          ]
         });
 
-        const publicClient = createPublicClient({
-          chain: monadTestnet,
-          transport: http()
-        });
-
-        toast.loading("Approving AUSD...", { id: "tx-toast" });
-
-        // 1. Approve AUSD
-        const approveHash = await walletClient.writeContract({
-          address: ausdAddress,
-          abi: erc20Abi,
-          functionName: "approve",
-          args: [ledgerAddress, amountWei],
-          account: privyWallet.address as `0x${string}`
-        });
-        await publicClient.waitForTransactionReceipt({ hash: approveHash });
-
-        toast.loading("Executing Settlement...", { id: "tx-toast" });
-
-        // 2. Call payNettedDebt
-        const payHash = await walletClient.writeContract({
-          address: ledgerAddress,
-          abi: MeshTabLedgerABI,
-          functionName: "payNettedDebt",
-          args: [tabId, mockCreditorAddress, amountWei],
-          account: privyWallet.address as `0x${string}`
-        });
-        await publicClient.waitForTransactionReceipt({ hash: payHash });
+        await smartAccountClient.waitForUserOperationTransaction({ hash: result.hash });
         
         toast.dismiss("tx-toast");
 
@@ -164,17 +148,6 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
     });
   };
 
-  const handleQuickFaucet = () => {
-    topUp(50000);
-    sounds.playCoinClink();
-    fireFaucetConfetti();
-    toast.success("+$500.00 Test AUSD Added!", {
-      description: "Virtual sandbox balance topped up."
-    });
-    setJustToppedUp(true);
-    setTimeout(() => setJustToppedUp(false), 2500);
-  };
-
   if (isSuccess) {
     return (
       <ReceiptView 
@@ -190,7 +163,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
   }
 
   return (
-    <Sheet isOpen={isOpen} onClose={onClose} size="full">
+    <Sheet isOpen={isOpen} onClose={onClose} size="4xl">
       <div className="p-6 md:p-8 flex flex-col items-center bg-white dark:bg-[#0a0a0a] text-slate-900 dark:text-white">
         <div className="w-full">
           <div className="text-center mb-8">
@@ -244,11 +217,13 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
                     <div>
                       <div className="flex items-center gap-2">
                         <h4 className="font-semibold text-sm text-slate-900 dark:text-white">
-                          Virtual AUSD Balance
+                          {workspaceMode === "testnet" ? "AUSD Balance" : "Virtual AUSD Balance"}
                         </h4>
-                        <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded-full font-bold">
-                          Sandbox
-                        </span>
+                        {workspaceMode !== "testnet" && (
+                          <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded-full font-bold">
+                            Sandbox
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5 font-mono">
                         {formatCurrency(virtualBalance)} Available

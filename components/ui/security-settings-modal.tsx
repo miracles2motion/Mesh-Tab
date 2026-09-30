@@ -1,13 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Settings, Shield, Lock, X } from "lucide-react";
+import { Settings, Shield, Lock, X, Fingerprint } from "lucide-react";
 import { useSecurity } from "../providers/security-provider";
 import { sounds } from "../../lib/sounds";
+import { usePrivy } from "@privy-io/react-auth";
 
 export function SecuritySettingsModal() {
   const [isOpen, setIsOpen] = useState(false);
   const { lockTimer, setLockTimer } = useSecurity();
+  const { linkPasskey, user } = usePrivy();
+  
+  const hasPasskey = user?.linkedAccounts?.some(account => account.type === 'passkey') || false;
 
   const options = [
     { label: "Immediately (On tab close)", value: 0 },
@@ -76,8 +80,29 @@ export function SecuritySettingsModal() {
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-slate-500 dark:text-white/50 mt-4 text-center leading-relaxed">
-                When active, your session is automatically destroyed for security. You will need your Passkey to regain access.
+              
+              {!hasPasskey && (
+                <div className="mt-6 pt-6 border-t border-slate-100 dark:border-white/10">
+                  <label className="block text-sm font-semibold mb-3 flex items-center gap-2">
+                    <Fingerprint className="w-4 h-4 text-slate-400" /> Device Passkey
+                  </label>
+                  <button
+                    onClick={() => {
+                      sounds.playClick();
+                      linkPasskey();
+                    }}
+                    className="w-full flex items-center justify-center p-3.5 rounded-xl border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-bold text-sm transition-all shadow-sm"
+                  >
+                    Set Up Passkey Now
+                  </button>
+                  <p className="text-[11px] text-slate-500 dark:text-white/50 mt-2 text-center leading-relaxed">
+                    Link your device's biometric security (Face ID, Touch ID) for secure, passwordless access.
+                  </p>
+                </div>
+              )}
+
+              <p className="text-xs text-slate-500 dark:text-white/50 mt-6 text-center leading-relaxed bg-slate-50 dark:bg-white/5 p-3 rounded-xl border border-slate-100 dark:border-white/5">
+                When auto-lock is active, your session is automatically destroyed for security. You will need to authenticate again to regain access.
               </p>
             </div>
           </div>

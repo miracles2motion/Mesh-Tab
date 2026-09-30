@@ -37,8 +37,6 @@ export default function GlobalHub() {
   const { user, linkPasskey } = usePrivy();
   const [testnetBalance, setTestnetBalance] = useState<number>(0);
   const [isFetchingBalance, setIsFetchingBalance] = useState(false);
-  const [dismissPasskeyPrompt, setDismissPasskeyPrompt] = useState(false);
-
   const hasPasskey = user?.linkedAccounts?.some(account => account.type === 'passkey') || false;
 
   const [showJoinModal, setShowJoinModal] = useState(false);
@@ -198,35 +196,10 @@ export default function GlobalHub() {
     <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300 pb-36 lg:pb-36">
       <GlobalNav />
       
-      {/* Passkey Link Prompt */}
-      {mounted && user && !hasPasskey && !dismissPasskeyPrompt && (
-        <div className="bg-indigo-600 dark:bg-indigo-500/10 text-white dark:text-indigo-200 px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-indigo-700 dark:border-indigo-500/20 animate-in fade-in slide-in-from-top-2">
-          <div className="flex items-center gap-3">
-            <Fingerprint className="w-5 h-5 text-indigo-200 dark:text-indigo-400" />
-            <span className="text-sm font-medium">Secure your account with device biometrics (Face ID, Fingerprint) for frictionless access.</span>
-          </div>
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <button 
-              onClick={() => {
-                sounds.playClick();
-                linkPasskey();
-              }}
-              className="bg-white dark:bg-indigo-500 text-indigo-600 dark:text-white px-4 py-1.5 rounded-full text-xs font-bold hover:scale-105 transition-transform whitespace-nowrap shadow-sm"
-            >
-              Link Passkey
-            </button>
-            <button 
-              onClick={() => setDismissPasskeyPrompt(true)}
-              className="text-indigo-200 dark:text-indigo-400 hover:text-white text-xs font-medium px-2"
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Passkey Link Prompt removed to reduce noise - moved to settings */}
 
       {/* Header */}
-      <header className="px-6 md:px-12 pt-10 pb-6 flex items-center justify-between max-w-[1600px] mx-auto w-full">
+      <header className="px-6 md:px-12 pt-10 pb-6 flex items-center justify-between max-w-5xl mx-auto w-full">
         <div>
           <div className="flex flex-col md:flex-row md:items-end gap-2 md:gap-4 mb-1">
             <div className="flex items-center gap-2 flex-wrap order-2 md:order-1">
@@ -249,25 +222,29 @@ export default function GlobalHub() {
                 <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isTestnetMode ? "bg-purple-500" : "bg-emerald-500"}`} />
                 {isTestnetMode ? "Monad Testnet" : "Demo Sandbox"}
               </span>
-              <Link 
-                href="/demo?from=/home"
-                className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors"
-                title="Open Demo Mode Selection"
-              >
-                <Sparkles className="w-3 h-3" />
-                <span>Change Mode</span>
-              </Link>
-              <button
-                onClick={() => {
-                  sounds.playClick();
-                  setShowPitchModal(true);
-                }}
-                className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20 hover:bg-purple-500/20 transition-colors cursor-pointer"
-                title="Open Monad Metropolis Pitch Mode"
-              >
-                <Award className="w-3 h-3 text-purple-600 dark:text-purple-400" />
-                <span>Pitch Mode</span>
-              </button>
+              {!isTestnetMode && (
+                <>
+                  <Link 
+                    href="/demo?from=/home"
+                    className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors"
+                    title="Open Demo Mode Selection"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>Change Mode</span>
+                  </Link>
+                  <button
+                    onClick={() => {
+                      sounds.playClick();
+                      setShowPitchModal(true);
+                    }}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20 hover:bg-purple-500/20 transition-colors cursor-pointer"
+                    title="Open Monad Metropolis Pitch Mode"
+                  >
+                    <Award className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+                    <span>Pitch Mode</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
           <p className="text-slate-500 dark:text-white/60 mt-0.5 text-sm">
@@ -318,7 +295,7 @@ export default function GlobalHub() {
         </div>
       </header>
 
-      <main className="px-6 md:px-12 max-w-[1600px] mx-auto w-full space-y-10">
+      <main className="px-6 md:px-12 max-w-5xl mx-auto w-full space-y-10">
         {/* Unified Overall Balance & Payout Hub */}
         <div className="bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-indigo-500/15 dark:from-indigo-500/20 dark:to-purple-500/10 border border-indigo-200/80 dark:border-indigo-500/20 rounded-3xl p-6 md:p-8 relative overflow-hidden shadow-sm">
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">

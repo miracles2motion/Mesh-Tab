@@ -22,7 +22,7 @@ export function GlobalNav() {
 
   return (
     <div className="w-full border-b border-slate-200 dark:border-white/10 bg-white/70 dark:bg-[#0a0a0a]/70 backdrop-blur-xl sticky top-0 z-40">
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 md:px-12 h-16 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-12 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Link href="/home" className="flex items-center hover:opacity-80 transition-opacity">
             <img src="/brand/logo/logo-light.svg" alt="MeshTab Logo" className="h-[22px] w-auto dark:hidden" />

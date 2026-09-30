@@ -67,6 +67,9 @@ export async function saveStoredUser(name: string, colorIndex?: number, walletAd
   return {};
 }
 
+let profileFetchPromise: Promise<any> | null = null;
+let lastFetchedWallet: string | null = null;
+
 export function useUserProfile() {
   const [profile, setProfile] = useState<UserProfile>(getStoredUser);
   const { user, authenticated } = usePrivy();
@@ -92,18 +95,33 @@ export function useUserProfile() {
   // Sync from Upstash Redis when authenticated
   useEffect(() => {
     if (authenticated && walletAddress) {
-      fetch(`/api/user/profile?wallet=${walletAddress}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data && data.name) {
-            // Update local storage so it feels instant next time, but do NOT push back to Redis
-            const trimmed = data.name.trim();
+      if (walletAddress !== lastFetchedWallet || !profileFetchPromise) {
+        lastFetchedWallet = walletAddress;
+        profileFetchPromise = fetch(`/api/user/profile?wallet=${walletAddress}`)
+          .then(res => res.json())
+          .catch(err => {
+             console.error("Redis sync error:", err);
+             profileFetchPromise = null;
+             return null;
+          });
+      }
+      
+      profileFetchPromise.then(data => {
+        if (data && data.name) {
+          // Update local storage so it feels instant next time, but do NOT push back to Redis
+          const trimmed = data.name.trim();
+          
+          // Only dispatch if something actually changed to avoid infinite loops
+          const currentName = localStorage.getItem("meshTab_displayName");
+          const currentIdx = localStorage.getItem("meshTab_avatarColorIndex");
+          
+          if (currentName !== trimmed || currentIdx !== String(data.avatarColorIndex)) {
             localStorage.setItem("meshTab_displayName", trimmed);
             localStorage.setItem("meshTab_avatarColorIndex", String(data.avatarColorIndex));
             window.dispatchEvent(new Event("meshTab-profile-update"));
           }
-        })
-        .catch(console.error);
+        }
+      });
     }
   }, [authenticated, walletAddress]);
 

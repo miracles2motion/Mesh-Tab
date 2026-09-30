@@ -81,7 +81,7 @@ export function CashOutDrawer({
 
   return (
     <>
-    <Sheet isOpen={isOpen} onClose={handleClose} size="full">
+    <Sheet isOpen={isOpen} onClose={handleClose} size="4xl">
       <div className="p-6 md:p-8 flex flex-col items-center bg-white dark:bg-[#0a0a0a] text-slate-900 dark:text-white">
         {!isSuccess ? (
           <div className="w-full">

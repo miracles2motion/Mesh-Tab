@@ -23,7 +23,8 @@ import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import Image from "next/image";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
-import { createWalletClient, custom } from "viem";
+import { encodeFunctionData } from "viem";
+import { getAlchemySmartAccountClient } from "../../lib/alchemy";
 
 const MockAUSD_ABI = [
   {
@@ -64,31 +65,7 @@ function OnboardingContent() {
 
   const quickNames = ["Sarah", "Alex", "Liam", "Elena", "Marcus"];
 
-  const handleEnrollPasskey = async () => {
-    if (isScanningPasskey || passkeyDone) return;
-    setIsScanningPasskey(true);
-    sounds.playClick();
-
-    toast.info("Setting Up Passkey", {
-      description: "Requesting Touch ID / Face ID biometric registration..."
-    });
-
-    await new Promise(r => setTimeout(r, 1600));
-
-    setIsScanningPasskey(false);
-    setPasskeyDone(true);
-    sounds.playSuccessChime();
-
-    toast.success("Passkey Registered", {
-      description: "Secured in your device's biometric vault for 1-tap sign in."
-    });
-
-    setTimeout(() => {
-      setStep(2);
-    }, 500);
-  };
-
-  const handleContinue = async (e: React.FormEvent) => {
+  const handleContinueName = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
     
@@ -118,6 +95,39 @@ function OnboardingContent() {
       setWorkspaceMode("sample");
     }
 
+    setIsSubmitting(false);
+    setStep(2); // Move to Passkey step
+  };
+
+  const handleEnrollPasskey = async () => {
+    if (isScanningPasskey || passkeyDone) return;
+    setIsScanningPasskey(true);
+    sounds.playClick();
+
+    toast.info("Setting Up Passkey", {
+      description: "Requesting Touch ID / Face ID biometric registration..."
+    });
+
+    await new Promise(r => setTimeout(r, 1600));
+
+    setIsScanningPasskey(false);
+    setPasskeyDone(true);
+    sounds.playSuccessChime();
+
+    toast.success("Passkey Registered", {
+      description: "Secured in your device's biometric vault for 1-tap sign in."
+    });
+
+    setTimeout(() => {
+      finishOnboarding();
+    }, 500);
+  };
+
+  const skipPasskey = () => {
+    finishOnboarding();
+  };
+
+  const finishOnboarding = async () => {
     setStep(3);
 
     // Trigger Welcome Bonus Gasless Transaction
@@ -125,20 +135,20 @@ function OnboardingContent() {
     try {
       const privyWallet = wallets.find(w => w.walletClientType === 'privy');
       if (privyWallet) {
-        const provider = await privyWallet.getEthereumProvider();
-        const walletClient = createWalletClient({
-          account: privyWallet.address as `0x${string}`,
-          chain: monadTestnet,
-          transport: custom(provider)
-        });
+        const smartAccountClient = await getAlchemySmartAccountClient(privyWallet);
 
         // Call the smart contract silently (Alchemy pays gas)
-        await walletClient.writeContract({
-          address: process.env.NEXT_PUBLIC_MOCK_AUSD_ADDRESS as `0x${string}`,
-          abi: MockAUSD_ABI,
-          functionName: "claimWelcomeBonus",
-          account: privyWallet.address as `0x${string}`
+        await smartAccountClient.sendUserOperation({
+          uo: {
+            target: process.env.NEXT_PUBLIC_MOCK_AUSD_ADDRESS as `0x${string}`,
+            data: encodeFunctionData({
+              abi: MockAUSD_ABI,
+              functionName: "claimWelcomeBonus",
+              args: []
+            })
+          }
         });
+
         // Short delay to let the TX broadcast smoothly
         await new Promise((resolve) => setTimeout(resolve, 800));
       }
@@ -237,34 +247,45 @@ function OnboardingContent() {
                 <span>Protected by your device hardware. Zero passwords required.</span>
               </div>
 
-              <Button
-                onClick={handleEnrollPasskey}
-                disabled={isScanningPasskey || passkeyDone}
-                variant="primary"
-                size="lg"
-                className="w-full cursor-pointer"
-              >
-                {isScanningPasskey ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" /> Enrolling Passkey...
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <Key className="w-4 h-4" /> Enroll Passkey (Touch ID / Face ID)
-                  </span>
-                )}
-              </Button>
+              <div className="space-y-3">
+                <Button
+                  onClick={handleEnrollPasskey}
+                  disabled={isScanningPasskey || passkeyDone}
+                  variant="primary"
+                  size="lg"
+                  className="w-full cursor-pointer"
+                >
+                  {isScanningPasskey ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" /> Enrolling Passkey...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <Key className="w-4 h-4" /> Enroll Passkey (Touch ID / Face ID)
+                    </span>
+                  )}
+                </Button>
+                
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  disabled={isScanningPasskey}
+                  className="w-full text-center text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-white/50 dark:hover:text-white transition-colors py-2 cursor-pointer"
+                >
+                  Skip for now
+                </button>
+              </div>
             </motion.div>
           )}
 
-          {/* STEP 2: Name & Color Selection */}
-          {step === 2 && (
+          {/* STEP 1: Name & Color Selection */}
+          {step === 1 && (
             <motion.form
-              key="step2"
+              key="step1"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              onSubmit={handleContinue}
+              onSubmit={handleContinueName}
               className="space-y-6"
             >
               <div className="text-center mb-6">
@@ -373,10 +394,97 @@ function OnboardingContent() {
                 className="w-full group cursor-pointer"
                 isLoading={isSubmitting}
               >
-                Complete Setup & Get Started
+                Continue Setup
                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
             </motion.form>
+          )}
+
+          {/* STEP 2: Passkey Registration */}
+          {step === 2 && (
+            <motion.div
+              key="step2"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="text-center space-y-6"
+            >
+              <div className="w-16 h-16 bg-slate-100 dark:bg-white/10 rounded-full flex items-center justify-center mx-auto mb-2 border border-slate-200 dark:border-white/20">
+                <Fingerprint className="w-8 h-8 text-slate-700 dark:text-white" />
+              </div>
+
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
+                  Create Passkey
+                </h1>
+                <p className="text-slate-500 dark:text-white/60 text-xs md:text-sm">
+                  Register your device for instant, passwordless sign-ins.
+                </p>
+              </div>
+
+              <div className="py-4 flex flex-col items-center">
+                <div
+                  onClick={handleEnrollPasskey}
+                  className={`w-24 h-24 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md ${
+                    passkeyDone
+                      ? "bg-emerald-500/20 border-2 border-emerald-500 text-emerald-600"
+                      : isScanningPasskey
+                      ? "bg-indigo-500/20 border-2 border-indigo-500 text-indigo-600 animate-pulse"
+                      : "bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 border border-slate-300 dark:border-white/20 text-slate-700 dark:text-white hover:scale-105"
+                  }`}
+                >
+                  {passkeyDone ? (
+                    <CheckCircle2 className="w-12 h-12 text-emerald-500" />
+                  ) : isScanningPasskey ? (
+                    <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
+                  ) : (
+                    <Fingerprint className="w-12 h-12" />
+                  )}
+                </div>
+
+                <span className="text-xs font-semibold text-slate-600 dark:text-white/60 mt-3">
+                  {passkeyDone 
+                    ? "Passkey Enrolled!" 
+                    : isScanningPasskey 
+                    ? "Scanning biometric sensor..." 
+                    : "Tap Sensor to Register Passkey"}
+                </span>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-indigo-50/70 dark:bg-indigo-500/5 border border-indigo-200/70 dark:border-indigo-500/20 flex items-center gap-2.5 text-xs text-left text-slate-600 dark:text-white/70">
+                <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                <span>Protected by your device hardware. Zero passwords required.</span>
+              </div>
+
+              <div className="space-y-3">
+                <Button
+                  onClick={handleEnrollPasskey}
+                  disabled={isScanningPasskey || passkeyDone}
+                  variant="primary"
+                  size="lg"
+                  className="w-full cursor-pointer"
+                >
+                  {isScanningPasskey ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" /> Enrolling Passkey...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <Key className="w-4 h-4" /> Enroll Passkey (Touch ID / Face ID)
+                    </span>
+                  )}
+                </Button>
+                
+                <button
+                  type="button"
+                  onClick={skipPasskey}
+                  disabled={isScanningPasskey}
+                  className="w-full text-center text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-white/50 dark:hover:text-white transition-colors py-2 cursor-pointer"
+                >
+                  Skip for now
+                </button>
+              </div>
+            </motion.div>
           )}
 
           {/* STEP 3: Smart Account Genesis on Monad */}

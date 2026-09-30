@@ -1017,7 +1017,15 @@ export function MeshBuddy() {
     // Deliver response with natural conversational timing and voice animation
     setTimeout(() => {
       setIsThinking(false);
-      const botMsg: ChatMessage = { id: `bot-${Date.now()}`, sender: "buddy", text: replyText, actions: actionItems, spokenText: spokenPunchline };
+      
+      const finalActions = actionItems?.filter(a => {
+        if (workspaceMode === "testnet" || workspaceMode === "blank") {
+          return !a.label.toLowerCase().includes("faucet");
+        }
+        return true;
+      });
+
+      const botMsg: ChatMessage = { id: `bot-${Date.now()}`, sender: "buddy", text: replyText, actions: finalActions, spokenText: spokenPunchline };
       setMessages((prev) => [...prev, botMsg]);
       speakText(replyText, spokenPunchline);
     }, 320);
@@ -1381,12 +1389,14 @@ export function MeshBuddy() {
                       >
                         💡 About App
                       </button>
-                      <button
-                        onClick={handleClaimFaucet}
-                        className="shrink-0 px-2.5 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
-                      >
-                        <Coins className="w-3 h-3" /> Faucet (+$500)
-                      </button>
+                      {workspaceMode === "sample" && (
+                        <button
+                          onClick={handleClaimFaucet}
+                          className="shrink-0 px-2.5 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
+                        >
+                          <Coins className="w-3 h-3" /> Faucet (+$500)
+                        </button>
+                      )}
                       <button
                         onClick={() => setDrawerTab("kb")}
                         className="shrink-0 px-2.5 py-1 rounded-full bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
@@ -1797,20 +1807,22 @@ export function MeshBuddy() {
                   )}
 
                   {/* Quick Faucet Top-up */}
-                  <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold text-emerald-800 dark:text-emerald-300">Sandbox Faucet</span>
-                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                        {formatCurrency(virtualBalance)}
-                      </span>
+                  {workspaceMode === "sample" && (
+                    <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold text-emerald-800 dark:text-emerald-300">Sandbox Faucet</span>
+                        <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                          {formatCurrency(virtualBalance)}
+                        </span>
+                      </div>
+                      <button
+                        onClick={handleClaimFaucet}
+                        className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm"
+                      >
+                        + Top Up $500 Test AUSD
+                      </button>
                     </div>
-                    <button
-                      onClick={handleClaimFaucet}
-                      className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm"
-                    >
-                      + Top Up $500 Test AUSD
-                    </button>
-                  </div>
+                  )}
                 </div>
               )}
             </motion.div>

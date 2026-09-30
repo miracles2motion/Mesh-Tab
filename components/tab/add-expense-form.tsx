@@ -401,10 +401,21 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
       }
     } else {
       // Equal split between selected members
-      // Omit unticked members so the ledger accurately counts only ticked members as participants
-      splitBetween.forEach(m => {
-        splitsMap[m] = Math.round(totalBillCents / splitBetween.length);
-      });
+      const splitCount = splitBetween.length;
+      if (splitCount > 0) {
+        const baseAmt = Math.floor(totalBillCents / splitCount);
+        let remainder = totalBillCents - (baseAmt * splitCount);
+        
+        // Omit unticked members so the ledger accurately counts only ticked members as participants
+        splitBetween.forEach(m => {
+          let extra = 0;
+          if (remainder > 0) {
+            extra = 1;
+            remainder--;
+          }
+          splitsMap[m] = baseAmt + extra;
+        });
+      }
     }
 
     // 1. Mock Passkey Prompt (Browser Native equivalent)
