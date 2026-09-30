@@ -55,43 +55,28 @@ function LoginContent() {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-sm bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 p-8 rounded-3xl relative z-10 shadow-2xl flex flex-col items-center text-center"
       >
-        <div className="w-16 h-16 bg-slate-100 dark:bg-white/10 rounded-full flex items-center justify-center mb-6">
-          <Fingerprint className="w-8 h-8 text-slate-800 dark:text-white" />
+        <div className="w-16 h-16 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full flex items-center justify-center mb-6">
+          <Fingerprint className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
         </div>
         
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Welcome Back</h1>
-        <p className="text-slate-500 dark:text-white/60 text-sm mb-8">Sign in securely using your device passkey. No passwords required.</p>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Secure Login</h1>
+        <p className="text-slate-500 dark:text-white/60 text-sm mb-8">Sign in to access your shared tabs and synchronize your identity.</p>
 
         <Button
           onClick={handleLogin}
           disabled={!ready || authenticated}
           variant="primary"
           size="lg"
-          className="w-full relative overflow-hidden"
+          className="w-full relative overflow-hidden bg-indigo-600 hover:bg-indigo-700 text-white"
         >
           {(!ready) ? (
             <span className="flex items-center gap-2">
-              <Loader2 className="w-5 h-5 animate-spin" /> Loading...
+              <Loader2 className="w-5 h-5 animate-spin" /> Initializing...
             </span>
           ) : (
-            "Continue with Passkey"
+            "Sign In Securely"
           )}
         </Button>
-
-        <div className="mt-5 pt-5 border-t border-slate-200/80 dark:border-white/10 w-full flex flex-col gap-2 text-xs">
-          <Link
-            href="/demo"
-            className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline"
-          >
-            Start Fresh Demo or Explore Sandbox →
-          </Link>
-          <Link
-            href="/onboarding?fresh=true"
-            className="text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white transition-colors"
-          >
-            Create New Profile with Custom Name & Color
-          </Link>
-        </div>
       </motion.div>
     </div>
   );
