@@ -44,13 +44,11 @@ export function Web3Provider({ children }: { children: ReactNode }) {
         }
       }}
     >
-      <SmartWalletsProvider>
-        <QueryClientProvider client={queryClient}>
-          <SecurityProvider>
-            {children}
-          </SecurityProvider>
-        </QueryClientProvider>
-      </SmartWalletsProvider>
+      <QueryClientProvider client={queryClient}>
+        <SecurityProvider>
+          {children}
+        </SecurityProvider>
+      </QueryClientProvider>
     </PrivyProvider>
   );
 }
