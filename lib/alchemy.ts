@@ -1,4 +1,4 @@
-// @ts-nocheck -- Bypassing viem version mismatch between project (viem 2.x) and @alchemy/aa-core
+
 import { createMultiOwnerModularAccount, multiOwnerPluginActions, pluginManagerActions, accountLoupeActions } from "@alchemy/aa-accounts";
 import { alchemyGasManagerMiddleware } from "@alchemy/aa-alchemy";
 import { createSmartAccountClient, createBundlerClient, WalletClientSigner } from "@alchemy/aa-core";
@@ -26,8 +26,7 @@ export async function getAlchemySmartAccountClient(privyWallet: any) {
   });
 
   // 2. Convert to aa-core Smart Account Signer
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const privySigner = new WalletClientSigner(privyClient as any, "privy");
+  const privySigner = new WalletClientSigner(privyClient, "privy");
   
   const apiKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || "";
   const policyId = process.env.NEXT_PUBLIC_ALCHEMY_POLICY_ID || "";
@@ -36,29 +35,28 @@ export async function getAlchemySmartAccountClient(privyWallet: any) {
     throw new Error("Alchemy configuration missing (API Key or Policy ID)");
   }
 
-  // 3. Create the Smart Account Client without aa-alchemy's strict chain validation wrapper!
+  // 3. Create the Smart Account Client
   const rpcUrl = `https://monad-testnet.g.alchemy.com/v2/${apiKey}`;
   const transport = http(rpcUrl);
 
   const account = await createMultiOwnerModularAccount({
     transport,
-    chain: monadTestnet as any,
+    chain: monadTestnet,
     signer: privySigner,
   });
 
   const bundlerClient = createBundlerClient({
-    chain: monadTestnet as any,
+    chain: monadTestnet,
     transport,
   }).extend(() => ({
     updateHeaders(newHeaders: HeadersInit) {}
   }));
 
-  // @ts-ignore -- Viem version mismatch between project and @alchemy/aa-core
   const smartAccountClient = createSmartAccountClient({
     transport,
-    chain: monadTestnet as any,
+    chain: monadTestnet,
     account,
-    ...alchemyGasManagerMiddleware(bundlerClient as any, { policyId }),
+    ...alchemyGasManagerMiddleware(bundlerClient, { policyId }),
   })
     .extend(multiOwnerPluginActions)
     .extend(pluginManagerActions)

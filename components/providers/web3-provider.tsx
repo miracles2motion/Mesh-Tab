@@ -33,6 +33,8 @@ export function Web3Provider({ children }: { children: ReactNode }) {
           theme: theme, // Dynamically syncs with app's light/dark mode!
           accentColor: '#4f46e5', // The true MeshTab brand primary color (indigo-600)
           logo: 'https://imagedelivery.net/oHBRUd2clqykxgDWmeAyLg/23967a44-79df-4671-a90f-90bff2e89b00/icon',
+          walletList: ['metamask', 'rainbow', 'wallet_connect_qr'],
+          walletChainType: 'ethereum-only',
         },
         loginMethods: ['email', 'google', 'discord'],
         defaultChain: monadTestnet,
