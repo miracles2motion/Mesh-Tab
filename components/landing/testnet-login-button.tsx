@@ -9,16 +9,7 @@ export function TestnetLoginButton() {
   const router = useRouter();
   const { login, authenticated, ready } = usePrivy();
 
-  useEffect(() => {
-    if (ready && authenticated) {
-      const hasProfile = typeof window !== "undefined" && Boolean(localStorage.getItem("meshTab_displayName"));
-      if (!hasProfile) {
-        router.push("/onboarding?fresh=true");
-      } else {
-        router.push("/home?mode=testnet");
-      }
-    }
-  }, [ready, authenticated, router]);
+
 
   const handleTestnetLogin = () => {
     sounds.playClick();

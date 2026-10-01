@@ -13,16 +13,7 @@ export function Hero() {
   const { login, authenticated, ready } = usePrivy();
   const router = useRouter();
 
-  useEffect(() => {
-    if (ready && authenticated) {
-      const hasProfile = typeof window !== "undefined" && Boolean(localStorage.getItem("meshTab_displayName"));
-      if (!hasProfile) {
-        router.push("/onboarding?fresh=true");
-      } else {
-        router.push("/home?mode=testnet");
-      }
-    }
-  }, [ready, authenticated, router]);
+
 
   const handleTestnetClick = () => {
     sounds.playPop();
