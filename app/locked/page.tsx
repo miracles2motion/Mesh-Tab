@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { Lock, Fingerprint, LogIn, ChevronRight } from "lucide-react";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, useLoginWithPasskey } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from "../../components/theme-toggle";
 import { sounds } from "../../lib/sounds";
 
 export default function LockedPage() {
   const { login, authenticated, ready } = usePrivy();
+  const { loginWithPasskey } = useLoginWithPasskey();
   const router = useRouter();
   const [hadPasskey, setHadPasskey] = useState(true);
 
@@ -44,7 +45,11 @@ export default function LockedPage() {
         <button 
           onClick={() => {
             sounds.playClick();
-            login();
+            if (hadPasskey) {
+              loginWithPasskey();
+            } else {
+              login();
+            }
           }}
           className="w-full btn-primary py-4 text-lg font-bold shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2 mb-6 hover:scale-[1.02] transition-transform"
         >
