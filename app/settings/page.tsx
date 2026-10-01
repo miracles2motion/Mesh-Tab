@@ -300,7 +300,7 @@ function SettingsContent() {
                   : "text-slate-600 dark:text-white/60 hover:bg-slate-50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
-              <Key className="w-4 h-4 shrink-0" /> Web3 Security
+              <Key className="w-4 h-4 shrink-0" /> Advanced Security
             </button>
           </div>
         </div>
@@ -767,7 +767,7 @@ function SettingsContent() {
             </div>
           )}
 
-          {/* WEB3 ADVANCED SECURITY TAB */}
+          {/* ADVANCED SECURITY TAB */}
           {activeTab === "advanced" && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 shadow-sm">
@@ -776,18 +776,18 @@ function SettingsContent() {
                     <Settings2 className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">Web3 Native Architecture</h2>
-                    <p className="text-xs text-slate-500 dark:text-white/50">Monad testnet smart account credentials and biometric security</p>
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">Hardware & Network Security</h2>
+                    <p className="text-xs text-slate-500 dark:text-white/50">Ledger account credentials and biometric security</p>
                   </div>
                 </div>
                 <p className="text-slate-600 dark:text-white/60 text-sm mb-6 mt-3 leading-relaxed">
-                  MeshTab abstracts blockchain complexity away for standard users. If you&apos;re verifying contract logic, your Smart Account details on Monad are below.
+                  MeshTab abstracts ledger complexity away for standard users. If you&apos;re verifying system architecture, your underlying Network Account details are below.
                 </p>
                 
                 <div className="space-y-4">
                   {/* Wallet Address Card */}
                   <div className="p-5 bg-slate-50 dark:bg-black/30 rounded-2xl border border-slate-200 dark:border-white/5">
-                    <label className="text-sm font-semibold text-slate-900 dark:text-white mb-2 block">Smart Account Address (Monad)</label>
+                    <label className="text-sm font-semibold text-slate-900 dark:text-white mb-2 block">Ledger Account Address</label>
                     <div className="flex items-center gap-2">
                       <div className="flex-1 bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-indigo-600 dark:text-indigo-300 text-sm font-mono truncate select-all shadow-xs">
                         {fullAddress}
@@ -854,7 +854,7 @@ function SettingsContent() {
                   <div className="p-5 bg-slate-50 dark:bg-black/30 rounded-2xl border border-slate-200 dark:border-white/5 flex items-center justify-between">
                     <div>
                       <h3 className="text-sm font-bold text-slate-900 dark:text-white">Developer Mode</h3>
-                      <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5">Show smart account address badge in the dashboard header.</p>
+                      <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5">Show ledger address badge in the dashboard header.</p>
                     </div>
                     <button 
                       onClick={toggleAddress}
