@@ -49,7 +49,7 @@ function SettingsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromUrl = searchParams.get("from");
-  const { user } = usePrivy();
+  const { user, linkPasskey } = usePrivy();
   const hasPasskey = user?.linkedAccounts?.some(account => account.type === 'passkey') || false;
 
   const profile = useUserProfile();
@@ -455,7 +455,7 @@ function SettingsContent() {
                       </Button>
                     ) : (
                       <Button 
-                        onClick={() => user?.linkPasskey?.()} 
+                        onClick={() => linkPasskey()} 
                         variant="primary" 
                         size="sm"
                       >

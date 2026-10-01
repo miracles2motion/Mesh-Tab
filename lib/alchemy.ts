@@ -23,7 +23,8 @@ export async function getAlchemySmartAccountClient(privyWallet: any) {
   });
 
   // 2. Convert to aa-core Smart Account Signer
-  const privySigner = new WalletClientSigner(privyClient, "privy");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- viem version mismatch between project and aa-core internals
+  const privySigner = new WalletClientSigner(privyClient as any, "privy");
   
   const apiKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || "";
   const policyId = process.env.NEXT_PUBLIC_ALCHEMY_POLICY_ID || "";
