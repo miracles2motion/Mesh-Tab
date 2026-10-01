@@ -147,24 +147,26 @@ function SettingsContent() {
     setBuddyNameInput(buddySettings.name);
   }, [buddySettings.name]);
 
+  const { ready } = usePrivy();
   const { wallets } = useWallets();
   const [fullAddress, setFullAddress] = useState<string>("Loading...");
 
   useEffect(() => {
     async function fetchSmartAddress() {
+      if (!ready) return;
       try {
         const activeWallet = wallets.find((w) => w.walletClientType === "privy");
         if (activeWallet) {
           const smartClient = await getAlchemySmartAccountClient(activeWallet);
           setFullAddress(smartClient.account.address);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to load smart account address", err);
-        setFullAddress("Unavailable");
+        setFullAddress(`Unavailable: ${err.message || "Unknown Error"}`);
       }
     }
     fetchSmartAddress();
-  }, [wallets]);
+  }, [wallets, ready]);
 
   const copyAddress = () => {
     navigator.clipboard.writeText(fullAddress);
