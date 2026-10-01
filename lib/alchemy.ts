@@ -7,8 +7,11 @@ export const monadTestnet = {
   name: 'Monad Testnet',
   network: 'monad-testnet',
   nativeCurrency: { name: 'MONAD', symbol: 'MONAD', decimals: 18 },
-  rpcUrls: { default: { http: [process.env.NEXT_PUBLIC_MONAD_RPC_URL || 'https://testnet-rpc.monad.xyz'] } }
-} as const;
+  rpcUrls: { 
+    default: { http: [process.env.NEXT_PUBLIC_MONAD_RPC_URL || 'https://testnet-rpc.monad.xyz'] },
+    alchemy: { http: [`https://monad-testnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || ''}`] }
+  }
+} as any;
 
 export async function getAlchemySmartAccountClient(privyWallet: any) {
   if (!privyWallet) throw new Error("No privy wallet provided");
