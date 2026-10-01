@@ -49,7 +49,7 @@ function OnboardingContent() {
   const isInvite = searchParams.get("invite") === "true";
   const inviteTab = searchParams.get("tab");
   const isFresh = searchParams.get("fresh") === "true";
-  const { user } = usePrivy();
+  const { user, linkPasskey } = usePrivy();
   const { wallets } = useWallets();
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
@@ -108,19 +108,31 @@ function OnboardingContent() {
       description: "Requesting Touch ID / Face ID biometric registration..."
     });
 
-    await new Promise(r => setTimeout(r, 1600));
+    try {
+      if (linkPasskey) {
+        await linkPasskey();
+        setIsScanningPasskey(false);
+        setPasskeyDone(true);
+        sounds.playSuccessChime();
 
-    setIsScanningPasskey(false);
-    setPasskeyDone(true);
-    sounds.playSuccessChime();
+        toast.success("Passkey Registered", {
+          description: "Secured in your device's biometric vault for 1-tap sign in."
+        });
 
-    toast.success("Passkey Registered", {
-      description: "Secured in your device's biometric vault for 1-tap sign in."
-    });
-
-    setTimeout(() => {
-      finishOnboarding();
-    }, 500);
+        setTimeout(() => {
+          finishOnboarding();
+        }, 500);
+      } else {
+        throw new Error("Passkey linking not available");
+      }
+    } catch (error) {
+      console.error(error);
+      setIsScanningPasskey(false);
+      toast.error("Passkey Setup Cancelled", {
+        description: "You can set this up later in settings."
+      });
+      // Optionally don't auto-finish if they cancel, let them click skip
+    }
   };
 
   const skipPasskey = () => {
@@ -188,96 +200,9 @@ function OnboardingContent() {
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 p-8 rounded-3xl relative z-10 shadow-2xl"
+        className="w-full max-w-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 p-8 rounded-3xl relative z-10 shadow-2xl"
       >
         <AnimatePresence mode="wait">
-          {/* STEP 1: Passkey Registration */}
-          {step === 1 && (
-            <motion.div
-              key="step1"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="text-center space-y-6"
-            >
-              <div className="w-16 h-16 bg-slate-100 dark:bg-white/10 rounded-full flex items-center justify-center mx-auto mb-2 border border-slate-200 dark:border-white/20">
-                <Fingerprint className="w-8 h-8 text-slate-700 dark:text-white" />
-              </div>
-
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
-                  Create Passkey
-                </h1>
-                <p className="text-slate-500 dark:text-white/60 text-xs md:text-sm">
-                  Register your device for instant, passwordless sign-ins.
-                </p>
-              </div>
-
-              <div className="py-4 flex flex-col items-center">
-                <div
-                  onClick={handleEnrollPasskey}
-                  className={`w-24 h-24 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md ${
-                    passkeyDone
-                      ? "bg-emerald-500/20 border-2 border-emerald-500 text-emerald-600"
-                      : isScanningPasskey
-                      ? "bg-indigo-500/20 border-2 border-indigo-500 text-indigo-600 animate-pulse"
-                      : "bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 border border-slate-300 dark:border-white/20 text-slate-700 dark:text-white hover:scale-105"
-                  }`}
-                >
-                  {passkeyDone ? (
-                    <CheckCircle2 className="w-12 h-12 text-emerald-500" />
-                  ) : isScanningPasskey ? (
-                    <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
-                  ) : (
-                    <Fingerprint className="w-12 h-12" />
-                  )}
-                </div>
-
-                <span className="text-xs font-semibold text-slate-600 dark:text-white/60 mt-3">
-                  {passkeyDone 
-                    ? "Passkey Enrolled!" 
-                    : isScanningPasskey 
-                    ? "Scanning biometric sensor..." 
-                    : "Tap Sensor to Register Passkey"}
-                </span>
-              </div>
-
-              <div className="p-3 rounded-2xl bg-indigo-50/70 dark:bg-indigo-500/5 border border-indigo-200/70 dark:border-indigo-500/20 flex items-center gap-2.5 text-xs text-left text-slate-600 dark:text-white/70">
-                <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                <span>Protected by your device hardware. Zero passwords required.</span>
-              </div>
-
-              <div className="space-y-3">
-                <Button
-                  onClick={handleEnrollPasskey}
-                  disabled={isScanningPasskey || passkeyDone}
-                  variant="primary"
-                  size="lg"
-                  className="w-full cursor-pointer"
-                >
-                  {isScanningPasskey ? (
-                    <span className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" /> Enrolling Passkey...
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-2">
-                      <Key className="w-4 h-4" /> Enroll Passkey (Touch ID / Face ID)
-                    </span>
-                  )}
-                </Button>
-                
-                <button
-                  type="button"
-                  onClick={() => setStep(2)}
-                  disabled={isScanningPasskey}
-                  className="w-full text-center text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-white/50 dark:hover:text-white transition-colors py-2 cursor-pointer"
-                >
-                  Skip for now
-                </button>
-              </div>
-            </motion.div>
-          )}
-
           {/* STEP 1: Name & Color Selection */}
           {step === 1 && (
             <motion.form
