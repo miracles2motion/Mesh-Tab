@@ -149,14 +149,14 @@ export function useClaimWelcomeBonus() {
         functionName: "claimWelcomeBonus"
       });
 
-      const txHash = await smartClient.sendUserOperation({
+      const uoResult = await smartClient.sendUserOperation({
         uo: {
           target: (process.env.NEXT_PUBLIC_MOCK_AUSD_ADDRESS as `0x${string}`) || "0xF9bA02Cd0aFc210e0867852eEb0E994B07d9957F",
           data,
         }
       });
       
-      await smartClient.waitForUserOperationTransaction({ hash: txHash });
+      await smartClient.waitForUserOperationTransaction({ hash: uoResult.hash });
       return { success: true };
     } catch (err: any) {
       console.error("Failed to claim bonus", err);
