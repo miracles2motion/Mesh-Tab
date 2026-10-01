@@ -76,6 +76,9 @@ export default function GlobalHub() {
 
       setIsFetchingBalance(true);
       try {
+        const { getAlchemySmartAccountClient } = await import('../../lib/alchemy');
+        const smartClient = await getAlchemySmartAccountClient(primaryWallet);
+        
         const client = createPublicClient({
           transport: http(process.env.NEXT_PUBLIC_MONAD_RPC_URL || "https://testnet-rpc.monad.xyz")
         });
@@ -84,7 +87,7 @@ export default function GlobalHub() {
           address: (process.env.NEXT_PUBLIC_MOCK_AUSD_ADDRESS as `0x${string}`) || "0xF9bA02Cd0aFc210e0867852eEb0E994B07d9957F",
           abi: erc20Abi,
           functionName: "balanceOf",
-          args: [primaryWallet.address as `0x${string}`],
+          args: [smartClient.account.address as `0x${string}`],
         });
 
         const formatted = parseFloat(formatUnits(balance as bigint, 6));
