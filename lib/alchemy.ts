@@ -1,17 +1,17 @@
-import { createModularAccountAlchemyClient } from "@alchemy/aa-alchemy";
+import { createModularAccountAlchemyClient, defineAlchemyChain } from "@alchemy/aa-alchemy";
 import { WalletClientSigner } from "@alchemy/aa-core";
 import { createWalletClient, custom } from "viem";
 
-export const monadTestnet = {
-  id: 10143,
-  name: 'Monad Testnet',
-  network: 'monad-testnet',
-  nativeCurrency: { name: 'MONAD', symbol: 'MONAD', decimals: 18 },
-  rpcUrls: { 
-    default: { http: [process.env.NEXT_PUBLIC_MONAD_RPC_URL || 'https://testnet-rpc.monad.xyz'] },
-    alchemy: { http: [`https://monad-testnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || ''}`] }
-  }
-} as any;
+export const monadTestnet = defineAlchemyChain({
+  chain: {
+    id: 10143,
+    name: 'Monad Testnet',
+    network: 'monad-testnet',
+    nativeCurrency: { name: 'MONAD', symbol: 'MONAD', decimals: 18 },
+    rpcUrls: { default: { http: [process.env.NEXT_PUBLIC_MONAD_RPC_URL || 'https://testnet-rpc.monad.xyz'] } }
+  },
+  rpcBaseUrl: `https://monad-testnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || ''}`
+});
 
 export async function getAlchemySmartAccountClient(privyWallet: any) {
   if (!privyWallet) throw new Error("No privy wallet provided");
