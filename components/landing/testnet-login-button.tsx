@@ -4,12 +4,11 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { sounds } from "../../lib/sounds";
 import { usePrivy } from "@privy-io/react-auth";
+import { setWorkspaceMode } from "../../lib/user";
 
 export function TestnetLoginButton() {
   const router = useRouter();
   const { login, authenticated, ready } = usePrivy();
-
-
 
   const handleTestnetLogin = () => {
     sounds.playClick();
@@ -18,7 +17,8 @@ export function TestnetLoginButton() {
       if (!hasProfile) {
         router.push("/onboarding?fresh=true");
       } else {
-        router.push("/home?mode=testnet");
+        setWorkspaceMode("testnet");
+        router.push("/home");
       }
     } else {
       router.push("/login");

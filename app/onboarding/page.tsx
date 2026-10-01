@@ -183,7 +183,8 @@ function OnboardingContent() {
     if (isInvite && inviteTab) {
       router.push(`/tab/${inviteTab}?invite=true`);
     } else {
-      router.push("/home?mode=testnet");
+      setWorkspaceMode("testnet");
+      router.push("/home");
     }
   };
 
