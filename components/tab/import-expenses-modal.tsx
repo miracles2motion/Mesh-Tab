@@ -186,7 +186,6 @@ Airport Van Logistics, 120.00, Sarah`;
         });
         memberNames.add(exp.payer.toLowerCase());
       }
-      }
     });
 
     // 2.5 Save members first so saveStoredExpense sees any new payers

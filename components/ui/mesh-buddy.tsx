@@ -36,6 +36,7 @@ import {
   TabMember,
   StoredExpense,
   AVATAR_COLORS
+} from "../../lib/user";
 import { formatCurrency } from "../../lib/utils";
 import { useClaimWelcomeBonus } from "../../lib/alchemy";
 import { toast } from "sonner";
