@@ -19,7 +19,7 @@ import { NetworkStatusBadge } from "../../components/ui/network-status-badge";
 import { GlobalNav } from "../../components/ui/global-nav";
 import { createPublicClient, http, formatUnits, erc20Abi } from "viem";
 import { useWallets, usePrivy } from "@privy-io/react-auth";
-import { SecuritySettingsModal } from "../../components/ui/security-settings-modal";
+
 
 export default function GlobalHub() {
   const router = useRouter();
@@ -300,7 +300,7 @@ export default function GlobalHub() {
               </span>
             )}
           </Link>
-          <SecuritySettingsModal />
+
         </div>
       </header>
 

@@ -23,8 +23,10 @@ import {
   Play,
   Sun,
   Moon,
-  Laptop
+  Laptop,
+  Lock
 } from "lucide-react";
+import { useSecurity } from "../../components/providers/security-provider";
 import { Button } from "../../components/ui/button";
 import { ThemeToggle } from "../../components/theme-toggle";
 import { 
@@ -57,6 +59,7 @@ function SettingsContent() {
   const { settings: buddySettings, updateSettings: updateBuddySettings } = useBuddySettings();
   const { balance: virtualBalance, topUp: topUpFaucet } = useVirtualBalance();
   const { mode: workspaceMode, setMode: setWorkspaceMode } = useWorkspaceMode();
+  const { lockTimer, setLockTimer } = useSecurity();
 
   const handleBack = () => {
     sounds.playClick();
@@ -804,6 +807,46 @@ function SettingsContent() {
                     </div>
                     <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold border border-emerald-500/20 shrink-0">
                       Hardware Secured
+                    </div>
+                  </div>
+
+                  {/* Auto-Lock Timer Card */}
+                  <div className="p-5 bg-slate-50 dark:bg-black/30 rounded-2xl border border-slate-200 dark:border-white/5 space-y-4">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-1">
+                        <Lock className="w-4 h-4 text-indigo-500" /> Auto-Lock App
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5 max-w-md">Manage your auto-lock timer. When active, your session is automatically destroyed for security. You will need to authenticate again to regain access.</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {[
+                        { label: "Immediately", value: 0 },
+                        { label: "2 Minutes", value: 120000 },
+                        { label: "5 Minutes", value: 300000 },
+                        { label: "10 Minutes", value: 600000 },
+                        { label: "15 Minutes", value: 900000 },
+                        { label: "Never", value: -1 }
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          onClick={() => {
+                            sounds.playClick();
+                            setLockTimer(opt.value);
+                            toast.success("Timer Updated", { description: `Auto-lock set to ${opt.label}` });
+                          }}
+                          className={`flex items-center justify-between p-3 rounded-xl border transition-all text-xs font-semibold ${
+                            lockTimer === opt.value 
+                              ? "bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 shadow-sm" 
+                              : "bg-white dark:bg-[#1a1a1a] border-slate-200 dark:border-white/5 text-slate-700 dark:text-white/80 hover:bg-slate-50 dark:hover:bg-[#222]"
+                          }`}
+                        >
+                          {opt.label}
+                          {lockTimer === opt.value && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                          )}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
