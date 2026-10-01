@@ -46,11 +46,6 @@ function LoginContent() {
   const inviteTab = searchParams.get("tab");
 
   const handleComplete = (user: any, isNewUser: boolean) => {
-    // Lock in sample mode during demo phase so Lisbon Weekend & demo data are loaded
-    if (typeof window !== "undefined" && localStorage.getItem("meshTab_workspaceMode") !== "blank") {
-      setWorkspaceMode("sample");
-    }
-
     const hasProfile = typeof window !== "undefined" && Boolean(localStorage.getItem("meshTab_displayName"));
     if (!hasProfile || isNewUser) {
       router.push("/onboarding?fresh=true");
