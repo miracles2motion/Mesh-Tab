@@ -24,7 +24,7 @@ import { SecuritySettingsModal } from "../../components/ui/security-settings-mod
 export default function GlobalHub() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const isTestnetMode = searchParams.get("mode") === "testnet";
+  const urlMode = searchParams.get("mode");
   
   const profile = useUserProfile();
   const { tabs: mockTabs, saveTab } = useStoredTabs();
@@ -32,6 +32,9 @@ export default function GlobalHub() {
   const { mode: workspaceMode, setMode: setWorkspaceMode } = useWorkspaceMode();
   const { settledBalance, totalOutstandingDebt, withdrawableAmount } = useSettledPayoutBalance();
   const { unreadCount } = useNotifications();
+
+  // Use workspaceMode as the source of truth, not the URL
+  const isTestnetMode = workspaceMode === "testnet";
 
   const { wallets } = useWallets();
   const { user, linkPasskey } = usePrivy();
@@ -52,14 +55,17 @@ export default function GlobalHub() {
     setMounted(true);
   }, []);
 
-  // Sync URL testnet mode to workspace storage mode
+  // Sync URL mode to workspace storage mode if explicitly provided
   useEffect(() => {
-    if (isTestnetMode && workspaceMode !== "testnet") {
+    if (urlMode === "testnet" && workspaceMode !== "testnet") {
       setWorkspaceMode("testnet");
-    } else if (!isTestnetMode && workspaceMode === "testnet") {
-      setWorkspaceMode("blank"); // default fallback if they remove the param
+      // Clean up the URL
+      router.replace("/home");
+    } else if (urlMode === "sample" && workspaceMode !== "sample") {
+      setWorkspaceMode("sample");
+      router.replace("/home");
     }
-  }, [isTestnetMode, workspaceMode, setWorkspaceMode]);
+  }, [urlMode, workspaceMode, setWorkspaceMode, router]);
 
   useEffect(() => {
     async function fetchBalance() {

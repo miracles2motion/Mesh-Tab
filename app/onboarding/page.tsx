@@ -87,7 +87,7 @@ function OnboardingContent() {
     });
 
     if (isFresh) {
-      setWorkspaceMode("blank");
+      setWorkspaceMode("testnet");
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("meshTab-tabs-update"));
       }
@@ -183,7 +183,7 @@ function OnboardingContent() {
     if (isInvite && inviteTab) {
       router.push(`/tab/${inviteTab}?invite=true`);
     } else {
-      router.push("/home");
+      router.push("/home?mode=testnet");
     }
   };
 
