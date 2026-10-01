@@ -11,6 +11,7 @@ import { ThemeToggle } from "../../components/theme-toggle";
 import { setWorkspaceMode, saveStoredUser } from "../../lib/user";
 
 import { usePrivy, useLogin, useLoginWithPasskey } from "@privy-io/react-auth";
+import { toast } from "sonner";
 
 function LoginContent() {
   const router = useRouter();
@@ -21,8 +22,13 @@ function LoginContent() {
       handleComplete(user, isNewUser);
     },
     onError: (error) => {
-      console.log("Passkey login failed or cancelled, falling back to standard login", error);
-      login(); // Fallback to standard login modal if passkey fails (e.g. they switched devices)
+      console.log("Passkey login failed or cancelled", error);
+      toast.error("Passkey Not Recognized", {
+        description: "Your passkey couldn't be validated. You may need to sign in with email first."
+      });
+      // Disable hadPasskey so the next click opens the normal modal
+      localStorage.setItem("mesh_last_passkey_status", "false");
+      setHadPasskey(false);
     }
   });
 
