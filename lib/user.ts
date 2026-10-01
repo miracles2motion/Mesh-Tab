@@ -534,6 +534,7 @@ export interface StoredExpense {
   time: string;
   splitType?: "equal" | "exact";
   splits?: Record<string, number>; // memberName -> amount in cents
+  participants?: string[]; // frozen roster at creation time
   category?: ExpenseCategory;
   originalCurrency?: string; // e.g. "EUR", "GBP", "NGN", "JPY"
   originalAmount?: number; // amount in original foreign currency
@@ -542,14 +543,14 @@ export interface StoredExpense {
 
 export const DEFAULT_FEED: Record<string, StoredExpense[]> = {
   "lisbon-24": [
-    { id: "1", payer: "Aisha", amount: 60000, desc: "Villa booking", time: "Just now", splitType: "equal", category: "stay", originalCurrency: "EUR", originalAmount: 555.50 },
-    { id: "2", payer: "Kemi", amount: 26000, desc: "Dinners & wine", time: "5h ago", splitType: "equal", category: "dining", originalCurrency: "EUR", originalAmount: 240.00 },
-    { id: "3", payer: "Ben", amount: 22000, desc: "Excursions", time: "1d ago", splitType: "equal", category: "activities", originalCurrency: "EUR", originalAmount: 203.70 },
+    { id: "1", payer: "Aisha", amount: 60000, desc: "Villa booking", time: "Just now", splitType: "equal", participants: ["Aisha", "Kemi", "Ben", "You"], category: "stay", originalCurrency: "EUR", originalAmount: 555.50 },
+    { id: "2", payer: "Kemi", amount: 26000, desc: "Dinners & wine", time: "5h ago", splitType: "equal", participants: ["Aisha", "Kemi", "Ben", "You"], category: "dining", originalCurrency: "EUR", originalAmount: 240.00 },
+    { id: "3", payer: "Ben", amount: 22000, desc: "Excursions", time: "1d ago", splitType: "equal", participants: ["Aisha", "Kemi", "Ben", "You"], category: "activities", originalCurrency: "EUR", originalAmount: 203.70 },
     { id: "settle-ls-1", payer: "You", amount: 15000, desc: "Settled up with Aisha", time: "2d ago", splitType: "exact", splits: { "Aisha": 15000 }, category: "other" },
     { id: "4", payer: "Aisha", amount: 15000, desc: "Sightseeing tickets", time: "3d ago", splitType: "exact", splits: { "You": 15000 }, category: "activities", originalCurrency: "EUR", originalAmount: 138.89 },
   ],
   "miami-boat": [
-    { id: "mb-1", payer: "You", amount: 150000, desc: "Yacht Rental", time: "2 days ago", splitType: "equal", category: "activities" },
+    { id: "mb-1", payer: "You", amount: 150000, desc: "Yacht Rental", time: "2 days ago", splitType: "equal", participants: ["You", "John", "Sarah"], category: "activities" },
     { id: "settle-mb-1", payer: "John", amount: 50000, desc: "Settled up with You", time: "1 day ago", splitType: "exact", splits: { "You": 50000 }, category: "other" }
   ]
 };
@@ -602,6 +603,12 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense, skipBal
       ? `meshTab_testnet_expenses_${tabId}`
       : `meshTab_clean_expenses_${tabId}`;
   const current = getStoredExpenses(tabId);
+  // Auto-populate participants for equal splits if not provided
+  if (!expense.participants && !expense.splits) {
+    const currentMembers = getStoredTabMembers(tabId);
+    expense.participants = currentMembers.map(m => m.name);
+  }
+
   const updated = [expense, ...current];
   localStorage.setItem(storageKey, JSON.stringify(updated));
 
@@ -615,7 +622,9 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense, skipBal
           // Only participating members matter if splits exist
           const participatingMembers = hasSplits 
             ? members.filter(m => expense.splits && expense.splits[m.name] !== undefined && expense.splits[m.name] > 0)
-            : members;
+            : expense.participants
+              ? members.filter(m => expense.participants!.includes(m.name))
+              : members;
           
           const splitCount = Math.max(1, participatingMembers.length);
           const baseShare = Math.floor(expense.amount / splitCount);
@@ -626,9 +635,12 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense, skipBal
             if (hasSplits && expense.splits && expense.splits[m.name] !== undefined) {
               memberOwes = expense.splits[m.name];
             } else if (!hasSplits) {
-              const extraPenny = remainderPennies > 0 ? 1 : 0;
-              if (remainderPennies > 0) remainderPennies--;
-              memberOwes = baseShare + extraPenny;
+              const isParticipant = expense.participants ? expense.participants.includes(m.name) : true;
+              if (isParticipant) {
+                const extraPenny = remainderPennies > 0 ? 1 : 0;
+                if (remainderPennies > 0) remainderPennies--;
+                memberOwes = baseShare + extraPenny;
+              }
             }
 
             let delta = -memberOwes;
@@ -717,7 +729,9 @@ export function deleteStoredExpense(tabId: string, expenseId: string): { success
         const hasSplits = target.splits && Object.keys(target.splits).length > 0;
         const participatingMembers = hasSplits 
           ? members.filter(m => target.splits && target.splits[m.name] !== undefined && target.splits[m.name] > 0)
-          : members;
+          : target.participants
+            ? members.filter(m => target.participants!.includes(m.name))
+            : members;
         
         const splitCount = Math.max(1, participatingMembers.length);
         const baseShare = Math.floor(target.amount / splitCount);
@@ -728,9 +742,12 @@ export function deleteStoredExpense(tabId: string, expenseId: string): { success
           if (hasSplits && target.splits && target.splits[m.name] !== undefined) {
             memberOwed = target.splits[m.name];
           } else if (!hasSplits) {
-            const extraPenny = remainderPennies > 0 ? 1 : 0;
-            if (remainderPennies > 0) remainderPennies--;
-            memberOwed = baseShare + extraPenny;
+            const isParticipant = target.participants ? target.participants.includes(m.name) : true;
+            if (isParticipant) {
+              const extraPenny = remainderPennies > 0 ? 1 : 0;
+              if (remainderPennies > 0) remainderPennies--;
+              memberOwed = baseShare + extraPenny;
+            }
           }
 
           // Invert delta to reverse the expense
@@ -1144,10 +1161,11 @@ export function seedDemoExpenses(tabId: string, currentUserName?: string) {
   localStorage.setItem(membersKey, JSON.stringify(demoMembers));
 
   // 2. Seed 3 realistic expenses
+  const demoParticipants = ["Aisha", "Kemi", "Ben", activeUser];
   const demoExpenses: StoredExpense[] = [
-    { id: `demo-${Date.now()}-1`, payer: "Aisha", amount: 60000, desc: "Seaside Villa Booking", time: "2h ago", splitType: "equal" },
-    { id: `demo-${Date.now()}-2`, payer: "Kemi", amount: 26000, desc: "Tasting Menu & Wine", time: "5h ago", splitType: "equal" },
-    { id: `demo-${Date.now()}-3`, payer: "Ben", amount: 22000, desc: "Catamaran Excursion", time: "1d ago", splitType: "equal" }
+    { id: `demo-${Date.now()}-1`, payer: "Aisha", amount: 60000, desc: "Seaside Villa Booking", time: "2h ago", splitType: "equal", participants: demoParticipants },
+    { id: `demo-${Date.now()}-2`, payer: "Kemi", amount: 26000, desc: "Tasting Menu & Wine", time: "5h ago", splitType: "equal", participants: demoParticipants },
+    { id: `demo-${Date.now()}-3`, payer: "Ben", amount: 22000, desc: "Catamaran Excursion", time: "1d ago", splitType: "equal", participants: demoParticipants }
   ];
   const expensesKey = mode === "blank" ? `meshTab_clean_expenses_${tabId}` : `meshTab_expenses_${tabId}`;
   localStorage.setItem(expensesKey, JSON.stringify(demoExpenses));

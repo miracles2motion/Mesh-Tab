@@ -19,6 +19,8 @@ import { NetworkStatusBadge } from "../../components/ui/network-status-badge";
 import { GlobalNav } from "../../components/ui/global-nav";
 import { createPublicClient, http, formatUnits, erc20Abi } from "viem";
 import { useWallets, usePrivy } from "@privy-io/react-auth";
+import { AuthGuard } from "../../components/providers/auth-guard";
+import { useRealAusdBalance } from "../../lib/alchemy";
 
 
 export default function GlobalHub() {
@@ -38,8 +40,7 @@ export default function GlobalHub() {
 
   const { wallets } = useWallets();
   const { user, linkPasskey } = usePrivy();
-  const [testnetBalance, setTestnetBalance] = useState<number>(0);
-  const [isFetchingBalance, setIsFetchingBalance] = useState(false);
+  const { balance: testnetBalance, isLoading: isFetchingBalance } = useRealAusdBalance(workspaceMode);
   const hasPasskey = user?.linkedAccounts?.some(account => account.type === 'passkey') || false;
 
   const [showJoinModal, setShowJoinModal] = useState(false);
@@ -66,45 +67,6 @@ export default function GlobalHub() {
       router.replace("/home");
     }
   }, [urlMode, workspaceMode, setWorkspaceMode, router]);
-
-  useEffect(() => {
-    async function fetchBalance() {
-      if (!isTestnetMode) return;
-      
-      const primaryWallet = wallets.find(w => w.chainId?.includes("eip155")) || wallets[0];
-      if (!primaryWallet || !primaryWallet.address) return;
-
-      setIsFetchingBalance(true);
-      try {
-        const { getAlchemySmartAccountClient } = await import('../../lib/alchemy');
-        const smartClient = await getAlchemySmartAccountClient(primaryWallet);
-        
-        const client = createPublicClient({
-          transport: http(process.env.NEXT_PUBLIC_MONAD_RPC_URL || "https://testnet-rpc.monad.xyz")
-        });
-
-        const balance = await client.readContract({
-          address: (process.env.NEXT_PUBLIC_MOCK_AUSD_ADDRESS as `0x${string}`) || "0xF9bA02Cd0aFc210e0867852eEb0E994B07d9957F",
-          abi: erc20Abi,
-          functionName: "balanceOf",
-          args: [smartClient.account.address as `0x${string}`],
-        });
-
-        const formatted = parseFloat(formatUnits(balance as bigint, 6));
-        setTestnetBalance(formatted);
-      } catch (err) {
-        console.error("Error fetching Monad AUSD balance:", err);
-      } finally {
-        setIsFetchingBalance(false);
-      }
-    }
-
-    fetchBalance();
-    
-    // Poll every 5 seconds for live updates
-    const interval = setInterval(fetchBalance, 5000);
-    return () => clearInterval(interval);
-  }, [isTestnetMode, wallets]);
 
   const currentUserName = profile.name || "David";
 
@@ -193,7 +155,7 @@ export default function GlobalHub() {
   });
 
   return (
-    <>
+    <AuthGuard>
     <TransactionOverlay 
       state={txState} 
       messages={{
@@ -205,6 +167,25 @@ export default function GlobalHub() {
     <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300 pb-36 lg:pb-36">
       <GlobalNav />
       
+      {/* Welcome Bonus Nudge Banner */}
+      {mounted && isTestnetMode && testnetBalance === 0 && !isFetchingBalance && (
+        <div className="max-w-5xl mx-auto px-6 md:px-12 mt-6">
+          <div className="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between shadow-sm animate-in fade-in slide-in-from-top-4 gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-indigo-900 dark:text-indigo-100">Welcome Bonus Pending!</h3>
+                <p className="text-xs text-indigo-700/80 dark:text-indigo-200/80 mt-0.5">
+                  Looks like your account isn't funded yet. Click the Top Up button above to claim your welcome bonus.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Passkey Link Prompt removed to reduce noise - moved to settings */}
 
       {/* Header */}
@@ -276,7 +257,7 @@ export default function GlobalHub() {
                   ? "bg-purple-50 dark:bg-purple-500/10 border-purple-200 dark:border-purple-500/20 text-purple-700 dark:text-purple-300" 
                   : "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-300"
               }`}
-              title={isTestnetMode ? "Monad Testnet AUSD Balance" : "Sandbox Virtual Balance"}
+              title={isTestnetMode ? "Mesh Balance" : "Sandbox Virtual Balance"}
             >
               <Coins className="w-3.5 h-3.5" />
               <span className="tabular-nums">
@@ -636,6 +617,6 @@ export default function GlobalHub() {
       {/* MeshBuddy Tab Co-Pilot */}
       <MeshBuddy />
     </div>
-    </>
+    </AuthGuard>
   );
 }

@@ -186,13 +186,18 @@ Airport Van Logistics, 120.00, Sarah`;
         });
         memberNames.add(exp.payer.toLowerCase());
       }
+      }
     });
+
+    // 2.5 Save members first so saveStoredExpense sees any new payers
+    saveStoredTabMembers(tabId, members);
 
     // 3. Import each expense and compute zero-sum distribution
     const now = new Date();
     parsedExpenses.forEach((exp, idx) => {
       const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
       
+      // Let saveStoredExpense handle the balance update and participants automatically
       saveStoredExpense(tabId, {
         id: `import-${Date.now()}-${idx}`,
         desc: exp.desc,
@@ -201,31 +206,7 @@ Airport Van Logistics, 120.00, Sarah`;
         time: timeStr,
         category: exp.category
       });
-
-      // Split equally across all current members
-      const activeMemberCount = members.length > 0 ? members.length : 1;
-      const baseShare = Math.floor(exp.amountCents / activeMemberCount);
-      const remainder = exp.amountCents % activeMemberCount;
-
-      members = members.map((m, mIdx) => {
-        let diff = -baseShare;
-        if (mIdx < remainder) {
-          diff -= 1;
-        }
-        if (m.name.toLowerCase() === exp.payer.toLowerCase()) {
-          diff += exp.amountCents;
-        }
-        const nextBal = m.balance + diff;
-        return {
-          ...m,
-          balance: nextBal,
-          type: nextBal === 0 ? ("settled" as const) : nextBal > 0 ? ("creditor" as const) : ("debtor" as const)
-        };
-      });
     });
-
-    // 4. Save updated members
-    saveStoredTabMembers(tabId, members);
 
     // 5. Push to Redis for cross-device sync
     pushTabStateToRedis(tabId);

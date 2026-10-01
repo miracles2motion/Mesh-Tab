@@ -80,7 +80,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         const hasSplits = exp.splits && Object.keys(exp.splits).length > 0;
         const participatingMembers = hasSplits 
           ? calculatedMembers.filter(m => exp.splits && exp.splits[m.name] !== undefined && exp.splits[m.name] > 0)
-          : calculatedMembers;
+          : exp.participants
+            ? calculatedMembers.filter(m => exp.participants!.includes(m.name))
+            : calculatedMembers;
         
         const splitCount = Math.max(1, participatingMembers.length);
         const baseShare = Math.floor(exp.amount / splitCount);
@@ -91,9 +93,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           if (hasSplits && exp.splits && exp.splits[m.name] !== undefined) {
             memberOwes = exp.splits[m.name];
           } else if (!hasSplits) {
-            const extraPenny = remainderPennies > 0 ? 1 : 0;
-            if (remainderPennies > 0) remainderPennies--;
-            memberOwes = baseShare + extraPenny;
+            const isParticipant = exp.participants ? exp.participants.includes(m.name) : true;
+            if (isParticipant) {
+              const extraPenny = remainderPennies > 0 ? 1 : 0;
+              if (remainderPennies > 0) remainderPennies--;
+              memberOwes = baseShare + extraPenny;
+            }
           }
 
           let delta = -memberOwes;

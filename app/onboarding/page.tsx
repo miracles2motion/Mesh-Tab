@@ -25,6 +25,7 @@ import Image from "next/image";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { encodeFunctionData } from "viem";
 import { getAlchemySmartAccountClient } from "../../lib/alchemy";
+import { AuthGuard } from "../../components/providers/auth-guard";
 
 const MockAUSD_ABI = [
   {
@@ -143,7 +144,7 @@ function OnboardingContent() {
     setStep(3);
 
     // Trigger Welcome Bonus Gasless Transaction
-    toast.info("Funding Smart Account", { description: "Minting 5,000 AUSD welcome bonus via Alchemy Paymaster..." });
+    toast.info("Setting up your account...", { description: "Adding your $5,000 welcome bonus..." });
     try {
       const privyWallet = wallets.find(w => w.walletClientType === 'privy');
       if (privyWallet) {
@@ -446,8 +447,10 @@ function OnboardingContent() {
 
 export default function OnboardingPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a]" />}>
-      <OnboardingContent />
-    </Suspense>
+    <AuthGuard>
+      <Suspense fallback={<div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a]" />}>
+        <OnboardingContent />
+      </Suspense>
+    </AuthGuard>
   );
 }

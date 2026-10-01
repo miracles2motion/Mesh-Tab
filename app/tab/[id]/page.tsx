@@ -121,7 +121,7 @@ function DashboardContent() {
     setPaymentTxState("idle");
     sounds.playSuccessChime();
     fireSettlementConfetti();
-    toast.success("Debt Settled", { description: `Your payment of $${(debtAmount / 100).toFixed(2)} AUSD was confirmed on Monad.` });
+    toast.success("Debt Settled", { description: `Your payment of $${(debtAmount / 100).toFixed(2)} was confirmed.` });
   };
   const [mounted, setMounted] = useState(false);
   const searchParams = useSearchParams();
@@ -472,7 +472,7 @@ function DashboardContent() {
       <SettlementDrawer 
         isOpen={isSettlementOpen} 
         onClose={() => setIsSettlementOpen(false)} 
-        onConfirmPayment={() => {
+        onConfirmPayment={workspaceMode === "testnet" ? undefined : () => {
           setIsSettlementOpen(false);
           setTimeout(() => setIsPaymentDrawerOpen(true), 400); // Wait for the drawer to close
         }}

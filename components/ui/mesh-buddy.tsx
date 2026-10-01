@@ -36,8 +36,8 @@ import {
   TabMember,
   StoredExpense,
   AVATAR_COLORS
-} from "../../lib/user";
 import { formatCurrency } from "../../lib/utils";
+import { useClaimWelcomeBonus } from "../../lib/alchemy";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { fireFaucetConfetti } from "../../lib/confetti";
@@ -106,6 +106,10 @@ export function MeshBuddy() {
   const { mode: workspaceMode, setMode: setWorkspaceMode, resetLisbonDemo } = useWorkspaceMode();
   const { balance: virtualBalance, topUp } = useVirtualBalance();
   const { tabs: storedTabs } = useStoredTabs();
+  const { claimBonus, isClaiming: isTestnetClaiming } = useClaimWelcomeBonus();
+  const [isLocalClaiming, setIsLocalClaiming] = useState(false);
+  
+  const isClaiming = workspaceMode === "testnet" ? isTestnetClaiming : isLocalClaiming;
 
   const [isOpen, setIsOpen] = useState(false);
   const [drawerTab, setDrawerTab] = useState<"chat" | "kb">("chat");
@@ -319,7 +323,7 @@ export function MeshBuddy() {
         welcomeActions = [
           { label: "❓ How does Netting work?", action: () => handleAskQuestion("How does netting work?") },
           { label: "📸 Smart Scan Receipt", action: () => router.push("/tab/lisbon-24/expense/new") },
-          { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet },
+          { label: "🚰 Claim Bonus", action: handleClaimFaucet },
           { label: "🧹 Switch to Clean Slate", action: handleToggleWorkspace }
         ];
       } else if (isCustomTab) {
@@ -328,20 +332,20 @@ export function MeshBuddy() {
           { label: "➕ Add Expense", action: () => router.push(`/tab/${currentTabId}/expense/new`) },
           { label: "👥 Invite Members", action: () => router.push(`/tab/${currentTabId}/members`) },
           { label: "❓ How does Netting work?", action: () => handleAskQuestion("How does netting work on custom tabs?") },
-          { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet }
+          { label: "🚰 Claim Bonus", action: handleClaimFaucet }
         ];
       } else if (isCleanMode) {
         welcomeText = `Hey ${profile.name || "there"}! I'm ${buddySettings.name}. You're in Clean Slate mode with a fresh workspace. Ready to create your first tab?`;
         welcomeActions = [
           { label: "➕ Create New Tab", action: () => router.push("/tab/new") },
-          { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet },
+          { label: "🚰 Claim Bonus", action: handleClaimFaucet },
           { label: "❓ How to Split Bills?", action: () => handleAskQuestion("How do I create and split a bill?") }
         ];
       } else {
         welcomeText = `Hey ${profile.name || "there"}! I'm ${buddySettings.name}. You're in Sample Trip Mode. Tap Lisbon Weekend to test netting, or explore your settings.`;
         welcomeActions = [
           { label: "🏖️ Open Lisbon Demo", action: () => router.push("/tab/lisbon-24") },
-          { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet },
+          { label: "🚰 Claim Bonus", action: handleClaimFaucet },
           { label: "❓ How does Netting work?", action: () => handleAskQuestion("How does netting work?") },
           { label: "🧹 Switch to Clean Slate", action: handleToggleWorkspace }
         ];
@@ -408,25 +412,52 @@ export function MeshBuddy() {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isConfiguring, isThinking]);
 
-  // Actions
-  function handleClaimFaucet() {
+  async function handleClaimFaucet() {
+    if (isClaiming) return;
+
+    if (workspaceMode === "testnet") {
+      const { success, error } = await claimBonus();
+      if (success) {
+        sounds.playCoinClink();
+        fireFaucetConfetti();
+        setBuddyMood("excited");
+        setTimeout(() => setBuddyMood("happy"), 4000);
+        
+        const reply: ChatMessage = {
+          id: `faucet-${Date.now()}`,
+          sender: "buddy",
+          text: `Done! Credited +$5,000.00 to your real balance. You can use this to settle debts in the settlement drawer!`,
+          spokenText: "Added 5000 dollars to your account."
+        };
+        setMessages((prev) => [...prev, reply]);
+        speakText(reply.text, "Added 5000 dollars to your account.");
+      } else {
+        toast.info(error || "Bonus already claimed");
+      }
+      return;
+    }
+
+    setIsLocalClaiming(true);
+    await new Promise((r) => setTimeout(r, 600));
     topUp(50000);
+    setIsLocalClaiming(false);
+    
     sounds.playCoinClink();
     fireFaucetConfetti();
     setBuddyMood("excited");
     setTimeout(() => setBuddyMood("happy"), 4000);
-    toast.success("+$500.00 Test AUSD Added!", {
+    toast.success("+$500.00 Bonus Added!", {
       description: "Credited to sandbox balance via MeshBuddy."
     });
 
     const reply: ChatMessage = {
       id: `faucet-${Date.now()}`,
       sender: "buddy",
-      text: `Done! Credited +$500.00 in Virtual AUSD to your sandbox account. Current balance: ${formatCurrency(virtualBalance + 50000)}. You can use this to settle debts in the settlement drawer!`,
-      spokenText: "Added 500 test dollars to your sandbox account."
+      text: `Done! Credited +$500.00 to your sandbox account. Current balance: ${formatCurrency(virtualBalance + 50000)}. You can use this to settle debts in the settlement drawer!`,
+      spokenText: "Added 500 dollars to your sandbox account."
     };
     setMessages((prev) => [...prev, reply]);
-    speakText(reply.text, "Added 500 test dollars to your sandbox account.");
+    speakText(reply.text, "Added 500 dollars to your sandbox account.");
   }
 
   function handleToggleWorkspace() {
@@ -554,7 +585,7 @@ export function MeshBuddy() {
 
         actionItems = [
           totalTabs > 0 ? { label: `🏖️ Open ${tabs[0].name}`, action: () => router.push(`/tab/${tabs[0].id}`) } : { label: "➕ Create New Tab", action: () => router.push("/tab/new") },
-          { label: "🚰 Claim Faucet (+$500)", action: handleClaimFaucet },
+          { label: "🚰 Claim Bonus (+$500)", action: handleClaimFaucet },
           ...(workspaceMode === "sample" ? [{ label: "🧹 Switch to Clean Slate", action: handleToggleWorkspace }] : [])
         ];
       } else if (pathname === "/demo") {
@@ -1009,7 +1040,7 @@ export function MeshBuddy() {
             : { label: "💡 Tell Me About This App", action: () => handleAskQuestion("tell me about this app") },
           { label: "🌀 How Netting Works", action: () => handleAskQuestion("how does netting work") },
           { label: "📚 Open Knowledge Base (20 Guides)", action: () => setDrawerTab("kb") },
-          { label: "🚰 Top Up Faucet (+$500)", action: handleClaimFaucet },
+          { label: "🚰 Top Up Balance", action: handleClaimFaucet },
         ];
       }
     }

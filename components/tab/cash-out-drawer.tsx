@@ -8,7 +8,7 @@ import { formatCurrency } from "../../lib/utils";
 import Image from "next/image";
 import { AgoraLogo } from "../ui/partner-logo";
 
-import { DEFAULT_USER_NAME, useSettledPayoutBalance } from "../../lib/user";
+import { DEFAULT_USER_NAME, useSettledPayoutBalance, useWorkspaceMode } from "../../lib/user";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
 import { fireSettlementConfetti } from "../../lib/confetti";
@@ -33,6 +33,7 @@ export function CashOutDrawer({
   currentUserName = DEFAULT_USER_NAME
 }: CashOutDrawerProps) {
   const { withdrawPayout } = useSettledPayoutBalance();
+  const { mode: workspaceMode } = useWorkspaceMode();
   const [method, setMethod] = useState<"card" | "bank">("card");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -48,6 +49,14 @@ export function CashOutDrawer({
     await new Promise((r) => setTimeout(r, 1500));
     setTxState("processing");
     await new Promise((r) => setTimeout(r, 2000));
+    
+    if (workspaceMode === "testnet") {
+      setTxState("idle");
+      setIsProcessing(false);
+      setIsSuccess(true);
+      return;
+    }
+
     withdrawPayout(withdrawableAmount);
     sounds.playSuccessChime();
     fireSettlementConfetti();
@@ -235,6 +244,33 @@ export function CashOutDrawer({
                 </div>
               </div>
             </div>
+          </div>
+        ) : workspaceMode === "testnet" ? (
+          <div className="py-8 flex flex-col items-center max-w-md mx-auto text-center animate-in fade-in zoom-in duration-500">
+            <div className="w-full relative aspect-square max-w-[280px] mx-auto mb-6 rounded-2xl overflow-hidden shadow-2xl border border-white/20">
+              <Image 
+                src="/haha-meme.jpg" 
+                alt="Vault Under Construction" 
+                fill 
+                className="object-cover"
+              />
+            </div>
+
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">
+              Nice try 😏
+            </h3>
+            <p className="text-slate-500 dark:text-white/60 text-sm mb-8 leading-relaxed">
+              Withdrawals to real bank accounts will go live at launch. Don't worry, your balance is safe and sound!
+            </p>
+
+            <Button
+              onClick={handleClose}
+              variant="primary"
+              size="lg"
+              className="w-full font-bold shadow-lg"
+            >
+              Got it
+            </Button>
           </div>
         ) : (
           <div className="py-8 flex flex-col items-center">

@@ -24,7 +24,8 @@ import {
   Sun,
   Moon,
   Laptop,
-  Lock
+  Lock,
+  LogOut
 } from "lucide-react";
 import { useSecurity } from "../../components/providers/security-provider";
 import { Button } from "../../components/ui/button";
@@ -47,12 +48,13 @@ import { speak, stopSpeech, VoicePersona } from "../../lib/voice";
 import { GlobalNav } from "../../components/ui/global-nav";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { getAlchemySmartAccountClient } from "../../lib/alchemy";
+import { AuthGuard } from "../../components/providers/auth-guard";
 
 function SettingsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromUrl = searchParams.get("from");
-  const { user, linkPasskey } = usePrivy();
+  const { user, linkPasskey, logout } = usePrivy();
   const hasPasskey = user?.linkedAccounts?.some(account => account.type === 'passkey') || false;
 
   const profile = useUserProfile();
@@ -889,6 +891,37 @@ function SettingsContent() {
             </div>
           )}
 
+          {/* ─── Account Actions ─── */}
+          <div className="p-6 sm:p-8 bg-white dark:bg-[#111] rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+              <LogOut className="w-5 h-5 text-red-500" />
+              Account Actions
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-white/50 mb-5">Sign out of your MeshTab account on this device.</p>
+            <button
+              onClick={async () => {
+                sounds.playClick();
+                try {
+                  await logout();
+                  // Clear sensitive frontend caches
+                  localStorage.removeItem("meshTab_displayName");
+                  localStorage.removeItem("meshTab_avatarColorIndex");
+                  localStorage.removeItem("meshTab_workspaceMode");
+                  localStorage.removeItem("meshTab_settledPayoutBalance");
+                  localStorage.removeItem("meshTab_virtualBalance");
+                  router.push("/login");
+                } catch (err) {
+                  console.error("Logout failed:", err);
+                  toast.error("Logout failed", { description: "Please try again." });
+                }
+              }}
+              className="w-full sm:w-auto px-6 py-3 rounded-2xl border-2 border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              Log Out
+            </button>
+          </div>
+
         </div>
       </main>
 
@@ -900,8 +933,10 @@ function SettingsContent() {
 
 export default function SettingsPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a]" />}>
-      <SettingsContent />
-    </Suspense>
+    <AuthGuard>
+      <Suspense fallback={<div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a]" />}>
+        <SettingsContent />
+      </Suspense>
+    </AuthGuard>
   );
 }

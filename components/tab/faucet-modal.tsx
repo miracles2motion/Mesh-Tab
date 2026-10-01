@@ -5,7 +5,8 @@ import { Modal } from "../ui/modal";
 import { Button } from "../ui/button";
 import { Coins, Sparkles, CheckCircle2, ArrowRight, ShieldCheck, Zap } from "lucide-react";
 import { formatCurrency } from "../../lib/utils";
-import { useVirtualBalance } from "../../lib/user";
+import { useVirtualBalance, useWorkspaceMode } from "../../lib/user";
+import { useClaimWelcomeBonus } from "../../lib/alchemy";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { fireFaucetConfetti } from "../../lib/confetti";
@@ -17,24 +18,44 @@ interface FaucetModalProps {
 }
 
 export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
+  const { mode: workspaceMode } = useWorkspaceMode();
   const { balance, topUp } = useVirtualBalance();
-  const [isClaiming, setIsClaiming] = useState(false);
+  const { claimBonus, isClaiming: isTestnetClaiming } = useClaimWelcomeBonus();
+  const [isLocalClaiming, setIsLocalClaiming] = useState(false);
   const [justClaimed, setJustClaimed] = useState(false);
+
+  const isClaiming = workspaceMode === "testnet" ? isTestnetClaiming : isLocalClaiming;
 
   if (!isOpen) return null;
 
   const handleClaim = async () => {
-    setIsClaiming(true);
+    if (workspaceMode === "testnet") {
+      const { success, error } = await claimBonus();
+      if (success) {
+        setJustClaimed(true);
+        sounds.playCoinClink();
+        fireFaucetConfetti();
+        toast.success("Welcome bonus claimed!", {
+          description: "$5,000 added to your balance."
+        });
+        setTimeout(() => setJustClaimed(false), 2500);
+      } else {
+        toast.info(error || "You've already received your one-time welcome bonus!");
+      }
+      return;
+    }
+
+    setIsLocalClaiming(true);
     await new Promise((r) => setTimeout(r, 600));
     topUp(50000); // +$500.00
-    setIsClaiming(false);
+    setIsLocalClaiming(false);
     setJustClaimed(true);
 
     // Audio + Confetti + Toast
     sounds.playCoinClink();
     fireFaucetConfetti();
     toast.success("+$500.00 Test AUSD Minted!", {
-      description: "Added to your Monad sandbox balance."
+      description: "Added to your sandbox balance."
     });
 
     setTimeout(() => setJustClaimed(false), 2500);

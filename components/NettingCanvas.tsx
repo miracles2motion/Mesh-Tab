@@ -129,14 +129,23 @@ export function NettingCanvas({
         });
       });
     } else {
-      // Elliptical orbital distribution for 5 to 12+ members
+      // Elliptical orbital distribution for 5 to 15+ members
       const sortedList = [...creds, ...debts, ...setts];
       const cx = 270;
-      const cy = 155;
-      const rx = n <= 8 ? 200 : 215;
-      const ry = n <= 8 ? 95 : 105;
+      const cy = n > 8 ? 205 : 155;
+      const rxBase = n <= 8 ? 200 : 235;
+      const ryBase = n <= 8 ? 95 : 145;
 
       sortedList.forEach((m, i) => {
+        let rx = rxBase;
+        let ry = ryBase;
+
+        // Two-ring layout for high density: creditors on inner ring
+        if (n > 8 && (m.balance ?? 0) > 0) {
+          rx -= 75;
+          ry -= 55;
+        }
+
         const theta = (2 * Math.PI * i) / n - Math.PI / 2;
         const x = Math.round(cx + rx * Math.cos(theta));
         const y = Math.round(cy + ry * Math.sin(theta));
@@ -327,7 +336,7 @@ export function NettingCanvas({
   };
 
   const creditorNames = creditors.length > 0 ? creditors.map(c => c.name).join(", ") : "Creditor";
-  const baseNodeRadius = nodes.length <= 4 ? 24 : nodes.length <= 8 ? 20 : 17;
+  const baseNodeRadius = nodes.length <= 4 ? 24 : nodes.length <= 8 ? 20 : nodes.length <= 12 ? 16 : 14;
   const unNettedCount = Math.max(nodes.length * 2, Math.round((nodes.length * (nodes.length - 1)) / 1.5));
   const settledCapital = Math.round(grossVolume * 0.25);
 
@@ -446,9 +455,12 @@ export function NettingCanvas({
       </div>
 
       {/* Unified Mathematical SVG Canvas */}
-      <div className="relative w-full h-[270px] sm:h-[300px] bg-slate-950 dark:bg-[#070709] flex items-center justify-center overflow-hidden select-none">
+      <div 
+        className="relative w-full bg-slate-950 dark:bg-[#070709] flex items-center justify-center overflow-hidden select-none"
+        style={{ height: `min(450px, max(300px, ${nodes.length * 30}px))` }}
+      >
         <svg 
-          viewBox="0 0 540 320" 
+          viewBox={`0 0 540 ${nodes.length > 8 ? 420 : 320}`}
           className="w-full h-full"
           preserveAspectRatio="xMidYMid meet"
         >
@@ -498,7 +510,7 @@ export function NettingCanvas({
 
           {/* STATE 0: FULLY SETTLED LEDGER (Equilibrium) */}
           {!hasActiveDebts && (
-            <g transform="translate(270, 160)">
+            <g transform={`translate(270, ${nodes.length > 8 ? 210 : 160})`}>
               <circle r="50" fill="none" stroke="#10b981" strokeWidth="1.5" opacity="0.3">
                 <animate attributeName="r" values="35;60;35" dur="3s" repeatCount="indefinite" />
                 <animate attributeName="opacity" values="0.4;0.05;0.4" dur="3s" repeatCount="indefinite" />
@@ -527,7 +539,7 @@ export function NettingCanvas({
                 />
               ))}
               {/* Central badge showing un-netted debt complexity */}
-              <g transform="translate(270, 160)">
+              <g transform={`translate(270, ${nodes.length > 8 ? 210 : 160})`}>
                 <rect x="-95" y="-14" width="190" height="28" rx="14" fill="#1c1917" stroke="#f43f5e" strokeWidth="1.5" />
                 <text x="0" y="4" textAnchor="middle" fill="#fda4af" fontSize="10" fontWeight="bold" fontFamily="sans-serif">
                   {unNettedCount} Un-Netted Transfers ({formatCurrency(totalActiveDebt)})
@@ -538,7 +550,7 @@ export function NettingCanvas({
 
           {/* STATE 2: CALCULATING (Monad Consensus Wave) */}
           {hasActiveDebts && nettingState === "calculating" && (
-            <g transform="translate(270, 155)">
+            <g transform={`translate(270, ${nodes.length > 8 ? 205 : 155})`}>
               <circle r="60" fill="none" stroke="#6366f1" strokeWidth="2" opacity="0.3">
                 <animate attributeName="r" values="20;75" dur="1.2s" repeatCount="indefinite" />
                 <animate attributeName="opacity" values="0.8;0" dur="1.2s" repeatCount="indefinite" />
@@ -560,12 +572,21 @@ export function NettingCanvas({
               {simplifiedEdges.map((edge, idx) => {
                 // Check if line is vertical or passes through the central axis (x ~ 270)
                 const isVerticalCenter = Math.abs(edge.startX - 270) < 20 && Math.abs(edge.endX - 270) < 20;
-                const curveOffset = isVerticalCenter ? -48 : 0;
+                
+                // Add collision avoidance multiplier based on index for dense graphs
+                const curveMultiplier = (idx % 2 === 0 ? 1 : -1) * (1 + Math.floor(idx / 2) * 0.4);
+                const curveOffset = isVerticalCenter ? -48 * curveMultiplier : (nodes.length > 5 ? 45 * curveMultiplier : 0);
+
                 const pathD = curveOffset !== 0
-                  ? `M ${edge.startX} ${edge.startY} Q ${edge.midX + curveOffset} ${edge.midY} ${edge.endX} ${edge.endY}`
+                  ? `M ${edge.startX} ${edge.startY} Q ${edge.midX + curveOffset} ${edge.midY + (isVerticalCenter ? 0 : curveOffset * 0.6)} ${edge.endX} ${edge.endY}`
                   : `M ${edge.startX} ${edge.startY} L ${edge.endX} ${edge.endY}`;
-                const pillX = edge.midX + (curveOffset !== 0 ? curveOffset * 0.72 : 0);
-                const pillY = edge.midY;
+                
+                const pillX = edge.midX + (curveOffset !== 0 ? curveOffset * 0.5 : 0);
+                const pillY = edge.midY + (curveOffset !== 0 && !isVerticalCenter ? curveOffset * 0.3 : 0);
+
+                const amountStr = formatCurrency(edge.amount);
+                const pillWidth = Math.max(50, amountStr.length * 5 + 16);
+                const prx = Math.round(pillWidth / 2);
 
                 return (
                   <g key={`${edge.from.id}->${edge.to.id}`}>
@@ -597,9 +618,9 @@ export function NettingCanvas({
                     {/* Payment Amount Pill on the Arrow */}
                     <g transform={`translate(${pillX}, ${pillY})`}>
                       <rect 
-                        x="-30" 
+                        x={-prx} 
                         y="-10" 
-                        width="60" 
+                        width={pillWidth} 
                         height="20" 
                         rx="10" 
                         fill="#064e3b" 
@@ -616,7 +637,7 @@ export function NettingCanvas({
                         fontWeight="bold" 
                         fontFamily="sans-serif"
                       >
-                        {formatCurrency(edge.amount)}
+                        {amountStr}
                       </text>
                     </g>
                   </g>
@@ -624,7 +645,7 @@ export function NettingCanvas({
               })}
 
               {/* Central Netting Result Badge */}
-              <g transform="translate(270, 160)">
+              <g transform={`translate(270, ${nodes.length > 8 ? 210 : 160})`}>
                 <rect x="-85" y="-12" width="170" height="24" rx="12" fill="#022c22" stroke="#10b981" strokeWidth="1.5" />
                 <text x="0" y="4" textAnchor="middle" fill="#6ee7b7" fontSize="9.5" fontWeight="bold" fontFamily="sans-serif">
                   ✓ {simplifiedEdges.length} Settlements ({formatCurrency(settledCapital)})
@@ -670,7 +691,7 @@ export function NettingCanvas({
                   y={nodes.length <= 4 ? "5.5" : "4.5"}
                   textAnchor="middle"
                   fill="#ffffff"
-                  fontSize={isTargetCreditor ? (nodes.length <= 4 ? "15" : "13") : (nodes.length <= 4 ? "13" : "11")}
+                  fontSize={isTargetCreditor ? (nodes.length <= 4 ? "15" : nodes.length > 8 ? "11" : "13") : (nodes.length <= 4 ? "13" : nodes.length > 8 ? "9" : "11")}
                   fontWeight="bold"
                   fontFamily="sans-serif"
                 >
@@ -679,14 +700,14 @@ export function NettingCanvas({
 
                 {/* Role Pill Above Node */}
                 {isTargetCreditor && !node.isSettled ? (
-                  <g transform={`translate(0, -${nodeRadius + 11})`}>
+                  <g transform={`translate(0, -${nodeRadius + (nodes.length > 8 ? 8 : 11)})`} style={{ transform: `scale(${nodes.length > 8 ? 0.8 : 1}) translate(0, -${nodeRadius + 11}px)` }}>
                     <rect x="-30" y="-7" width="60" height="14" rx="7" fill="#047857" stroke="#34d399" strokeWidth="1" />
                     <text x="0" y="3" textAnchor="middle" fill="#ecfdf5" fontSize="7.5" fontWeight="bold" fontFamily="sans-serif">
                       CREDITOR
                     </text>
                   </g>
                 ) : node.isSettled ? (
-                  <g transform={`translate(0, -${nodeRadius + 11})`}>
+                  <g transform={`translate(0, -${nodeRadius + (nodes.length > 8 ? 8 : 11)})`} style={{ transform: `scale(${nodes.length > 8 ? 0.8 : 1}) translate(0, -${nodeRadius + 11}px)` }}>
                     <rect x="-26" y="-6.5" width="52" height="13" rx="6.5" fill="#065f46" stroke="#34d399" strokeWidth="1" />
                     <text x="0" y="2.5" textAnchor="middle" fill="#a7f3d0" fontSize="7" fontWeight="bold" fontFamily="sans-serif">
                       SETTLED
@@ -697,18 +718,18 @@ export function NettingCanvas({
                 {/* Name Label Below Node */}
                 <text
                   x="0"
-                  y={nodeRadius + (nodes.length <= 4 ? 14 : 12)}
+                  y={nodeRadius + (nodes.length <= 4 ? 14 : nodes.length > 8 ? 10 : 12)}
                   textAnchor="middle"
                   fill={currentUserName && node.name.toLowerCase() === currentUserName.toLowerCase() ? "#a5b4fc" : "#f8fafc"}
-                  fontSize={nodes.length <= 4 ? "11" : "9.5"}
+                  fontSize={nodes.length <= 4 ? "11" : nodes.length > 8 ? "8.5" : "9.5"}
                   fontWeight="bold"
                   fontFamily="sans-serif"
                 >
                   {currentUserName && node.name.toLowerCase() === currentUserName.toLowerCase() 
-                    ? `${node.name} (You)` 
+                    ? `${node.name.length > 5 && nodes.length > 8 ? node.name.slice(0,4) + '…' : node.name} (You)` 
                     : creatorName && node.name.toLowerCase() === creatorName.toLowerCase()
-                    ? `${node.name} ★`
-                    : node.name}
+                    ? `${node.name.length > 5 && nodes.length > 8 ? node.name.slice(0,4) + '…' : node.name} ★`
+                    : (node.name.length > 6 && nodes.length > 8 ? node.name.slice(0,5) + '…' : node.name)}
                 </text>
 
                 {/* Balance Subtitle Below Name */}

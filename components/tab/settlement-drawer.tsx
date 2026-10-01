@@ -15,7 +15,7 @@ import { fireSettlementConfetti, fireFaucetConfetti } from "../../lib/confetti";
 import { SUPPORTED_CURRENCIES, usePythRate } from "../../lib/pyth";
 import { erc20Abi, encodeFunctionData } from "viem";
 import { useWallets } from "@privy-io/react-auth";
-import { getAlchemySmartAccountClient } from "../../lib/alchemy";
+import { getAlchemySmartAccountClient, useRealAusdBalance } from "../../lib/alchemy";
 
 const MeshTabLedgerABI = [
   {
@@ -44,6 +44,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
   const profile = useUserProfile();
   const { mode: workspaceMode } = useWorkspaceMode();
   const { wallets } = useWallets();
+  const { balance: testnetBalance } = useRealAusdBalance(workspaceMode);
   const { balance: virtualBalance, deduct, topUp } = useVirtualBalance();
   const activeUser = currentUserName || profile.name || "David";
   const { members: tabMembers } = useStoredTabMembers(tabId, activeUser);
@@ -66,7 +67,8 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
     ? Math.round(convertedAmount).toLocaleString() 
     : convertedAmount.toFixed(2);
 
-  const hasEnoughVirtual = workspaceMode === "testnet" ? true : virtualBalance >= debtAmount;
+  const activeBalance = workspaceMode === "testnet" ? testnetBalance * 100 : virtualBalance; // convert testnet balance to cents for comparison
+  const hasEnoughVirtual = activeBalance >= debtAmount;
 
   const handleSettle = async () => {
     if (onConfirmPayment) {
@@ -94,7 +96,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
 
         const smartAccountClient = await getAlchemySmartAccountClient(privyWallet);
 
-        toast.loading("Executing Gasless Settlement via Alchemy...", { id: "tx-toast" });
+        toast.loading("Processing payment securely...", { id: "tx-toast" });
 
         const result = await smartAccountClient.sendUserOperation({
           uo: [
@@ -174,8 +176,8 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Settle Your Debt</h2>
             <p className="text-slate-500 dark:text-white/60 text-sm max-w-sm mx-auto">
               {primaryCreditor 
-                ? `Paying off your netted residual balance directly to ${primaryCreditor} via Agora AUSD.`
-                : "Paying off your netted residual balance via Agora AUSD on Monad."}
+                ? `Paying off your netted residual balance directly to ${primaryCreditor}.`
+                : "Paying off your netted residual balance."}
             </p>
           </div>
 
@@ -188,7 +190,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
                 <div className="text-5xl font-bold text-slate-900 dark:text-white my-2 tabular-nums tracking-tight">
                   {formatCurrency(debtAmount)}
                 </div>
-                <span className="text-slate-500 dark:text-white/60 font-semibold text-sm">Agora AUSD (Digital Dollars)</span>
+                <span className="text-slate-500 dark:text-white/60 font-semibold text-sm">Mesh Balance</span>
               </div>
             </div>
 
@@ -217,7 +219,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
                     <div>
                       <div className="flex items-center gap-2">
                         <h4 className="font-semibold text-sm text-slate-900 dark:text-white">
-                          {workspaceMode === "testnet" ? "AUSD Balance" : "Virtual AUSD Balance"}
+                          {workspaceMode === "testnet" ? "Mesh Balance" : "Sandbox Virtual Balance"}
                         </h4>
                         {workspaceMode !== "testnet" && (
                           <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded-full font-bold">
@@ -226,7 +228,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
                         )}
                       </div>
                       <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5 font-mono">
-                        {formatCurrency(virtualBalance)} Available
+                        {formatCurrency(activeBalance)} Available
                       </p>
                     </div>
                   </div>

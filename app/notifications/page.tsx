@@ -27,6 +27,7 @@ import { useWorkspaceMode } from "../../lib/user";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
 import { GlobalNav } from "../../components/ui/global-nav";
+import { AuthGuard } from "../../components/providers/auth-guard";
 
 function NotificationsContent() {
   const router = useRouter();
@@ -365,8 +366,10 @@ function NotificationsContent() {
 
 export default function NotificationsPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a]" />}>
-      <NotificationsContent />
-    </Suspense>
+    <AuthGuard>
+      <Suspense fallback={<div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a]" />}>
+        <NotificationsContent />
+      </Suspense>
+    </AuthGuard>
   );
 }

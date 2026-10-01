@@ -102,7 +102,8 @@ export function OfflineMeshSyncModal({ isOpen, onClose, tabId }: OfflineMeshSync
           const remoteExp: StoredExpense = {
             id: c.id, payer: c.p, amount: c.a, desc: c.d, time: c.tm,
             splitType: c.st, splits: c.sp, category: c.cat, 
-            originalCurrency: c.oc, originalAmount: c.oa, syncStatus: "pending"
+            originalCurrency: c.oc, originalAmount: c.oa, syncStatus: "pending",
+            participants: c.pa
           };
           saveStoredExpense(tabId, remoteExp);
           expCount++;
