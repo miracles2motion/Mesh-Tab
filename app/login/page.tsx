@@ -87,7 +87,13 @@ function LoginContent() {
         </div>
         
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Secure Login</h1>
-        <p className="text-slate-500 dark:text-white/60 text-sm mb-8">Sign in to access your shared tabs and synchronize your identity.</p>
+        <div className="space-y-4 mb-8">
+          <p className="text-slate-500 dark:text-white/60 text-sm">Sign in to access your shared tabs and synchronize your identity.</p>
+          <div className="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 text-indigo-700 dark:text-indigo-300 p-3.5 rounded-2xl text-xs text-left leading-relaxed">
+            <strong className="block mb-1">New to Mesh Tab?</strong>
+            Start with Google or Email. Please <strong>do not</strong> click the blue &quot;I have a passkey&quot; link until you&apos;ve registered one inside!
+          </div>
+        </div>
 
         <Button
           onClick={handleLogin}
