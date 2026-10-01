@@ -45,7 +45,8 @@ import { fireFaucetConfetti } from "../../lib/confetti";
 import { AnimatedCounter } from "../../components/ui/animated-counter";
 import { speak, stopSpeech, VoicePersona } from "../../lib/voice";
 import { GlobalNav } from "../../components/ui/global-nav";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { getAlchemySmartAccountClient } from "../../lib/alchemy";
 
 function SettingsContent() {
   const router = useRouter();
@@ -146,12 +147,29 @@ function SettingsContent() {
     setBuddyNameInput(buddySettings.name);
   }, [buddySettings.name]);
 
-  const fullAddress = "0x7F5c0919245151522A1Bc65261dE3b1111923b9A";
+  const { wallets } = useWallets();
+  const [fullAddress, setFullAddress] = useState<string>("Loading...");
+
+  useEffect(() => {
+    async function fetchSmartAddress() {
+      try {
+        const activeWallet = wallets.find((w) => w.walletClientType === "privy");
+        if (activeWallet) {
+          const smartClient = await getAlchemySmartAccountClient(activeWallet);
+          setFullAddress(smartClient.account.address);
+        }
+      } catch (err) {
+        console.error("Failed to load smart account address", err);
+        setFullAddress("Unavailable");
+      }
+    }
+    fetchSmartAddress();
+  }, [wallets]);
 
   const copyAddress = () => {
     navigator.clipboard.writeText(fullAddress);
     setCopied(true);
-    toast.success("Monad Address Copied", { description: "0x7F5c...3b9A copied to clipboard." });
+    toast.success("Ledger Address Copied", { description: `${fullAddress.slice(0, 6)}...${fullAddress.slice(-4)} copied to clipboard.` });
     setTimeout(() => setCopied(false), 2000);
   };
 
