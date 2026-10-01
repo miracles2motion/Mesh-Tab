@@ -33,6 +33,7 @@ function LoginContent() {
   });
 
   const [hadPasskey, setHadPasskey] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
     // Check if they had a passkey configured previously on this device
@@ -44,13 +45,47 @@ function LoginContent() {
 
   const isInvite = searchParams.get("invite") === "true";
   const inviteTab = searchParams.get("tab");
+  const intent = searchParams.get("intent");
 
-  const handleComplete = (user: any, isNewUser: boolean) => {
-    const hasProfile = typeof window !== "undefined" && Boolean(localStorage.getItem("meshTab_displayName"));
+  const handleComplete = async (user: any, isNewUser: boolean) => {
+    let hasProfile = typeof window !== "undefined" && Boolean(localStorage.getItem("meshTab_displayName"));
+    
+    // Redis Sync: If they are not a new user but have no local profile (cleared site data)
+    if (!hasProfile && !isNewUser && user?.wallet?.address) {
+      setIsVerifying(true);
+      try {
+        const res = await fetch(`/api/user/profile?wallet=${user.wallet.address}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.name) {
+            localStorage.setItem("meshTab_displayName", data.name.trim());
+            localStorage.setItem("meshTab_avatarColorIndex", String(data.avatarColorIndex));
+            window.dispatchEvent(new Event("meshTab-profile-update"));
+            hasProfile = true;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to verify existing profile", err);
+      } finally {
+        setIsVerifying(false);
+      }
+    }
+
     if (!hasProfile || isNewUser) {
-      router.push("/onboarding?fresh=true");
+      if (intent === "testnet") {
+        router.push("/onboarding?fresh=true&intent=testnet");
+      } else {
+        router.push("/onboarding?fresh=true");
+      }
     } else {
-      router.push(isInvite ? `/tab/${inviteTab}?invite=true` : "/home");
+      if (intent === "testnet") {
+        setWorkspaceMode("testnet");
+      }
+      if (isInvite) {
+        router.push(`/tab/${inviteTab}?invite=true`);
+      } else {
+        router.push("/home");
+      }
     }
   };
 
@@ -98,7 +133,7 @@ function LoginContent() {
 
         <Button
           onClick={handleLogin}
-          disabled={!ready || authenticated}
+          disabled={!ready || authenticated || isVerifying}
           variant="primary"
           size="lg"
           className="w-full relative overflow-hidden bg-indigo-600 hover:bg-indigo-700 text-white"
@@ -106,6 +141,10 @@ function LoginContent() {
           {(!ready) ? (
             <span className="flex items-center gap-2">
               <Loader2 className="w-5 h-5 animate-spin" /> Initializing...
+            </span>
+          ) : isVerifying ? (
+            <span className="flex items-center gap-2">
+              <Loader2 className="w-5 h-5 animate-spin" /> Verifying Profile...
             </span>
           ) : (
             "Sign In Securely"

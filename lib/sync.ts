@@ -73,7 +73,11 @@ export function pushTabStateToRedis(tabId: string) {
       const hadPending = currentExpenses.some(e => e.syncStatus === "pending");
       if (hadPending) {
         const updated = currentExpenses.map(e => ({ ...e, syncStatus: "synced" as const }));
-        const storageKey = mode === "blank" ? `meshTab_clean_expenses_${tabId}` : `meshTab_expenses_${tabId}`;
+        const storageKey = mode === "sample"
+          ? `meshTab_expenses_${tabId}`
+          : mode === "testnet"
+            ? `meshTab_testnet_expenses_${tabId}`
+            : `meshTab_clean_expenses_${tabId}`;
         localStorage.setItem(storageKey, JSON.stringify(updated));
         window.dispatchEvent(new CustomEvent("meshTab-expenses-update", { detail: { fromServer: true } }));
       }
@@ -121,7 +125,11 @@ export function useTabSync(tabId: string) {
           if (members && Array.isArray(members) && members.length > 0) {
             const localMembers = getStoredTabMembers(tabId);
             if (haveMembersChanged(members, localMembers)) {
-              const storageKey = mode === "blank" ? `meshTab_clean_members_${tabId}` : `meshTab_members_${tabId}`;
+              const storageKey = mode === "sample" 
+                ? `meshTab_members_${tabId}`
+                : mode === "testnet" 
+                  ? `meshTab_testnet_members_${tabId}`
+                  : `meshTab_clean_members_${tabId}`;
               localStorage.setItem(storageKey, JSON.stringify(members));
               window.dispatchEvent(new CustomEvent("meshTab-members-update", { detail: { fromServer: true } }));
               stateUpdated = true;
@@ -131,7 +139,11 @@ export function useTabSync(tabId: string) {
                 const profile = getStoredUser();
                 const userMember = members.find(m => m.name.toLowerCase() === profile.name.toLowerCase());
                 if (userMember) {
-                  const key = mode === "blank" ? "meshTab_clean_tabs" : "meshTab_sample_tabs";
+                  const key = mode === "sample"
+                    ? "meshTab_sample_tabs"
+                    : mode === "testnet"
+                      ? "meshTab_testnet_tabs"
+                      : "meshTab_clean_tabs";
                   const tabs = getStoredTabs();
                   const nextTabs = tabs.map(t => {
                     if (t.id === tabId) {
@@ -150,7 +162,11 @@ export function useTabSync(tabId: string) {
           if (expenses && Array.isArray(expenses) && expenses.length > 0) {
             const localExpenses = getStoredExpenses(tabId);
             if (haveExpensesChanged(expenses, localExpenses)) {
-              const storageKey = mode === "blank" ? `meshTab_clean_expenses_${tabId}` : `meshTab_expenses_${tabId}`;
+              const storageKey = mode === "sample"
+                ? `meshTab_expenses_${tabId}`
+                : mode === "testnet"
+                  ? `meshTab_testnet_expenses_${tabId}`
+                  : `meshTab_clean_expenses_${tabId}`;
               localStorage.setItem(storageKey, JSON.stringify(expenses));
               window.dispatchEvent(new CustomEvent("meshTab-expenses-update", { detail: { fromServer: true } }));
               stateUpdated = true;

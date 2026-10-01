@@ -6,7 +6,7 @@ import { Button } from "../ui/button";
 import { Coins, Sparkles, CheckCircle2, ArrowRight, ShieldCheck, Zap } from "lucide-react";
 import { formatCurrency } from "../../lib/utils";
 import { useVirtualBalance, useWorkspaceMode } from "../../lib/user";
-import { useClaimWelcomeBonus } from "../../lib/alchemy";
+import { useClaimWelcomeBonus, useRealAusdBalance } from "../../lib/alchemy";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { fireFaucetConfetti } from "../../lib/confetti";
@@ -19,8 +19,11 @@ interface FaucetModalProps {
 
 export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
   const { mode: workspaceMode } = useWorkspaceMode();
-  const { balance, topUp } = useVirtualBalance();
-  const { claimBonus, isClaiming: isTestnetClaiming } = useClaimWelcomeBonus();
+  const { balance: virtualBalance, topUp } = useVirtualBalance();
+  const { balance: testnetBalance } = useRealAusdBalance(workspaceMode);
+  const { claimBonus, isClaiming: isTestnetClaiming } = useClaimWelcomeBonus(workspaceMode);
+  
+  const displayBalance = workspaceMode === "testnet" ? testnetBalance : virtualBalance;
   const [isLocalClaiming, setIsLocalClaiming] = useState(false);
   const [justClaimed, setJustClaimed] = useState(false);
 
@@ -80,7 +83,7 @@ export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
             Current Virtual Balance
           </span>
           <div className="text-4xl font-bold my-1 text-slate-900 dark:text-white tabular-nums">
-            <AnimatedCounter value={balance / 100} prefix="$" decimals={2} />
+            <AnimatedCounter value={displayBalance / 100} prefix="$" decimals={2} />
           </div>
           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full">
             <Zap className="w-3 h-3" /> Ready for Instant Settlement

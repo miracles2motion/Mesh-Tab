@@ -31,6 +31,7 @@ function DemoContent() {
   };
 
   const handleSelectSample = () => {
+    setWorkspaceMode("sample");
     resetLisbonDemo();
     sounds.playSuccessChime();
     toast.success("Loaded Lisbon Trip Demo", {

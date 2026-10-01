@@ -257,8 +257,16 @@ export function ManageMembers({
         localStorage.setItem(tabsKey, JSON.stringify(filteredTabs));
       }
       
-      const membersKey = mode === "blank" ? `meshTab_clean_members_${tabId}` : `meshTab_members_${tabId}`;
-      const expensesKey = mode === "blank" ? `meshTab_clean_expenses_${tabId}` : `meshTab_expenses_${tabId}`;
+      const membersKey = mode === "sample"
+        ? `meshTab_members_${tabId}`
+        : mode === "testnet"
+          ? `meshTab_testnet_members_${tabId}`
+          : `meshTab_clean_members_${tabId}`;
+      const expensesKey = mode === "sample"
+        ? `meshTab_expenses_${tabId}`
+        : mode === "testnet"
+          ? `meshTab_testnet_expenses_${tabId}`
+          : `meshTab_clean_expenses_${tabId}`;
       localStorage.removeItem(membersKey);
       localStorage.removeItem(expensesKey);
 

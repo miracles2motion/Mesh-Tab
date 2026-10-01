@@ -1157,7 +1157,11 @@ export function seedDemoExpenses(tabId: string, currentUserName?: string) {
     { name: "Ben", balance: -8000, type: "debtor", role: "member" },
     { name: activeUser, balance: -18000, type: "debtor", role: "admin" }
   ];
-  const membersKey = mode === "blank" ? `meshTab_clean_members_${tabId}` : `meshTab_members_${tabId}`;
+  const membersKey = mode === "sample" 
+    ? `meshTab_members_${tabId}` 
+    : mode === "testnet" 
+      ? `meshTab_testnet_members_${tabId}`
+      : `meshTab_clean_members_${tabId}`;
   localStorage.setItem(membersKey, JSON.stringify(demoMembers));
 
   // 2. Seed 3 realistic expenses

@@ -17,7 +17,7 @@ import { sounds } from "../../lib/sounds";
 import { AnimatedCounter } from "../../components/ui/animated-counter";
 import { NetworkStatusBadge } from "../../components/ui/network-status-badge";
 import { GlobalNav } from "../../components/ui/global-nav";
-import { createPublicClient, http, formatUnits, erc20Abi } from "viem";
+
 import { useWallets, usePrivy } from "@privy-io/react-auth";
 import { AuthGuard } from "../../components/providers/auth-guard";
 import { useRealAusdBalance } from "../../lib/alchemy";
@@ -26,7 +26,6 @@ import { useRealAusdBalance } from "../../lib/alchemy";
 export default function GlobalHub() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const urlMode = searchParams.get("mode");
   
   const profile = useUserProfile();
   const { tabs: mockTabs, saveTab } = useStoredTabs();
@@ -55,18 +54,6 @@ export default function GlobalHub() {
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  // Sync URL mode to workspace storage mode if explicitly provided
-  useEffect(() => {
-    if (urlMode === "testnet" && workspaceMode !== "testnet") {
-      setWorkspaceMode("testnet");
-      // Clean up the URL
-      router.replace("/home");
-    } else if (urlMode === "sample" && workspaceMode !== "sample") {
-      setWorkspaceMode("sample");
-      router.replace("/home");
-    }
-  }, [urlMode, workspaceMode, setWorkspaceMode, router]);
 
   const currentUserName = profile.name || "David";
 

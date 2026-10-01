@@ -15,13 +15,13 @@ export function TestnetLoginButton() {
     if (authenticated) {
       const hasProfile = typeof window !== "undefined" && Boolean(localStorage.getItem("meshTab_displayName"));
       if (!hasProfile) {
-        router.push("/onboarding?fresh=true");
+        router.push("/onboarding?fresh=true&intent=testnet");
       } else {
         setWorkspaceMode("testnet");
         router.push("/home");
       }
     } else {
-      router.push("/login");
+      router.push("/login?intent=testnet");
     }
   };
 

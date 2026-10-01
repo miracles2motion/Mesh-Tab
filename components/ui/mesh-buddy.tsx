@@ -107,7 +107,7 @@ export function MeshBuddy() {
   const { mode: workspaceMode, setMode: setWorkspaceMode, resetLisbonDemo } = useWorkspaceMode();
   const { balance: virtualBalance, topUp } = useVirtualBalance();
   const { tabs: storedTabs } = useStoredTabs();
-  const { claimBonus, isClaiming: isTestnetClaiming } = useClaimWelcomeBonus();
+  const { claimBonus, isClaiming: isTestnetClaiming } = useClaimWelcomeBonus(workspaceMode);
   const [isLocalClaiming, setIsLocalClaiming] = useState(false);
   
   const isClaiming = workspaceMode === "testnet" ? isTestnetClaiming : isLocalClaiming;

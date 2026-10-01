@@ -156,6 +156,10 @@ function SettingsContent() {
   useEffect(() => {
     async function fetchSmartAddress() {
       if (!ready) return;
+      if (workspaceMode !== "testnet") {
+        setFullAddress("Unavailable outside Testnet");
+        return;
+      }
       try {
         const activeWallet = wallets.find((w) => w.walletClientType === "privy");
         if (activeWallet) {
@@ -905,10 +909,20 @@ function SettingsContent() {
                   await logout();
                   // Clear sensitive frontend caches
                   localStorage.removeItem("meshTab_displayName");
-                  localStorage.removeItem("meshTab_avatarColorIndex");
+                  // Preserve sample mode sandbox but nuke all testnet/clean caches securely
+                  const keysToWipe = [];
+                  for (let i = 0; i < localStorage.length; i++) {
+                    const k = localStorage.key(i);
+                    if (k && (k.includes("_testnet_") || k.includes("_clean_"))) {
+                      keysToWipe.push(k);
+                    }
+                  }
+                  keysToWipe.forEach(k => localStorage.removeItem(k));
+                  
+                  localStorage.removeItem("meshTab_buddy_chat_history");
                   localStorage.removeItem("meshTab_workspaceMode");
-                  localStorage.removeItem("meshTab_settledPayoutBalance");
-                  localStorage.removeItem("meshTab_virtualBalance");
+                  localStorage.removeItem("meshTab_displayName");
+                  localStorage.removeItem("meshTab_avatarColorIndex");
                   router.push("/login");
                 } catch (err) {
                   console.error("Logout failed:", err);

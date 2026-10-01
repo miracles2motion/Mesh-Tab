@@ -98,8 +98,8 @@ export function TabSettingsDrawer({ isOpen, onClose, tabId, tabName, tabCurrency
     
     // Clear expenses and member data for this tab
     try {
-      const expenseKeys = [`meshTab_expenses_${tabId}`, `meshTab_clean_expenses_${tabId}`];
-      const memberKeys = [`meshTab_members_${tabId}`, `meshTab_clean_members_${tabId}`];
+      const expenseKeys = [`meshTab_expenses_${tabId}`, `meshTab_clean_expenses_${tabId}`, `meshTab_testnet_expenses_${tabId}`];
+      const memberKeys = [`meshTab_members_${tabId}`, `meshTab_clean_members_${tabId}`, `meshTab_testnet_members_${tabId}`];
       [...expenseKeys, ...memberKeys].forEach(k => localStorage.removeItem(k));
       window.dispatchEvent(new Event("meshTab-expenses-update"));
       window.dispatchEvent(new Event("meshTab-members-update"));
@@ -115,7 +115,7 @@ export function TabSettingsDrawer({ isOpen, onClose, tabId, tabName, tabCurrency
     
     // Remove tab from stored tabs list
     try {
-      const modes = ["meshTab_sample_tabs", "meshTab_clean_tabs"];
+      const modes = ["meshTab_sample_tabs", "meshTab_clean_tabs", "meshTab_testnet_tabs"];
       modes.forEach(key => {
         const raw = localStorage.getItem(key);
         if (raw) {
@@ -125,8 +125,8 @@ export function TabSettingsDrawer({ isOpen, onClose, tabId, tabName, tabCurrency
         }
       });
       // Also clear tab-specific data
-      const expenseKeys = [`meshTab_expenses_${tabId}`, `meshTab_clean_expenses_${tabId}`];
-      const memberKeys = [`meshTab_members_${tabId}`, `meshTab_clean_members_${tabId}`];
+      const expenseKeys = [`meshTab_expenses_${tabId}`, `meshTab_clean_expenses_${tabId}`, `meshTab_testnet_expenses_${tabId}`];
+      const memberKeys = [`meshTab_members_${tabId}`, `meshTab_clean_members_${tabId}`, `meshTab_testnet_members_${tabId}`];
       [...expenseKeys, ...memberKeys].forEach(k => localStorage.removeItem(k));
       
       window.dispatchEvent(new Event("meshTab-tabs-update"));

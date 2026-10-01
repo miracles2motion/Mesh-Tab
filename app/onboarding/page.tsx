@@ -50,6 +50,7 @@ function OnboardingContent() {
   const isInvite = searchParams.get("invite") === "true";
   const inviteTab = searchParams.get("tab");
   const isFresh = searchParams.get("fresh") === "true";
+  const intent = searchParams.get("intent");
   const { user, linkPasskey } = usePrivy();
   const { wallets } = useWallets();
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -87,7 +88,7 @@ function OnboardingContent() {
       color: AVATAR_COLORS[selectedColorIdx]
     });
 
-    if (isFresh) {
+    if (intent === "testnet") {
       setWorkspaceMode("testnet");
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("meshTab-tabs-update"));
@@ -143,9 +144,10 @@ function OnboardingContent() {
   const finishOnboarding = async () => {
     setStep(3);
 
-    // Trigger Welcome Bonus Gasless Transaction
-    toast.info("Setting up your account...", { description: "Adding your $5,000 welcome bonus..." });
-    try {
+    // Trigger Welcome Bonus Gasless Transaction if in testnet mode
+    if (intent === "testnet") {
+      toast.info("Setting up your account...", { description: "Adding your $5,000 welcome bonus..." });
+      try {
       const privyWallet = wallets.find(w => w.walletClientType === 'privy');
       if (privyWallet) {
         const smartAccountClient = await getAlchemySmartAccountClient(privyWallet);
@@ -165,9 +167,9 @@ function OnboardingContent() {
         // Short delay to let the TX broadcast smoothly
         await new Promise((resolve) => setTimeout(resolve, 800));
       }
-    } catch (err) {
-      console.warn("Welcome bonus failed or already claimed:", err);
-      // We don't block onboarding if this fails, they might be logging in again
+      } catch (err) {
+        console.warn("Welcome bonus failed or already claimed:", err);
+      }
     }
 
     sounds.playSuccessChime();
@@ -184,7 +186,7 @@ function OnboardingContent() {
     if (isInvite && inviteTab) {
       router.push(`/tab/${inviteTab}?invite=true`);
     } else {
-      setWorkspaceMode("testnet");
+      if (intent === "testnet") setWorkspaceMode("testnet");
       router.push("/home");
     }
   };

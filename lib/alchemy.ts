@@ -119,7 +119,7 @@ export function useRealAusdBalance(workspaceMode: string) {
   return { balance, isLoading, refetch: fetchBalance };
 }
 
-export function useClaimWelcomeBonus() {
+export function useClaimWelcomeBonus(workspaceMode: string) {
   const { wallets } = useWallets();
   const [isClaiming, setIsClaiming] = useState(false);
 
@@ -130,6 +130,10 @@ export function useClaimWelcomeBonus() {
     const primaryWallet = wallets.find(w => w.walletClientType === 'privy') || wallets[0];
     if (!primaryWallet) {
       return { success: false, error: "No wallet found to process the transaction." };
+    }
+    
+    if (workspaceMode !== "testnet") {
+      return { success: false, error: "Smart contract writes are only permitted in Testnet mode." };
     }
 
     try {
