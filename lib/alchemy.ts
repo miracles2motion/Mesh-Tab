@@ -1,17 +1,23 @@
 import { createModularAccountAlchemyClient, defineAlchemyChain } from "@alchemy/aa-alchemy";
 import { WalletClientSigner } from "@alchemy/aa-core";
-import { createWalletClient, custom } from "viem";
+import { createWalletClient, custom, type Chain } from "viem";
 
-export const monadTestnet = defineAlchemyChain({
+// Build the Alchemy-compatible chain via their SDK helper.
+// `defineAlchemyChain` stamps the object so their internal Zod schema accepts it.
+// We cast to `any` first, then to viem's `Chain` to bridge the version mismatch
+// between @alchemy/aa-core's bundled viem and the project's own viem.
+const alchemyMonad = defineAlchemyChain({
   chain: {
     id: 10143,
     name: 'Monad Testnet',
-    network: 'monad-testnet',
     nativeCurrency: { name: 'MONAD', symbol: 'MONAD', decimals: 18 },
     rpcUrls: { default: { http: [process.env.NEXT_PUBLIC_MONAD_RPC_URL || 'https://testnet-rpc.monad.xyz'] } }
   },
   rpcBaseUrl: `https://monad-testnet.g.alchemy.com/v2/${process.env.NEXT_PUBLIC_ALCHEMY_API_KEY || ''}`
 });
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- bridge viem version gap
+export const monadTestnet = alchemyMonad as any as Chain;
 
 export async function getAlchemySmartAccountClient(privyWallet: any) {
   if (!privyWallet) throw new Error("No privy wallet provided");
@@ -37,9 +43,10 @@ export async function getAlchemySmartAccountClient(privyWallet: any) {
   }
 
   // 3. Create the Alchemy Smart Account Client (Modular Account / Light Account)
+  // Pass the raw alchemyMonad (not the re-cast) so it keeps the alchemy rpcUrls stamp
   const smartAccountClient = await createModularAccountAlchemyClient({
     apiKey,
-    chain: monadTestnet,
+    chain: alchemyMonad,
     signer: privySigner,
     gasManagerConfig: {
       policyId,
