@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
@@ -10,34 +10,61 @@ import { Button } from "../../components/ui/button";
 import { ThemeToggle } from "../../components/theme-toggle";
 import { setWorkspaceMode, saveStoredUser } from "../../lib/user";
 
-import { usePrivy, useLogin } from "@privy-io/react-auth";
+import { usePrivy, useLogin, useLoginWithPasskey } from "@privy-io/react-auth";
 
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { ready, authenticated } = usePrivy();
+  const { ready, authenticated, login } = usePrivy();
+  const { loginWithPasskey } = useLoginWithPasskey({
+    onComplete: ({ user, isNewUser }) => {
+      handleComplete(user, isNewUser);
+    },
+    onError: (error) => {
+      console.log("Passkey login failed or cancelled, falling back to standard login", error);
+      login(); // Fallback to standard login modal if passkey fails (e.g. they switched devices)
+    }
+  });
+
+  const [hadPasskey, setHadPasskey] = useState(false);
+
+  useEffect(() => {
+    // Check if they had a passkey configured previously on this device
+    const savedStatus = localStorage.getItem("mesh_last_passkey_status");
+    if (savedStatus === "true") {
+      setHadPasskey(true);
+    }
+  }, []);
 
   const isInvite = searchParams.get("invite") === "true";
   const inviteTab = searchParams.get("tab");
 
-  const { login } = useLogin({
-    onComplete: ({ user, isNewUser }) => {
-      // Lock in sample mode during demo phase so Lisbon Weekend & demo data are loaded
-      if (typeof window !== "undefined" && localStorage.getItem("meshTab_workspaceMode") !== "blank") {
-        setWorkspaceMode("sample");
-      }
+  const handleComplete = (user: any, isNewUser: boolean) => {
+    // Lock in sample mode during demo phase so Lisbon Weekend & demo data are loaded
+    if (typeof window !== "undefined" && localStorage.getItem("meshTab_workspaceMode") !== "blank") {
+      setWorkspaceMode("sample");
+    }
 
-      const hasProfile = typeof window !== "undefined" && Boolean(localStorage.getItem("meshTab_displayName"));
-      if (!hasProfile || isNewUser) {
-        router.push("/onboarding?fresh=true");
-      } else {
-        router.push(isInvite ? `/tab/${inviteTab}?invite=true` : "/home");
-      }
+    const hasProfile = typeof window !== "undefined" && Boolean(localStorage.getItem("meshTab_displayName"));
+    if (!hasProfile || isNewUser) {
+      router.push("/onboarding?fresh=true");
+    } else {
+      router.push(isInvite ? `/tab/${inviteTab}?invite=true` : "/home");
+    }
+  };
+
+  useLogin({
+    onComplete: ({ user, isNewUser }) => {
+      handleComplete(user, isNewUser);
     },
   });
 
   const handleLogin = () => {
-    login();
+    if (hadPasskey) {
+      loginWithPasskey();
+    } else {
+      login();
+    }
   };
 
   return (
