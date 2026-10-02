@@ -107,7 +107,7 @@ export function PaymentDrawer({ isOpen, onClose, onPay, debtor, creditor, amount
                 <Fingerprint className="w-3 h-3" /> Passkeys powered by <span className="font-bold text-zinc-900 dark:text-zinc-100">Privy</span>
               </p>
               <p className="text-center text-[10px] text-zinc-400 flex items-center justify-center gap-1">
-                Gas fees sponsored by <span className="font-semibold text-zinc-600 dark:text-zinc-300">Alchemy</span>
+                Gas fees sponsored by <span className="font-semibold text-zinc-600 dark:text-zinc-300">Privy</span>
               </p>
             </div>
           </motion.div>

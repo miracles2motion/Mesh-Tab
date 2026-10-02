@@ -13,9 +13,9 @@ import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { fireSettlementConfetti, fireFaucetConfetti } from "../../lib/confetti";
 import { SUPPORTED_CURRENCIES, usePythRate } from "../../lib/pyth";
-import { erc20Abi, encodeFunctionData } from "viem";
-import { useWallets } from "@privy-io/react-auth";
-import { getAlchemySmartAccountClient, useRealAusdBalance } from "../../lib/alchemy";
+import { erc20Abi, encodeFunctionData, createPublicClient, http } from "viem";
+import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
+import { useRealAusdBalance } from "../../lib/alchemy";
 
 const MeshTabLedgerABI = [
   {
@@ -43,7 +43,7 @@ interface SettlementDrawerProps {
 export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-24", currentUserName, onConfirmPayment }: SettlementDrawerProps) {
   const profile = useUserProfile();
   const { mode: workspaceMode } = useWorkspaceMode();
-  const { wallets } = useWallets();
+  const { client } = useSmartWallets();
   const { balance: testnetBalance } = useRealAusdBalance(workspaceMode);
   const { balance: virtualBalance, deduct, topUp } = useVirtualBalance();
   const activeUser = currentUserName || profile.name || "David";
@@ -80,28 +80,23 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
 
     if (workspaceMode === "testnet" && paymentMethod === "ausd") {
       try {
-        const privyWallet = wallets.find(w => w.walletClientType === 'privy');
-        if (!privyWallet) throw new Error("Could not find connected embedded wallet.");
+        if (!client) throw new Error("Could not find connected embedded wallet.");
 
         const ausdAddress = (process.env.NEXT_PUBLIC_MOCK_AUSD_ADDRESS || "0xF9bA02Cd0aFc210e0867852eEb0E994B07d9957F") as `0x${string}`;
         const ledgerAddress = (process.env.NEXT_PUBLIC_MESH_TAB_LEDGER_ADDRESS || "0x43405B9D8E30ff76910009E79131200c862fCA7d") as `0x${string}`;
         
         // debtAmount is in cents. AUSD has 6 decimals.
-        // e.g. 1500 cents ($15.00) -> 15 * 10^4 = 150,000, which is 15 * 10^6 when factoring in cents
-        // Wait, 1500 cents is 15 dollars. 15 dollars in 6 decimals is 15 * 10^6. 1500 * 10^4 = 15,000,000. Correct.
         const amountWei = BigInt(debtAmount) * BigInt(10 ** 4); 
 
         // We use a mock creditor address for the demo since users aren't mapped to on-chain addresses in the local state
         const mockCreditorAddress = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"; // vitalik.eth
 
-        const smartAccountClient = await getAlchemySmartAccountClient(privyWallet);
-
         toast.loading("Processing payment securely...", { id: "tx-toast" });
 
-        const result = await smartAccountClient.sendUserOperation({
-          uo: [
+        const txHash = await client.sendTransaction({
+          calls: [
             {
-              target: ausdAddress,
+              to: ausdAddress,
               data: encodeFunctionData({
                 abi: erc20Abi,
                 functionName: "approve",
@@ -109,7 +104,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
               })
             },
             {
-              target: ledgerAddress,
+              to: ledgerAddress,
               data: encodeFunctionData({
                 abi: MeshTabLedgerABI,
                 functionName: "payNettedDebt",
@@ -119,7 +114,10 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
           ]
         });
 
-        await smartAccountClient.waitForUserOperationTransaction({ hash: result.hash });
+        const publicClient = createPublicClient({
+            transport: http(process.env.NEXT_PUBLIC_MONAD_RPC_URL || "https://testnet-rpc.monad.xyz")
+        });
+        await publicClient.waitForTransactionReceipt({ hash: txHash });
         
         toast.dismiss("tx-toast");
 

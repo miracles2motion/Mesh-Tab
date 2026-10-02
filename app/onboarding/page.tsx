@@ -22,9 +22,9 @@ import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import Image from "next/image";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { usePrivy } from "@privy-io/react-auth";
+import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
 import { encodeFunctionData } from "viem";
-import { getAlchemySmartAccountClient } from "../../lib/alchemy";
 import { AuthGuard } from "../../components/providers/auth-guard";
 
 const MockAUSD_ABI = [
@@ -45,7 +45,7 @@ function OnboardingContent() {
   const isFresh = searchParams.get("fresh") === "true";
   const intent = searchParams.get("intent");
   const { user, linkPasskey } = usePrivy();
-  const { wallets } = useWallets();
+  const { client } = useSmartWallets();
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
   // Step 1: Passkey enrollment
@@ -141,20 +141,15 @@ function OnboardingContent() {
     if (intent === "testnet") {
       toast.info("Setting up your account...", { description: "Adding your $5,000 welcome bonus..." });
       try {
-      const privyWallet = wallets.find(w => w.walletClientType === 'privy');
-      if (privyWallet) {
-        const smartAccountClient = await getAlchemySmartAccountClient(privyWallet);
-
-        // Call the smart contract silently (Alchemy pays gas)
-        await smartAccountClient.sendUserOperation({
-          uo: {
-            target: process.env.NEXT_PUBLIC_MOCK_AUSD_ADDRESS as `0x${string}`,
-            data: encodeFunctionData({
-              abi: MockAUSD_ABI,
-              functionName: "claimWelcomeBonus",
-              args: []
-            })
-          }
+      if (client) {
+        // Call the smart contract silently (Privy pays gas via sponsorship policy)
+        await client.sendTransaction({
+          to: process.env.NEXT_PUBLIC_MOCK_AUSD_ADDRESS as `0x${string}`,
+          data: encodeFunctionData({
+            abi: MockAUSD_ABI,
+            functionName: "claimWelcomeBonus",
+            args: []
+          })
         });
 
         // Short delay to let the TX broadcast smoothly

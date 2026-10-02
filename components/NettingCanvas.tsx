@@ -818,7 +818,7 @@ export function NettingCanvas({
 
           <div className="flex items-center gap-2">
             <span className="font-semibold text-slate-600 dark:text-white/60">Sponsor:</span>
-            <span className="font-medium text-slate-700 dark:text-white/80">Alchemy Paymaster</span>
+            <span className="font-medium text-slate-700 dark:text-white/80">Privy Native Sponsorship</span>
           </div>
         </div>
       </div>

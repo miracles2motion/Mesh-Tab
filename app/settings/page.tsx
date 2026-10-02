@@ -47,7 +47,7 @@ import { AnimatedCounter } from "../../components/ui/animated-counter";
 import { speak, stopSpeech, VoicePersona } from "../../lib/voice";
 import { GlobalNav } from "../../components/ui/global-nav";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
-import { getAlchemySmartAccountClient } from "../../lib/alchemy";
+import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
 import { AuthGuard } from "../../components/providers/auth-guard";
 
 function SettingsContent() {
@@ -150,7 +150,7 @@ function SettingsContent() {
   }, [buddySettings.name]);
 
   const { ready } = usePrivy();
-  const { wallets } = useWallets();
+  const { client } = useSmartWallets();
   const [fullAddress, setFullAddress] = useState<string>("Loading...");
 
   useEffect(() => {
@@ -161,10 +161,10 @@ function SettingsContent() {
         return;
       }
       try {
-        const activeWallet = wallets.find((w) => w.walletClientType === "privy");
-        if (activeWallet) {
-          const smartClient = await getAlchemySmartAccountClient(activeWallet);
-          setFullAddress(smartClient.account.address);
+        if (client?.account?.address) {
+          setFullAddress(client.account.address);
+        } else {
+          setFullAddress("Initializing Wallet...");
         }
       } catch (err: any) {
         console.error("Failed to load smart account address", err);
@@ -172,7 +172,7 @@ function SettingsContent() {
       }
     }
     fetchSmartAddress();
-  }, [wallets, ready]);
+  }, [client, ready, workspaceMode]);
 
   const copyAddress = () => {
     navigator.clipboard.writeText(fullAddress);

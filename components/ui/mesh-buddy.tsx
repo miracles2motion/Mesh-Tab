@@ -969,7 +969,7 @@ export function MeshBuddy() {
           { label: "Go to Hub", action: () => router.push("/home") }
         ];
       }
-    } else if (q.includes("fee") || q.includes("alchemy") || q.includes("gas")) {
+    } else if (q.includes("fee") || q.includes("privy") || q.includes("gas")) {
       spokenPunchline = "Routine group actions and settlements in MeshTab are sponsored with zero network fees.";
       replyText = "You never pay transaction fees in MeshTab! Routine group actions—logging expenses, creating tabs, and claiming seats—are 100% free and sponsored by the platform. You never have to pay transfer fees to split a bill with friends.";
       actionItems = [
