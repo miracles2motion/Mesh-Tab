@@ -5,7 +5,7 @@ import { Modal } from "../ui/modal";
 import { CheckCircle2, Share, Copy, Check, Sparkles, X, ShieldCheck, ArrowRight, ExternalLink } from "lucide-react";
 import { Button } from "../ui/button";
 import { formatCurrency } from "../../lib/utils";
-import { MonadLogo, AgoraLogo, AlchemyLogo } from "../ui/partner-logo";
+import { MonadLogo, AgoraLogo } from "../ui/partner-logo";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";

@@ -15,7 +15,7 @@ import { fireSettlementConfetti, fireFaucetConfetti } from "../../lib/confetti";
 import { SUPPORTED_CURRENCIES, usePythRate } from "../../lib/pyth";
 import { erc20Abi, encodeFunctionData, createPublicClient, http } from "viem";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
-import { useRealAusdBalance } from "../../lib/alchemy";
+import { useRealAusdBalance } from "../../lib/onchain";
 
 const MeshTabLedgerABI = [
   {

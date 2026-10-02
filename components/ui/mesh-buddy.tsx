@@ -38,7 +38,7 @@ import {
   AVATAR_COLORS
 } from "../../lib/user";
 import { formatCurrency } from "../../lib/utils";
-import { useClaimWelcomeBonus } from "../../lib/alchemy";
+import { useClaimWelcomeBonus } from "../../lib/onchain";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { fireFaucetConfetti } from "../../lib/confetti";

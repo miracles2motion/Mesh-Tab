@@ -6,7 +6,7 @@ import { Button } from "../ui/button";
 import { Coins, Sparkles, CheckCircle2, ArrowRight, ShieldCheck, Zap, Loader2 } from "lucide-react";
 import { formatCurrency } from "../../lib/utils";
 import { useVirtualBalance, useWorkspaceMode } from "../../lib/user";
-import { useClaimWelcomeBonus, useRealAusdBalance } from "../../lib/alchemy";
+import { useClaimWelcomeBonus, useRealAusdBalance } from "../../lib/onchain";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { fireFaucetConfetti } from "../../lib/confetti";
