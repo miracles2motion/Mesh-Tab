@@ -422,7 +422,7 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
     setTxState("authenticating");
     await new Promise(r => setTimeout(r, 1500));
     
-    // 2. Mock Paymaster/Bundler Processing
+    // 2. Mock Pimlico Paymaster/Bundler Processing
     setTxState("processing");
     await new Promise(r => setTimeout(r, 2000));
     

@@ -18,7 +18,8 @@ export const LANDING_CONTENT = {
       { name: "Monad", src: "/logos/monad.svg" },
       { name: "Privy", src: "https://mintcdn.com/privy-c2af3412/Ih_Fo3QYM486gzWq/logo/privy-logo-dark.png" },
       { name: "Envio", src: "/logos/envio.svg" },
-      { name: "Agora", src: "/logos/agora.svg" }
+      { name: "Agora", src: "/logos/agora.svg" },
+      { name: "Pimlico", src: "" }
     ],
   },
   problemAgitation: {
