@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Modal } from "../ui/modal";
 import { Button } from "../ui/button";
-import { Coins, Sparkles, CheckCircle2, ArrowRight, ShieldCheck, Zap } from "lucide-react";
+import { Coins, Sparkles, CheckCircle2, ArrowRight, ShieldCheck, Zap, Loader2 } from "lucide-react";
 import { formatCurrency } from "../../lib/utils";
 import { useVirtualBalance, useWorkspaceMode } from "../../lib/user";
 import { useClaimWelcomeBonus, useRealAusdBalance } from "../../lib/alchemy";
@@ -104,8 +104,17 @@ export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
           size="lg"
           className="w-full h-13 font-bold gap-2 shadow-md shadow-indigo-500/20"
         >
-          <Sparkles className="w-4 h-4" />
-          {isClaiming ? "Minting Test Funds..." : "Claim +$500 Test AUSD"}
+          {isClaiming ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Minting Test Funds...
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4" />
+              {workspaceMode === "testnet" ? "Claim +$5,000 Test AUSD" : "Claim +$500 Sandbox AUSD"}
+            </>
+          )}
         </Button>
 
         <div className="mt-5 flex items-center justify-center gap-1.5 text-[11px] text-slate-400 dark:text-white/40">

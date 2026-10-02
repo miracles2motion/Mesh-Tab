@@ -19,6 +19,7 @@ import { NetworkStatusBadge } from "../../components/ui/network-status-badge";
 import { GlobalNav } from "../../components/ui/global-nav";
 
 import { useWallets, usePrivy } from "@privy-io/react-auth";
+import { AuthGuard } from "../../components/providers/auth-guard";
 import { useRealAusdBalance } from "../../lib/alchemy";
 import { FaucetModal } from "../../components/tab/faucet-modal";
 
