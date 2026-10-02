@@ -23,11 +23,12 @@ export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
   const { balance: testnetBalance } = useRealAusdBalance(workspaceMode);
   const { claimBonus, isClaiming: isTestnetClaiming } = useClaimWelcomeBonus(workspaceMode);
   
-  const displayBalance = workspaceMode === "testnet" ? testnetBalance : virtualBalance;
+  const displayBalance = workspaceMode === "testnet" ? testnetBalance * 100 : virtualBalance;
   const [isLocalClaiming, setIsLocalClaiming] = useState(false);
   const [justClaimed, setJustClaimed] = useState(false);
 
   const isClaiming = workspaceMode === "testnet" ? isTestnetClaiming : isLocalClaiming;
+  const hasClaimed = workspaceMode === "testnet" ? testnetBalance >= 5000 : virtualBalance > 0;
 
   if (!isOpen) return null;
 
@@ -99,8 +100,8 @@ export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
 
         <Button
           onClick={handleClaim}
-          disabled={isClaiming}
-          variant="primary"
+          disabled={isClaiming || hasClaimed}
+          variant={hasClaimed ? "secondary" : "primary"}
           size="lg"
           className="w-full h-13 font-bold gap-2 shadow-md shadow-indigo-500/20"
         >
@@ -108,6 +109,11 @@ export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
               {workspaceMode === "testnet" ? "Claiming Bonus..." : "Adding Funds..."}
+            </>
+          ) : hasClaimed ? (
+            <>
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              {workspaceMode === "testnet" ? "Welcome Bonus Claimed" : "Funds Added"}
             </>
           ) : (
             <>
