@@ -119,7 +119,7 @@ export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
 
         <div className="mt-5 flex items-center justify-center gap-1.5 text-[11px] text-slate-400 dark:text-white/40">
           <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
-          <span>Demo Sandbox Only • No real credit card or bank funds charged.</span>
+          <span>{workspaceMode === "testnet" ? "Test funds only · No real money involved." : "Demo Sandbox Only · No real credit card or bank funds charged."}</span>
         </div>
       </div>
     </Modal>
