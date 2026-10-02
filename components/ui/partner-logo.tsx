@@ -126,6 +126,16 @@ export function PythLogo({ className = "h-5 w-auto", ...props }: LogoProps) {
   );
 }
 
+export function PimlicoLogo({ className = "h-5 w-auto", ...props }: LogoProps) {
+  return (
+    <img 
+      src="/logos/pimlico.svg" 
+      alt="Pimlico" 
+      className={className} 
+    />
+  );
+}
+
 export function PartnerLogo({ 
   name, 
   className = "h-5 w-auto" 
@@ -160,6 +170,8 @@ export function PartnerLogo({
           />
         </div>
       );
+    case "pimlico":
+      return <PimlicoLogo className={className} />;
     case "pyth":
       return <PythLogo className={className} />;
     default:

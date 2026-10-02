@@ -11,6 +11,17 @@ import { MonadLogo, AgoraLogo, PythLogo } from "../../../components/ui/partner-l
 
 import { saveNewTab, getStoredUser, DEFAULT_USER_NAME } from "../../../lib/user";
 import { SUPPORTED_CURRENCIES } from "../../../lib/pyth";
+import { useWallets } from "@privy-io/react-auth";
+
+async function generateSecureSuffix(address: string) {
+  const timestamp = Date.now().toString();
+  const seed = `${address}-${timestamp}`;
+  const encoded = new TextEncoder().encode(seed);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", encoded);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+  return hashHex.substring(0, 8);
+}
 
 export default function CreateTab() {
   const router = useRouter();
@@ -18,6 +29,9 @@ export default function CreateTab() {
   const [tabName, setTabName] = useState("");
   const [currency, setCurrency] = useState<string>("USD");
   
+  const { wallets } = useWallets();
+  const userAddress = wallets?.[0]?.address || "anonymous";
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tabName.trim()) return;
@@ -27,7 +41,7 @@ export default function CreateTab() {
     await new Promise(r => setTimeout(r, 1500));
 
     const cleanId = tabName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    const uniqueSuffix = Math.random().toString(36).substring(2, 6);
+    const uniqueSuffix = await generateSecureSuffix(userAddress);
     const newTabId = (cleanId || "custom-tab") + "-" + uniqueSuffix;
     const currentUserName = getStoredUser().name || DEFAULT_USER_NAME;
     
