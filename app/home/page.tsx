@@ -19,8 +19,8 @@ import { NetworkStatusBadge } from "../../components/ui/network-status-badge";
 import { GlobalNav } from "../../components/ui/global-nav";
 
 import { useWallets, usePrivy } from "@privy-io/react-auth";
-import { AuthGuard } from "../../components/providers/auth-guard";
 import { useRealAusdBalance } from "../../lib/alchemy";
+import { FaucetModal } from "../../components/tab/faucet-modal";
 
 
 export default function GlobalHub() {
@@ -45,6 +45,7 @@ export default function GlobalHub() {
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showCashOutModal, setShowCashOutModal] = useState(false);
   const [showPitchModal, setShowPitchModal] = useState(false);
+  const [showFaucetModal, setShowFaucetModal] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [txState, setTxState] = useState<TransactionState>("idle");
   const [searchQuery, setSearchQuery] = useState("");
@@ -151,6 +152,10 @@ export default function GlobalHub() {
         success: "Joined successfully!"
       }}
     />
+    <FaucetModal 
+      isOpen={showFaucetModal} 
+      onClose={() => setShowFaucetModal(false)} 
+    />
     <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300 pb-36 lg:pb-36">
       <GlobalNav />
       
@@ -165,10 +170,19 @@ export default function GlobalHub() {
               <div>
                 <h3 className="text-sm font-bold text-indigo-900 dark:text-indigo-100">Welcome Bonus Pending!</h3>
                 <p className="text-xs text-indigo-700/80 dark:text-indigo-200/80 mt-0.5">
-                  Looks like your account isn't funded yet. Click the Top Up button above to claim your welcome bonus.
+                  Looks like your account isn't funded yet. Claim your welcome bonus to start netting.
                 </p>
               </div>
             </div>
+            <button
+              onClick={() => {
+                sounds.playClick();
+                setShowFaucetModal(true);
+              }}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all whitespace-nowrap"
+            >
+              Top Up
+            </button>
           </div>
         </div>
       )}
@@ -238,13 +252,17 @@ export default function GlobalHub() {
           {!mounted ? (
             <div className="h-8 w-24 bg-slate-200 dark:bg-white/10 rounded-full animate-pulse" />
           ) : (
-            <div
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-full border font-bold text-xs shadow-sm transition-colors ${
+            <button
+              onClick={() => {
+                sounds.playClick();
+                setShowFaucetModal(true);
+              }}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-full border font-bold text-xs shadow-sm transition-all hover:scale-105 active:scale-95 cursor-pointer ${
                 isTestnetMode 
                   ? "bg-purple-50 dark:bg-purple-500/10 border-purple-200 dark:border-purple-500/20 text-purple-700 dark:text-purple-300" 
                   : "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-300"
               }`}
-              title={isTestnetMode ? "Mesh Balance" : "Sandbox Virtual Balance"}
+              title={isTestnetMode ? "Top Up Testnet Balance" : "Top Up Sandbox Balance"}
             >
               <Coins className="w-3.5 h-3.5" />
               <span className="tabular-nums">
@@ -254,7 +272,7 @@ export default function GlobalHub() {
                   <AnimatedCounter value={isTestnetMode ? testnetBalance : virtualBalance / 100} prefix="$" decimals={2} />
                 )}
               </span>
-            </div>
+            </button>
           )}
           <Link 
             href="/notifications?from=/home" 
