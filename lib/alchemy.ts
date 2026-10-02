@@ -3,18 +3,10 @@
 import { createMultiOwnerModularAccount, multiOwnerPluginActions, pluginManagerActions, accountLoupeActions } from "@alchemy/aa-accounts";
 import { alchemyGasManagerMiddleware } from "@alchemy/aa-alchemy";
 import { createSmartAccountClient, createBundlerClient, WalletClientSigner } from "@alchemy/aa-core";
-import { createWalletClient, custom, http, defineChain, createPublicClient, formatUnits, erc20Abi, encodeFunctionData } from "viem";
+import { createWalletClient, custom, http, createPublicClient, formatUnits, erc20Abi, encodeFunctionData } from "viem";
 import { useState, useEffect, useCallback } from "react";
 import { useWallets } from "@privy-io/react-auth";
-
-export const monadTestnet = defineChain({
-  id: 10143,
-  name: 'Monad Testnet',
-  nativeCurrency: { name: 'MONAD', symbol: 'MONAD', decimals: 18 },
-  rpcUrls: {
-    default: { http: [process.env.NEXT_PUBLIC_MONAD_RPC_URL || 'https://testnet-rpc.monad.xyz'] },
-  },
-});
+import { monadTestnet } from "./chains";
 
 export async function getAlchemySmartAccountClient(privyWallet: any) {
   if (!privyWallet) throw new Error("No privy wallet provided");
@@ -163,8 +155,12 @@ export function useClaimWelcomeBonus(workspaceMode: string) {
       await smartClient.waitForUserOperationTransaction({ hash: uoResult.hash });
       return { success: true };
     } catch (err: any) {
-      console.error("Failed to claim bonus", err);
-      return { success: false, error: err?.message || "Failed to claim welcome bonus. You might have already received it!" };
+      const userMessage = err?.message?.includes("Unsupported chain")
+        ? "Network connection issue. Please try again in a moment."
+        : err?.message?.includes("already")
+        ? "You've already claimed your welcome bonus!"
+        : "Something went wrong. Please try again.";
+      return { success: false, error: userMessage };
     } finally {
       setIsClaiming(false);
     }

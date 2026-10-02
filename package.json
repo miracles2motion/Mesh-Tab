@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@alchemy/aa-accounts": "^3.19.0",
     "@alchemy/aa-alchemy": "^3.19.0",
     "@alchemy/aa-core": "^3.19.0",
     "@privy-io/react-auth": "^3.46.0",

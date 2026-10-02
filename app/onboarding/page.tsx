@@ -37,13 +37,6 @@ const MockAUSD_ABI = [
   }
 ];
 
-const monadTestnet = {
-  id: 10143,
-  name: 'Monad Testnet',
-  network: 'monad-testnet',
-  nativeCurrency: { name: 'MONAD', symbol: 'MONAD', decimals: 18 },
-  rpcUrls: { default: { http: [process.env.NEXT_PUBLIC_MONAD_RPC_URL || 'https://testnet-rpc.monad.xyz'] } }
-} as const;
 function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
