@@ -72,15 +72,12 @@ function LoginContent() {
     }
 
     if (!hasProfile || isNewUser) {
-      if (intent === "testnet") {
-        router.push("/onboarding?fresh=true&intent=testnet");
-      } else {
-        router.push("/onboarding?fresh=true");
-      }
+      // If no profile, they must onboard into the live Web3 app
+      router.push("/onboarding?fresh=true&intent=testnet");
     } else {
-      if (intent === "testnet") {
-        setWorkspaceMode("testnet");
-      }
+      // Successful login always drops them into the live Web3 app
+      setWorkspaceMode("testnet");
+      
       if (isInvite) {
         router.push(`/tab/${inviteTab}?invite=true`);
       } else {

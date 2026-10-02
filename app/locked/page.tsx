@@ -5,6 +5,7 @@ import { Lock, Fingerprint, LogIn, ChevronRight } from "lucide-react";
 import { usePrivy, useLoginWithPasskey } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from "../../components/theme-toggle";
+import { setWorkspaceMode } from "../../lib/user";
 import { sounds } from "../../lib/sounds";
 
 export default function LockedPage() {
@@ -16,6 +17,7 @@ export default function LockedPage() {
   useEffect(() => {
     // If they successfully logged back in, send them straight back to the dashboard
     if (ready && authenticated) {
+      setWorkspaceMode("testnet");
       router.push("/home");
     }
     
