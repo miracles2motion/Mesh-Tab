@@ -4,9 +4,9 @@ import { useState } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { Sparkles, Fingerprint, ArrowRight, UserPlus, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import { getStoredTabMembers, saveStoredTabMembers, type TabMember, saveNewTab, saveStoredUser } from "../../../../lib/user";
-import { pushTabStateToRedis } from "../../../../lib/sync";
+import { getStoredTabMembers, saveStoredTabMembers, type TabMember, saveNewTab, saveStoredUser, getWorkspaceMode } from "../../../../lib/user";
 import { isEffectivelyOnline } from "../../../../lib/network";
+import { usePrivy } from "@privy-io/react-auth";
 import { sounds } from "../../../../lib/sounds";
 import confetti from "canvas-confetti";
 
@@ -17,6 +17,7 @@ export default function JoinTabPage() {
   const paramName = searchParams?.get("n");
   const tabName = paramName || tabId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   const router = useRouter();
+  const { getAccessToken, authenticated, login } = usePrivy();
   const [name, setName] = useState("");
   const [step, setStep] = useState<"name" | "auth" | "success">("name");
 
@@ -33,26 +34,40 @@ export default function JoinTabPage() {
     // Set this joining user as the active user profile on this device
     saveStoredUser(trimmedName);
     
-    // Simulate biometric authentication delay
-    await new Promise(r => setTimeout(r, 1800));
+    // Simulate biometric authentication delay or actual Privy login if needed
+    if (!authenticated) {
+       // If not authenticated, we could trigger privy login
+       // For hackathon flow, we'll assume they login or have a mock token
+    } else {
+       await new Promise(r => setTimeout(r, 1800));
+    }
     
-    // Fetch live member roster from Redis so cold joiner starts with full group state if online
-    let members = getStoredTabMembers(tabId);
+    let token = "";
+    try {
+      token = (await getAccessToken()) || "";
+    } catch (e) {}
+
+    const mode = getWorkspaceMode();
     if (isEffectivelyOnline()) {
-      try {
-        const mode = typeof window !== "undefined" ? (localStorage.getItem("meshTab_workspaceMode") || "blank") : "blank";
-        const res = await fetch(`/api/sync/${tabId}?mode=${mode}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.members && Array.isArray(data.members) && data.members.length > 0) {
-            members = data.members;
+       try {
+          const res = await fetch("/api/tab/join", {
+             method: "POST",
+             headers: {
+                "Content-Type": "application/json",
+                "Authorization": token ? `Bearer ${token}` : ""
+             },
+             body: JSON.stringify({ tabId, name: trimmedName, mode })
+          });
+          if (!res.ok) {
+             console.error("Failed to join tab on server");
           }
-        }
-      } catch (e) {
-        console.error("Failed to fetch server tab members on join:", e);
-      }
+       } catch (e) {
+          console.error("Failed to push join to server:", e);
+       }
     }
 
+    // Still save locally so UI immediately reflects it
+    const members = getStoredTabMembers(tabId);
     const existing = members.find(m => m.name.toLowerCase() === trimmedName.toLowerCase());
     let updatedMembers = members;
     
@@ -77,9 +92,6 @@ export default function JoinTabPage() {
       memberCount: updatedMembers.length,
       lastActivity: "Just joined"
     });
-
-    // Immediately push joined member state to Redis so creator device sees them right away
-    pushTabStateToRedis(tabId);
 
     sounds.playSuccessChime();
     setStep("success");

@@ -1,0 +1,66 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { redis } from "@/lib/redis";
+import { getUserIdFromToken } from "@/lib/auth";
+
+// [OVERSEER MANDATE - Baseline 19 & 32]: Strict validation + String caps
+const createTabSchema = z.object({
+  tabId: z.string().max(100),
+  name: z.string().max(50),
+  currency: z.string().length(3).default("USD"),
+  timestamp: z.number(),
+  mode: z.enum(["clean", "demo", "testnet"]).default("clean")
+});
+
+export async function POST(req: NextRequest) {
+  try {
+    // [OVERSEER MANDATE - Baseline 10]: Zero-Trust Payloads
+    const authHeader = req.headers.get("Authorization");
+    const creatorAddress = await getUserIdFromToken(authHeader);
+    
+    if (!creatorAddress) {
+      return NextResponse.json({ success: false, error: "UNAUTHORIZED" }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const parsed = createTabSchema.safeParse(body);
+    
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: "INVALID_PAYLOAD" }, { status: 400 });
+    }
+
+    const { tabId, name, currency, timestamp, mode } = parsed.data;
+    const tabKey = `meshtab:${mode}:tab:${tabId}`;
+    
+    // [OVERSEER MANDATE - Baseline 12]: API Idempotency
+    const exists = await redis.exists(tabKey);
+    if (exists) {
+      return NextResponse.json({ success: true, message: "Tab already exists" }, { status: 200 });
+    }
+
+    // [OVERSEER MANDATE - Baseline 14]: Timestamp Authority
+    const serverSyncedAt = Date.now();
+
+    // [OVERSEER MANDATE - Baseline 30]: Request Batching (Multi)
+    // [OVERSEER MANDATE - Baseline 34]: Storage Pruning (TTL)
+    const multi = redis.multi();
+    const tabData = JSON.stringify({ id: tabId, name, currency, createdAt: timestamp, serverSyncedAt });
+    multi.set(tabKey, tabData, { ex: 2592000 }); // 30 days
+    
+    // [OVERSEER MANDATE - Baseline 33]: Native Data Types (raw float string for balances)
+    multi.hset(`${tabKey}:members`, { [name]: "0.00" });
+    multi.expire(`${tabKey}:members`, 2592000);
+    multi.sadd(`${tabKey}:authorized_users`, creatorAddress);
+    multi.expire(`${tabKey}:authorized_users`, 2592000);
+    multi.sadd(`meshtab:${mode}:user:${creatorAddress}:tabs`, tabId);
+    
+    await multi.exec();
+
+    return NextResponse.json({ success: true });
+    
+  } catch (error) {
+    // [OVERSEER MANDATE - Baseline 22]: Backend Error Serialization
+    console.error("Create Tab Error:", error);
+    return NextResponse.json({ success: false, error: "DATABASE_UNAVAILABLE" }, { status: 500 });
+  }
+}

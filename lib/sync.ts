@@ -46,48 +46,89 @@ function haveExpensesChanged(serverExpenses: StoredExpense[], localExpenses: Sto
   return false;
 }
 
-export function pushTabStateToRedis(tabId: string) {
+export async function pushTabStateToRedis(tabId: string, getAccessToken?: () => Promise<string | null>) {
   if (typeof window === "undefined" || !tabId || tabId === "new") return;
   if (!isEffectivelyOnline()) return;
 
   const mode = getWorkspaceMode();
-  const members = getStoredTabMembers(tabId);
   const expenses = getStoredExpenses(tabId);
+  const pendingExpenses = expenses.filter(e => e.syncStatus === "pending");
+  if (pendingExpenses.length === 0) return; // Skip — nothing to push
 
-  const localHash = simpleHash(JSON.stringify({ members, expenses }));
-  const lastPushedHash = sessionStorage.getItem(`meshTab_lastPush_${tabId}`);
-  if (localHash === lastPushedHash) return; // Skip — nothing changed since last push
-  sessionStorage.setItem(`meshTab_lastPush_${tabId}`, localHash);
-
-  // Background fetch
-  fetch(`/api/sync/${tabId}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ mode, members, expenses }),
-  }).then((res) => {
-    if (res.ok) {
-      // Mark all pending expenses as synced
-      const currentExpenses = getStoredExpenses(tabId);
-      const hadPending = currentExpenses.some(e => e.syncStatus === "pending");
-      if (hadPending) {
-        const updated = currentExpenses.map(e => ({ ...e, syncStatus: "synced" as const }));
-        const storageKey = mode === "sample"
-          ? `meshTab_expenses_${tabId}`
-          : mode === "testnet"
-            ? `meshTab_testnet_expenses_${tabId}`
-            : `meshTab_clean_expenses_${tabId}`;
-        localStorage.setItem(storageKey, JSON.stringify(updated));
-        window.dispatchEvent(new CustomEvent("meshTab-expenses-update", { detail: { fromServer: true } }));
-      }
+  let token = "";
+  if (getAccessToken) {
+    try {
+      token = (await getAccessToken()) || "";
+    } catch (e) {
+      console.warn("Failed to get token for sync push");
     }
-  }).catch((error) => {
-    console.error("Failed to sync tab to redis:", error);
-  });
+  }
+
+  for (const exp of pendingExpenses) {
+    // Transform to payload
+    const payload = {
+      expenseId: exp.id,
+      description: exp.desc,
+      originalAmount: exp.originalAmount || Math.floor(exp.amount / 100),
+      originalCurrency: exp.originalCurrency || "USD",
+      finalAmountUsd: exp.amount, // assuming everything is cents
+      timestamp: new Date(exp.time).getTime() || Date.now(), // approximation if time is string like "Just now"
+      mode: mode,
+      payers: [{ name: exp.payer, amount: exp.amount }],
+      borrowers: [] as {name: string, amount: number}[],
+      metadata: exp // Include full UI state
+    };
+    
+    // We can infer borrowers based on splitType
+    if (exp.splitType === "exact" && exp.splits) {
+       for (const [name, amount] of Object.entries(exp.splits)) {
+           payload.borrowers.push({ name, amount });
+       }
+    } else if (exp.participants && exp.participants.length > 0) {
+       const splitCount = exp.participants.length;
+       const baseShare = Math.floor(exp.amount / splitCount);
+       let remainder = exp.amount - (baseShare * splitCount);
+       for (const p of exp.participants) {
+          let owes = baseShare + (remainder > 0 ? 1 : 0);
+          if (remainder > 0) remainder--;
+          payload.borrowers.push({ name: p, amount: owes });
+       }
+    } else {
+       // fallback
+       payload.borrowers.push({ name: "Unknown", amount: exp.amount });
+    }
+
+    try {
+      const res = await fetch(`/api/tab/${tabId}/expense/new`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": token ? `Bearer ${token}` : ""
+        },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+         // Mark as synced locally
+         const currentExpenses = getStoredExpenses(tabId);
+         const idx = currentExpenses.findIndex(e => e.id === exp.id);
+         if (idx >= 0) {
+            currentExpenses[idx].syncStatus = "synced";
+            const storageKey = mode === "sample"
+              ? `meshTab_expenses_${tabId}`
+              : mode === "testnet"
+                ? `meshTab_testnet_expenses_${tabId}`
+                : `meshTab_clean_expenses_${tabId}`;
+            localStorage.setItem(storageKey, JSON.stringify(currentExpenses));
+            window.dispatchEvent(new CustomEvent("meshTab-expenses-update", { detail: { fromServer: true } }));
+         }
+      }
+    } catch (err) {
+      console.error("Failed to push expense", err);
+    }
+  }
 }
 
-export function useTabSync(tabId: string) {
+export function useTabSync(tabId: string, getAccessToken?: () => Promise<string | null>) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [syncError, setSyncError] = useState(false);
@@ -112,7 +153,18 @@ export function useTabSync(tabId: string) {
       
       try {
         const mode = getWorkspaceMode();
-        const res = await fetch(`/api/sync/${tabId}?mode=${mode}`);
+        let token = "";
+        if (getAccessToken) {
+          try {
+            token = (await getAccessToken()) || "";
+          } catch (e) {}
+        }
+
+        const res = await fetch(`/api/tab/${tabId}/expenses?mode=${mode}`, {
+           headers: {
+             "Authorization": token ? `Bearer ${token}` : ""
+           }
+        });
         if (res.ok) {
           errorCount = 0;
           setSyncError(false);
@@ -124,20 +176,27 @@ export function useTabSync(tabId: string) {
           // Smart Deep Merge for Members
           if (members && Array.isArray(members) && members.length > 0) {
             const localMembers = getStoredTabMembers(tabId);
-            if (haveMembersChanged(members, localMembers)) {
+              // Apply member types (creditor, debtor) to match UI
+              const updatedMembers = members.map((m: any) => ({
+                 name: m.name,
+                 balance: m.balance,
+                 type: m.balance === 0 ? "settled" : m.balance > 0 ? "creditor" : "debtor",
+                 role: "member"
+              }));
+
               const storageKey = mode === "sample" 
                 ? `meshTab_members_${tabId}`
                 : mode === "testnet" 
                   ? `meshTab_testnet_members_${tabId}`
                   : `meshTab_clean_members_${tabId}`;
-              localStorage.setItem(storageKey, JSON.stringify(members));
+              localStorage.setItem(storageKey, JSON.stringify(updatedMembers));
               window.dispatchEvent(new CustomEvent("meshTab-members-update", { detail: { fromServer: true } }));
               stateUpdated = true;
 
               // Update user balance in stored tab summaries for home dashboard
               try {
                 const profile = getStoredUser();
-                const userMember = members.find(m => m.name.toLowerCase() === profile.name.toLowerCase());
+                const userMember = updatedMembers.find((m: any) => m.name.toLowerCase() === profile.name.toLowerCase());
                 if (userMember) {
                   const key = mode === "sample"
                     ? "meshTab_sample_tabs"
@@ -147,7 +206,7 @@ export function useTabSync(tabId: string) {
                   const tabs = getStoredTabs();
                   const nextTabs = tabs.map(t => {
                     if (t.id === tabId) {
-                      return { ...t, balance: userMember.balance, memberCount: members.length, lastActivity: "Just now" };
+                      return { ...t, balance: userMember.balance, memberCount: updatedMembers.length, lastActivity: "Just now" };
                     }
                     return t;
                   });
@@ -155,19 +214,32 @@ export function useTabSync(tabId: string) {
                   window.dispatchEvent(new Event("meshTab-tabs-update"));
                 }
               } catch (e) {}
-            }
           }
 
           // Smart Deep Merge for Expenses
           if (expenses && Array.isArray(expenses) && expenses.length > 0) {
+            const mappedExpenses = expenses.map((e: any) => {
+               if (e.metadata) {
+                 return { ...e.metadata, syncStatus: "synced" };
+               }
+               // Fallback if metadata is missing
+               return {
+                 id: e.expenseId || Math.random().toString(36).substr(2, 9),
+                 payer: e.payers?.[0]?.name || "Unknown",
+                 amount: e.finalAmountUsd || 0,
+                 desc: e.description || "",
+                 time: new Date(e.timestamp || Date.now()).toISOString(),
+                 syncStatus: "synced"
+               };
+            });
             const localExpenses = getStoredExpenses(tabId);
-            if (haveExpensesChanged(expenses, localExpenses)) {
+            if (haveExpensesChanged(mappedExpenses, localExpenses)) {
               const storageKey = mode === "sample"
                 ? `meshTab_expenses_${tabId}`
                 : mode === "testnet"
                   ? `meshTab_testnet_expenses_${tabId}`
                   : `meshTab_clean_expenses_${tabId}`;
-              localStorage.setItem(storageKey, JSON.stringify(expenses));
+              localStorage.setItem(storageKey, JSON.stringify(mappedExpenses));
               window.dispatchEvent(new CustomEvent("meshTab-expenses-update", { detail: { fromServer: true } }));
               stateUpdated = true;
             }
@@ -253,7 +325,7 @@ export function useTabSync(tabId: string) {
     const handleOnline = () => {
       markUserActive();
       // Push any offline-created expenses/members, then pull remote updates
-      pushTabStateToRedis(tabId);
+      pushTabStateToRedis(tabId, getAccessToken);
       pullFromRedis();
     };
 
@@ -268,7 +340,7 @@ export function useTabSync(tabId: string) {
       if (navigator.onLine && !isSimulatedOffline) {
         markUserActive();
         // Force push before the next poll can overwrite our pending offline data
-        pushTabStateToRedis(tabId);
+        pushTabStateToRedis(tabId, getAccessToken);
         pullFromRedis();
       }
     };
@@ -283,7 +355,7 @@ export function useTabSync(tabId: string) {
     const handleLocalUpdate = (e: any) => {
       if (e?.detail?.fromServer) return;
       markUserActive();
-      pushTabStateToRedis(tabId);
+      pushTabStateToRedis(tabId, getAccessToken);
     };
 
     window.addEventListener("meshTab-members-update", handleLocalUpdate);

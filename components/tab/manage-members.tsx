@@ -244,7 +244,7 @@ export function ManageMembers({
     try {
       // API call to wipe from Redis if online
       if (isEffectivelyOnline()) {
-        await fetch(`/api/sync/${tabId}?mode=${workspaceMode}`, { method: "DELETE" }).catch(() => {});
+        await fetch(`/api/tab/${tabId}?mode=${workspaceMode}`, { method: "DELETE" }).catch(() => {});
       }
 
       // Wipe local storage

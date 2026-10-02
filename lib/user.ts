@@ -593,8 +593,8 @@ export function getStoredExpenses(tabId: string): StoredExpense[] {
 export function saveStoredExpense(tabId: string, expense: StoredExpense, skipBalanceUpdate = false) {
   if (typeof window === "undefined") return;
   
-  // Tag sync status based on current connectivity
-  expense.syncStatus = isEffectivelyOnline() ? "synced" : "pending";
+  // Always set to pending so it gets picked up by pushTabStateToRedis
+  expense.syncStatus = "pending";
   
   const mode = getWorkspaceMode();
   const storageKey = mode === "sample"

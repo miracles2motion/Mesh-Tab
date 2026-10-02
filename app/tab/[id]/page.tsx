@@ -32,6 +32,7 @@ import { useUserProfile, useDeveloperMode, useStoredTabs, useStoredExpenses, use
 import { useTabSync } from "../../../lib/sync";
 import { useNotifications } from "../../../lib/notifications";
 import { fireSettlementConfetti } from "../../../lib/confetti";
+import { usePrivy } from "@privy-io/react-auth";
 
 function DashboardContent() {
   const params = useParams();
@@ -42,7 +43,8 @@ function DashboardContent() {
   const { tabs: storedTabs } = useStoredTabs();
   const { expenses } = useStoredExpenses(rawTabId);
   const { mode: workspaceMode } = useWorkspaceMode();
-  const { isSyncing, lastSync, syncError } = useTabSync(rawTabId);
+  const { getAccessToken } = usePrivy();
+  const { isSyncing, lastSync, syncError } = useTabSync(rawTabId, getAccessToken);
   const { settledBalance, totalOutstandingDebt, withdrawableAmount } = useSettledPayoutBalance();
   const { deduct } = useVirtualBalance();
   const { unreadCount } = useNotifications();

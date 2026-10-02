@@ -9,9 +9,9 @@ import { Button } from "../../../components/ui/button";
 import Image from "next/image";
 import { MonadLogo, AgoraLogo, PythLogo } from "../../../components/ui/partner-logo";
 
-import { saveNewTab, getStoredUser, DEFAULT_USER_NAME } from "../../../lib/user";
+import { saveNewTab, getStoredUser, DEFAULT_USER_NAME, getWorkspaceMode } from "../../../lib/user";
 import { SUPPORTED_CURRENCIES } from "../../../lib/pyth";
-import { useWallets } from "@privy-io/react-auth";
+import { useWallets, usePrivy } from "@privy-io/react-auth";
 
 async function generateSecureSuffix(address: string) {
   const timestamp = Date.now().toString();
@@ -29,6 +29,7 @@ export default function CreateTab() {
   const [tabName, setTabName] = useState("");
   const [currency, setCurrency] = useState<string>("USD");
   
+  const { getAccessToken } = usePrivy();
   const { wallets } = useWallets();
   const userAddress = wallets?.[0]?.address || "anonymous";
 
@@ -37,13 +38,28 @@ export default function CreateTab() {
     if (!tabName.trim()) return;
     
     setStep(2);
-    // Simulate API tab creation
-    await new Promise(r => setTimeout(r, 1500));
 
     const cleanId = tabName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
     const uniqueSuffix = await generateSecureSuffix(userAddress);
     const newTabId = (cleanId || "custom-tab") + "-" + uniqueSuffix;
     const currentUserName = getStoredUser().name || DEFAULT_USER_NAME;
+    
+    try {
+      const mode = getWorkspaceMode();
+      let token = "";
+      try { token = (await getAccessToken()) || ""; } catch (e) {}
+
+      await fetch("/api/tab/new", {
+         method: "POST",
+         headers: {
+            "Content-Type": "application/json",
+            "Authorization": token ? `Bearer ${token}` : ""
+         },
+         body: JSON.stringify({ tabId: newTabId, name: currentUserName, mode })
+      });
+    } catch (e) {
+      console.error("Failed to create tab on server", e);
+    }
     
     saveNewTab({
       id: newTabId,
