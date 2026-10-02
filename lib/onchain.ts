@@ -17,7 +17,6 @@ export function useRealAusdBalance(workspaceMode: string) {
     }
     
     if (!client?.account?.address) {
-      setIsLoading(false);
       return;
     }
 
