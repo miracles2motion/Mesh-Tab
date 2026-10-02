@@ -93,30 +93,29 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
 
         toast.loading("Processing payment securely...", { id: "tx-toast" });
 
-        const txHash = await client.sendTransaction({
-          calls: [
-            {
-              to: ausdAddress,
-              data: encodeFunctionData({
-                abi: erc20Abi,
-                functionName: "approve",
-                args: [ledgerAddress, amountWei]
-              })
-            },
-            {
-              to: ledgerAddress,
-              data: encodeFunctionData({
-                abi: MeshTabLedgerABI,
-                functionName: "payNettedDebt",
-                args: [tabId, mockCreditorAddress, amountWei]
-              })
-            }
-          ]
+        const approveHash = await client.sendTransaction({
+          to: ausdAddress,
+          data: encodeFunctionData({
+            abi: erc20Abi,
+            functionName: "approve",
+            args: [ledgerAddress, amountWei]
+          })
         });
 
         const publicClient = createPublicClient({
             transport: http(process.env.NEXT_PUBLIC_MONAD_RPC_URL || "https://testnet-rpc.monad.xyz")
         });
+        await publicClient.waitForTransactionReceipt({ hash: approveHash });
+
+        const txHash = await client.sendTransaction({
+          to: ledgerAddress,
+          data: encodeFunctionData({
+            abi: MeshTabLedgerABI,
+            functionName: "payNettedDebt",
+            args: [tabId, mockCreditorAddress, amountWei]
+          })
+        });
+
         await publicClient.waitForTransactionReceipt({ hash: txHash });
         
         toast.dismiss("tx-toast");
