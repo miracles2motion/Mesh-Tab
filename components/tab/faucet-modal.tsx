@@ -57,7 +57,7 @@ export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
     // Audio + Confetti + Toast
     sounds.playCoinClink();
     fireFaucetConfetti();
-    toast.success("+$500.00 Test AUSD Minted!", {
+    toast.success("+$500.00 Added!", {
       description: "Added to your sandbox balance."
     });
 
@@ -72,9 +72,9 @@ export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
           <Coins className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
         </div>
 
-        <h3 className="text-2xl font-bold mb-1">Sandbox AUSD Faucet</h3>
+        <h3 className="text-2xl font-bold mb-1">Welcome Bonus</h3>
         <p className="text-slate-500 dark:text-white/60 text-xs mb-6 max-w-xs leading-relaxed">
-          Need test dollars? Top up free play money to test paying tab debts and cashing out on Monad.
+          Need some funds? Claim your welcome bonus to start settling tab debts instantly.
         </p>
 
         {/* Current Balance Display */}
@@ -93,7 +93,7 @@ export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
         {justClaimed && (
           <div className="w-full p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center justify-center gap-2 mb-4 animate-in fade-in">
             <CheckCircle2 className="w-4 h-4" />
-            <span>Successfully added +$500.00 Test AUSD!</span>
+            <span>Successfully added funds!</span>
           </div>
         )}
 
@@ -107,12 +107,12 @@ export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
           {isClaiming ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              Minting Test Funds...
+              {workspaceMode === "testnet" ? "Claiming Bonus..." : "Adding Funds..."}
             </>
           ) : (
             <>
               <Sparkles className="w-4 h-4" />
-              {workspaceMode === "testnet" ? "Claim +$5,000 Test AUSD" : "Claim +$500 Sandbox AUSD"}
+              {workspaceMode === "testnet" ? "Claim $5,000 Welcome Bonus" : "Add $500 Sandbox Funds"}
             </>
           )}
         </Button>
