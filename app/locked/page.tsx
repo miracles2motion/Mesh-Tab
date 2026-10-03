@@ -18,7 +18,7 @@ export default function LockedPage() {
     // If they successfully logged back in, send them straight back to the dashboard
     if (ready && authenticated) {
       setWorkspaceMode("testnet");
-      router.push("/home");
+      router.replace("/home");
     }
     
     // Check if they had a passkey before getting locked out

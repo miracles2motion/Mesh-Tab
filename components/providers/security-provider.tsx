@@ -50,7 +50,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
       localStorage.setItem("mesh_last_passkey_status", hasPasskey.toString());
       
       logout();
-      router.push("/locked");
+      router.replace("/locked");
     };
 
     const resetTimer = () => {
