@@ -248,15 +248,7 @@ function SettingsContent() {
   };
 
   const handleManagePasskey = () => {
-    setIsManagingPasskey(true);
-    setPasskeyNotice("Scanning device Passkeys via WebAuthn...");
-    setTimeout(() => {
-      setPasskeyNotice("Passkey Verified: iPhone 15 Pro (Hardware P-256 Enclave active)");
-      setTimeout(() => {
-        setIsManagingPasskey(false);
-        setPasskeyNotice(null);
-      }, 3500);
-    }, 1200);
+    linkPasskey();
   };
 
   if (!mounted) {
@@ -453,50 +445,6 @@ function SettingsContent() {
                   <p className="text-xs text-slate-500 dark:text-white/40">
                     Auto mode monitors your device&apos;s OS settings in real time and automatically transitions between Apple White and Sleek Dark.
                   </p>
-                </div>
-              </div>
-
-              {/* Security Card */}
-              <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 shadow-sm">
-                <h2 className="text-lg font-bold mb-6 flex items-center gap-2 text-slate-900 dark:text-white">
-                  <Shield className="w-5 h-5 text-slate-400 dark:text-white/50" /> Device Authentication
-                </h2>
-                <div className="p-4 bg-slate-50 dark:bg-black/30 rounded-2xl border border-slate-200 dark:border-white/5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
-                        <Smartphone className="w-4 h-4 text-indigo-500" /> Passkey Hardware Key
-                      </h3>
-                      {hasPasskey ? (
-                        <p className="text-xs text-slate-500 dark:text-white/50 mt-1">1 active hardware passkey (Apple Secure Enclave P-256)</p>
-                      ) : (
-                        <p className="text-xs text-rose-500 dark:text-rose-400 mt-1">No passkey linked to this device.</p>
-                      )}
-                    </div>
-                    {hasPasskey ? (
-                      <Button 
-                        onClick={handleManagePasskey} 
-                        variant="secondary" 
-                        size="sm"
-                        isLoading={isManagingPasskey}
-                      >
-                        Verify Passkey
-                      </Button>
-                    ) : (
-                      <Button 
-                        onClick={() => linkPasskey()} 
-                        variant="primary" 
-                        size="sm"
-                      >
-                        Set Up Passkey
-                      </Button>
-                    )}
-                  </div>
-                  {passkeyNotice && (
-                    <div className="p-3 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 rounded-xl text-xs font-semibold text-indigo-700 dark:text-indigo-300 animate-in fade-in">
-                      {passkeyNotice}
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -796,6 +744,45 @@ function SettingsContent() {
           {/* ADVANCED SECURITY TAB */}
           {activeTab === "advanced" && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              
+              {/* Security Card */}
+              <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 shadow-sm">
+                <h2 className="text-lg font-bold mb-6 flex items-center gap-2 text-slate-900 dark:text-white">
+                  <Shield className="w-5 h-5 text-slate-400 dark:text-white/50" /> Device Authentication
+                </h2>
+                <div className="p-4 bg-slate-50 dark:bg-black/30 rounded-2xl border border-slate-200 dark:border-white/5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
+                        <Smartphone className="w-4 h-4 text-indigo-500" /> Passkey Hardware Key
+                      </h3>
+                      {hasPasskey ? (
+                        <p className="text-xs text-slate-500 dark:text-white/50 mt-1">Passkey is active and securing your account.</p>
+                      ) : (
+                        <p className="text-xs text-rose-500 dark:text-rose-400 mt-1">No passkey linked to this device.</p>
+                      )}
+                    </div>
+                    {hasPasskey ? (
+                      <Button 
+                        onClick={handleManagePasskey} 
+                        variant="secondary" 
+                        size="sm"
+                      >
+                        Add Another Passkey
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={() => linkPasskey()} 
+                        variant="primary" 
+                        size="sm"
+                      >
+                        Set Up Passkey
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 shadow-sm">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
@@ -892,49 +879,49 @@ function SettingsContent() {
                   </div>
                 </div>
               </div>
+
+              {/* ─── Account Actions ─── */}
+              <div className="p-6 sm:p-8 bg-white dark:bg-[#111] rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                  <LogOut className="w-5 h-5 text-red-500" />
+                  Account Actions
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-white/50 mb-5">Sign out of your MeshTab account on this device.</p>
+                <button
+                  onClick={async () => {
+                    sounds.playClick();
+                    try {
+                      await logout();
+                      // Clear sensitive frontend caches
+                      localStorage.removeItem("meshTab_displayName");
+                      // Preserve sample mode sandbox but nuke all testnet/clean caches securely
+                      const keysToWipe = [];
+                      for (let i = 0; i < localStorage.length; i++) {
+                        const k = localStorage.key(i);
+                        if (k && (k.includes("_testnet_") || k.includes("_clean_"))) {
+                          keysToWipe.push(k);
+                        }
+                      }
+                      keysToWipe.forEach(k => localStorage.removeItem(k));
+                      
+                      localStorage.removeItem("meshTab_buddy_chat_history");
+                      localStorage.removeItem("meshTab_workspaceMode");
+                      localStorage.removeItem("meshTab_displayName");
+                      localStorage.removeItem("meshTab_avatarColorIndex");
+                      router.push("/login");
+                    } catch (err) {
+                      console.error("Logout failed:", err);
+                      toast.error("Logout failed", { description: "Please try again." });
+                    }
+                  }}
+                  className="w-full sm:w-auto px-6 py-3 rounded-2xl border-2 border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Log Out
+                </button>
+              </div>
             </div>
           )}
-
-          {/* ─── Account Actions ─── */}
-          <div className="p-6 sm:p-8 bg-white dark:bg-[#111] rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-              <LogOut className="w-5 h-5 text-red-500" />
-              Account Actions
-            </h2>
-            <p className="text-sm text-slate-500 dark:text-white/50 mb-5">Sign out of your MeshTab account on this device.</p>
-            <button
-              onClick={async () => {
-                sounds.playClick();
-                try {
-                  await logout();
-                  // Clear sensitive frontend caches
-                  localStorage.removeItem("meshTab_displayName");
-                  // Preserve sample mode sandbox but nuke all testnet/clean caches securely
-                  const keysToWipe = [];
-                  for (let i = 0; i < localStorage.length; i++) {
-                    const k = localStorage.key(i);
-                    if (k && (k.includes("_testnet_") || k.includes("_clean_"))) {
-                      keysToWipe.push(k);
-                    }
-                  }
-                  keysToWipe.forEach(k => localStorage.removeItem(k));
-                  
-                  localStorage.removeItem("meshTab_buddy_chat_history");
-                  localStorage.removeItem("meshTab_workspaceMode");
-                  localStorage.removeItem("meshTab_displayName");
-                  localStorage.removeItem("meshTab_avatarColorIndex");
-                  router.push("/login");
-                } catch (err) {
-                  console.error("Logout failed:", err);
-                  toast.error("Logout failed", { description: "Please try again." });
-                }
-              }}
-              className="w-full sm:w-auto px-6 py-3 rounded-2xl border-2 border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2"
-            >
-              <LogOut className="w-4 h-4" />
-              Log Out
-            </button>
-          </div>
 
         </div>
       </main>
