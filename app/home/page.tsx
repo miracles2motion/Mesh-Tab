@@ -58,11 +58,15 @@ export default function GlobalHub() {
   const { showAddress } = useDeveloperMode();
   const { client } = useSmartWallets();
   const fullAddress = client?.account?.address;
-  const displayAddress = fullAddress ? `${fullAddress.slice(0, 6)}...${fullAddress.slice(-4)}` : "Initializing...";
+  
+  const activeAddress = isTestnetMode ? fullAddress : "0x7F5A4b2...3b9A";
+  const displayAddress = isTestnetMode 
+    ? (fullAddress ? `${fullAddress.slice(0, 6)}...${fullAddress.slice(-4)}` : "Initializing...")
+    : "0x7F5...3b9A";
 
   const handleCopyAddress = () => {
-    if (!fullAddress) return;
-    navigator.clipboard.writeText(fullAddress);
+    if (!activeAddress) return;
+    navigator.clipboard.writeText(activeAddress);
     setCopied(true);
     sounds.playClick();
     toast.success("Ledger Address Copied", { description: `${displayAddress} copied to clipboard.` });
@@ -230,7 +234,7 @@ export default function GlobalHub() {
                 <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isTestnetMode ? "bg-purple-500" : "bg-emerald-500"}`} />
                 {isTestnetMode ? "Monad Testnet" : "Demo Sandbox"}
               </span>
-              {showAddress && isTestnetMode && (
+              {showAddress && (
                 <button
                   onClick={handleCopyAddress}
                   className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-500/20 shrink-0 cursor-pointer"
