@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useRouter, usePathname } from "next/navigation";
+import { useWorkspaceMode } from "@/lib/user";
 
 type SecurityContextType = {
   lockTimer: number; // 0 = immediate, > 0 = milliseconds, -1 = never
@@ -16,6 +17,7 @@ const SecurityContext = createContext<SecurityContextType>({
 
 export function SecurityProvider({ children }: { children: ReactNode }) {
   const { logout, authenticated, user } = usePrivy();
+  const { mode } = useWorkspaceMode();
   const router = useRouter();
   const pathname = usePathname();
   
@@ -39,12 +41,22 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // Only track if they are authenticated and not already on the locked page
-    if (!authenticated || lockTimer < 0 || pathname === '/locked') return;
+    // In demo mode, we consider them authenticated for the timer logic
+    const isDemo = mode !== "testnet";
+    const isEffectivelyAuthenticated = isDemo ? true : authenticated;
+
+    // Only track if they are effectively authenticated and not already on the locked page
+    if (!isEffectivelyAuthenticated || lockTimer < 0 || pathname === '/locked') return;
 
     let timeoutId: NodeJS.Timeout;
 
     const performLock = () => {
+      if (isDemo) {
+        // No privy logout in demo
+        router.replace("/locked");
+        return;
+      }
+
       // Save passkey status before logging out so the /locked page knows what to say
       const hasPasskey = user?.linkedAccounts?.some(acc => acc.type === 'passkey') || false;
       localStorage.setItem("mesh_last_passkey_status", hasPasskey.toString());
@@ -80,7 +92,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
       events.forEach(event => document.removeEventListener(event, resetTimer));
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [authenticated, lockTimer, logout, router, pathname, user]);
+  }, [authenticated, lockTimer, logout, router, pathname, user, mode]);
 
   return (
     <SecurityContext.Provider value={{ lockTimer, setLockTimer }}>

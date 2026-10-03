@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useRouter, usePathname } from "next/navigation";
+import { useWorkspaceMode } from "@/lib/user";
 
 /**
  * AuthGuard — Session security wrapper for private routes.
@@ -22,11 +23,15 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { ready, authenticated } = usePrivy();
   const router = useRouter();
   const pathname = usePathname();
+  const { mode } = useWorkspaceMode();
   const [hasTimedOut, setHasTimedOut] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const isDemo = mode !== "testnet";
+
   // Timeout failsafe: if Privy SDK hasn't initialized within 5s, flag it
   useEffect(() => {
+    if (isDemo) return;
     if (!ready) {
       timeoutRef.current = setTimeout(() => {
         setHasTimedOut(true);
@@ -38,20 +43,27 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [ready]);
+  }, [ready, isDemo]);
 
   // Redirect on timeout (hung SDK) or expired session
   useEffect(() => {
+    if (isDemo) return;
     if (hasTimedOut && !ready) {
       router.replace("/locked");
     }
-  }, [hasTimedOut, ready, router]);
+  }, [hasTimedOut, ready, router, isDemo]);
 
   useEffect(() => {
+    if (isDemo) return;
     if (ready && !authenticated) {
       router.replace("/locked");
     }
-  }, [ready, authenticated, router]);
+  }, [ready, authenticated, router, isDemo]);
+
+  // Bypass entirely for demo mode
+  if (isDemo) {
+    return <>{children}</>;
+  }
 
   // Privy still initializing — show a minimal branded loader
   if (!ready) {

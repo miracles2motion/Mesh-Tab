@@ -25,7 +25,8 @@ import {
   Moon,
   Laptop,
   Lock,
-  LogOut
+  LogOut,
+  Trash2
 } from "lucide-react";
 import { useSecurity } from "../../components/providers/security-provider";
 import { Button } from "../../components/ui/button";
@@ -746,7 +747,8 @@ function SettingsContent() {
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               
               {/* Security Card */}
-              <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 shadow-sm">
+              {workspaceMode === "testnet" && (
+                <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 shadow-sm mb-8">
                 <h2 className="text-lg font-bold mb-6 flex items-center gap-2 text-slate-900 dark:text-white">
                   <Shield className="w-5 h-5 text-slate-400 dark:text-white/50" /> Device Authentication
                 </h2>
@@ -781,7 +783,8 @@ function SettingsContent() {
                     )}
                   </div>
                 </div>
-              </div>
+                </div>
+              )}
 
               <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 shadow-sm">
                 <div className="flex items-center gap-3 mb-2">
@@ -881,7 +884,8 @@ function SettingsContent() {
               </div>
 
               {/* ─── Account Actions ─── */}
-              <div className="p-6 sm:p-8 bg-white dark:bg-[#111] rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm">
+              {workspaceMode === "testnet" ? (
+                <div className="p-6 sm:p-8 bg-white dark:bg-[#111] rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm">
                 <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
                   <LogOut className="w-5 h-5 text-red-500" />
                   Account Actions
@@ -920,6 +924,27 @@ function SettingsContent() {
                   Log Out
                 </button>
               </div>
+              ) : (
+                <div className="p-6 sm:p-8 bg-white dark:bg-[#111] rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm">
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
+                    <Trash2 className="w-5 h-5 text-red-500" />
+                    Clear Demo Data
+                  </h2>
+                  <p className="text-sm text-slate-500 dark:text-white/50 mb-5">Wipe all local sandbox data and return to the entry screen.</p>
+                  <button
+                    onClick={() => {
+                      sounds.playClick();
+                      setWorkspaceMode("blank");
+                      localStorage.clear();
+                      toast.success("Sandbox Cleared");
+                      router.replace("/");
+                    }}
+                    className="w-full sm:w-auto px-6 py-3 rounded-2xl border-2 border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2"
+                  >
+                    Wipe Sandbox
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
