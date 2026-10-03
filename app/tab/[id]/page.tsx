@@ -28,7 +28,7 @@ import { NetworkStatusBadge } from "../../../components/ui/network-status-badge"
 import { GlobalNav } from "../../../components/ui/global-nav";
 import { PaymentDrawer } from "../../../components/ui/payment-drawer";
 
-import { useUserProfile, useDeveloperMode, useStoredTabs, useStoredExpenses, useStoredTabMembers, useWorkspaceMode, useSettledPayoutBalance, settleTab, useVirtualBalance } from "../../../lib/user";
+import { useUserProfile, useStoredTabs, useStoredExpenses, useStoredTabMembers, useWorkspaceMode, useSettledPayoutBalance, settleTab, useVirtualBalance } from "../../../lib/user";
 import { useTabSync } from "../../../lib/sync";
 import { useNotifications } from "../../../lib/notifications";
 import { fireSettlementConfetti } from "../../../lib/confetti";
@@ -39,7 +39,6 @@ function DashboardContent() {
   const rawTabId = typeof params?.id === "string" ? params.id : "lisbon-24";
 
   const profile = useUserProfile();
-  const { showAddress } = useDeveloperMode();
   const { tabs: storedTabs } = useStoredTabs();
   const { expenses } = useStoredExpenses(rawTabId);
   const { mode: workspaceMode } = useWorkspaceMode();
@@ -313,11 +312,6 @@ function DashboardContent() {
                   <Sparkles className="w-3 h-3" />
                   <span>Lisbon Demo</span>
                 </Link>
-              )}
-              {showAddress && (
-                <div className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-200 dark:border-indigo-500/20 shrink-0">
-                  0x7F5...3b9A
-                </div>
               )}
             </div>
           </div>

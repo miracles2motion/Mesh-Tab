@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode, Settings, Search, Filter, Crown, CheckCircle2, TrendingDown, TrendingUp, ArrowDownToLine, Coins, Sparkles, Award, Fingerprint } from "lucide-react";
+import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode, Settings, Search, Filter, Crown, CheckCircle2, TrendingDown, TrendingUp, ArrowDownToLine, Coins, Sparkles, Award, Fingerprint, Copy } from "lucide-react";
 import { useState, useEffect } from "react";
 import { TransactionOverlay, TransactionState } from "../../components/ui/transaction-overlay";
 import { formatCurrency } from "../../lib/utils";
 import { ThemeToggle } from "../../components/theme-toggle";
-import { useUserProfile, useStoredTabs, useVirtualBalance, useWorkspaceMode, useSettledPayoutBalance, getStoredTabMembers } from "../../lib/user";
+import { useUserProfile, useStoredTabs, useVirtualBalance, useWorkspaceMode, useSettledPayoutBalance, getStoredTabMembers, useDeveloperMode } from "../../lib/user";
 import { useNotifications } from "../../lib/notifications";
 import { CashOutDrawer } from "../../components/tab/cash-out-drawer";
 import { PitchModal } from "../../components/home/pitch-modal";
@@ -22,6 +22,7 @@ import { useWallets, usePrivy } from "@privy-io/react-auth";
 import { AuthGuard } from "../../components/providers/auth-guard";
 import { useRealAusdBalance } from "../../lib/onchain";
 import { FaucetModal } from "../../components/tab/faucet-modal";
+import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
 
 
 export default function GlobalHub() {
@@ -52,6 +53,21 @@ export default function GlobalHub() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<"all" | "owe" | "owed">("all");
   const [mounted, setMounted] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const { showAddress } = useDeveloperMode();
+  const { client } = useSmartWallets();
+  const fullAddress = client?.account?.address;
+  const displayAddress = fullAddress ? `${fullAddress.slice(0, 6)}...${fullAddress.slice(-4)}` : "Initializing...";
+
+  const handleCopyAddress = () => {
+    if (!fullAddress) return;
+    navigator.clipboard.writeText(fullAddress);
+    setCopied(true);
+    sounds.playClick();
+    toast.success("Ledger Address Copied", { description: `${displayAddress} copied to clipboard.` });
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -214,6 +230,16 @@ export default function GlobalHub() {
                 <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isTestnetMode ? "bg-purple-500" : "bg-emerald-500"}`} />
                 {isTestnetMode ? "Monad Testnet" : "Demo Sandbox"}
               </span>
+              {showAddress && isTestnetMode && (
+                <button
+                  onClick={handleCopyAddress}
+                  className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-500/20 shrink-0 cursor-pointer"
+                  title="Copy Ledger Address"
+                >
+                  {displayAddress}
+                  {copied ? <CheckCircle2 className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                </button>
+              )}
               {!isTestnetMode && (
                 <>
                   <Link 
