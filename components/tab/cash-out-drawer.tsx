@@ -279,19 +279,13 @@ export function CashOutDrawer({
             </div>
 
             <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-              {workspaceMode === "testnet" ? "Funds are SAFU! 🛡️" : "Transfer Initiated!"}
+              Transfer Initiated!
             </h3>
             <p className="text-slate-500 dark:text-white/60 text-sm max-w-xs mb-6 leading-relaxed text-center">
-              {workspaceMode === "testnet" ? (
-                <>Since you are on the Monad testnet, your real funds were never touched. The walkthrough is complete.</>
-              ) : (
-                <>
-                  <span className="font-semibold text-slate-900 dark:text-white">
-                    {formatCurrency(withdrawnAmount)}
-                  </span>{" "}
-                  is on its way to your {method === "card" ? "Debit Card" : "Bank Account"}.
-                </>
-              )}
+              <span className="font-semibold text-slate-900 dark:text-white">
+                {formatCurrency(withdrawnAmount)}
+              </span>{" "}
+              is on its way to your {method === "card" ? "Debit Card" : "Bank Account"}.
             </p>
 
             <div className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-4 mb-6 text-xs text-slate-500 dark:text-white/60 space-y-2 text-left">
