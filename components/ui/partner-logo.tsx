@@ -177,14 +177,12 @@ export function PartnerLogo({
             src="https://mintcdn.com/privy-c2af3412/Ih_Fo3QYM486gzWq/logo/privy-logo-light.png" 
             alt="Privy logo" 
             className="w-auto h-full object-contain block dark:hidden"
-            style={{ imageRendering: 'crisp-edges' }}
           />
           {/* Dark Mode Logo (hidden in light mode) */}
           <img 
             src="https://mintcdn.com/privy-c2af3412/Ih_Fo3QYM486gzWq/logo/privy-logo-dark.png" 
             alt="Privy logo" 
             className="w-auto h-full object-contain hidden dark:block"
-            style={{ imageRendering: 'crisp-edges' }}
           />
         </div>
       );
