@@ -152,6 +152,25 @@ export function PimlicoLogo({ className = "h-5 w-auto", ...props }: LogoProps) {
   );
 }
 
+export function PrivyLogo({ className = "h-5 w-auto" }: { className?: string }) {
+  return (
+    <div className={`relative inline-flex items-center justify-center ${className}`}>
+      {/* Light Mode Logo (hidden in dark mode) */}
+      <img 
+        src="/logos/privy-logo-light.png" 
+        alt="Privy logo" 
+        className="w-auto h-full object-contain block dark:hidden"
+      />
+      {/* Dark Mode Logo (hidden in light mode) */}
+      <img 
+        src="/logos/privy-logo-dark.png" 
+        alt="Privy logo" 
+        className="w-auto h-full object-contain hidden dark:block"
+      />
+    </div>
+  );
+}
+
 export function PartnerLogo({ 
   name, 
   className = "h-5 w-auto" 
@@ -170,22 +189,7 @@ export function PartnerLogo({
       return <EnvioLogo className={className} />;
 
     case "privy":
-      return (
-        <div className={`relative flex items-center justify-center ${className}`}>
-          {/* Light Mode Logo (hidden in dark mode) */}
-          <img 
-            src="https://mintcdn.com/privy-c2af3412/Ih_Fo3QYM486gzWq/logo/privy-logo-light.png" 
-            alt="Privy logo" 
-            className="w-auto h-full object-contain block dark:hidden"
-          />
-          {/* Dark Mode Logo (hidden in light mode) */}
-          <img 
-            src="https://mintcdn.com/privy-c2af3412/Ih_Fo3QYM486gzWq/logo/privy-logo-dark.png" 
-            alt="Privy logo" 
-            className="w-auto h-full object-contain hidden dark:block"
-          />
-        </div>
-      );
+      return <PrivyLogo className={className} />;
     case "pimlico":
       return <PimlicoLogo className={className} />;
     case "pyth":

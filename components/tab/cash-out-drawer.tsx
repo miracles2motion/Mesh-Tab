@@ -6,7 +6,7 @@ import { Sheet } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { formatCurrency } from "../../lib/utils";
 import Image from "next/image";
-import { AgoraLogo } from "../ui/partner-logo";
+import { AgoraLogo, PrivyLogo } from "../ui/partner-logo";
 
 import { DEFAULT_USER_NAME, useSettledPayoutBalance, useWorkspaceMode } from "../../lib/user";
 import { useAvailableBalance } from "../../lib/balance";
@@ -214,7 +214,7 @@ export function CashOutDrawer({
                 {/* Security Guarantee */}
                 <div className="w-full flex items-center gap-2 p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 mb-6 text-xs text-slate-600 dark:text-white/60">
                   <ShieldCheck className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                  <span>Institutional 1:1 reserve cashout backed by Agora.</span>
+                  <span>Secured by Privy Smart Accounts • Backed 1:1 by Agora.</span>
                 </div>
 
                 <Button
@@ -235,10 +235,12 @@ export function CashOutDrawer({
                   )}
                 </Button>
 
-                {/* Off-ramp Partner Badge */}
-                <div className="mt-6 flex items-center justify-center gap-3 text-slate-500 dark:text-white/50 text-xs font-medium">
-                  <span>Off-ramp powered by</span>
+                {/* Settlement & Payout Partner Badges */}
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5 text-slate-500 dark:text-white/50 text-xs font-medium">
+                  <span>Settlement & Payouts powered by</span>
                   <div className="flex items-center gap-2.5 opacity-90 hover:opacity-100 transition-opacity text-slate-800 dark:text-white">
+                    <PrivyLogo className="h-3.5 w-auto" />
+                    <span className="text-slate-400 dark:text-white/30 text-[10px] font-bold">&</span>
                     <AgoraLogo className="h-4 w-auto" />
                   </div>
                 </div>
