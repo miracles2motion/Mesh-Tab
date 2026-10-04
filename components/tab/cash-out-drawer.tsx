@@ -250,7 +250,7 @@ export function CashOutDrawer({
             <div className="w-full relative aspect-square max-w-[280px] mx-auto mb-6 rounded-2xl overflow-hidden shadow-2xl border border-white/20">
               <Image 
                 src="/haha-meme.jpg" 
-                alt="Vault Under Construction" 
+                alt="Chog Security Guard - Testnet Money Stays On Testnet" 
                 fill 
                 className="object-cover"
               />
