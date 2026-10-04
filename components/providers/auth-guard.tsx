@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useRouter, usePathname } from "next/navigation";
 import { useWorkspaceMode } from "@/lib/user";
+import { getSessionSnapshot, saveSessionSnapshot, isSessionSnapshotValid } from "@/lib/session-snapshot";
 
 /**
  * AuthGuard — Session security wrapper for private routes.
@@ -20,18 +21,60 @@ import { useWorkspaceMode } from "@/lib/user";
 const SDK_TIMEOUT_MS = 5000; // 5 second failsafe
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { ready, authenticated } = usePrivy();
+  const { ready, authenticated, user } = usePrivy();
+  const { wallets } = useWallets();
   const router = useRouter();
   const pathname = usePathname();
   const { mode } = useWorkspaceMode();
+  
   const [hasTimedOut, setHasTimedOut] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const [isOnline, setIsOnline] = useState(true);
+  const [isOfflineAllowed, setIsOfflineAllowed] = useState(false);
+  const [offlineStatusDetermined, setOfflineStatusDetermined] = useState(false);
 
   const isDemo = mode !== "testnet";
 
-  // Timeout failsafe: if Privy SDK hasn't initialized within 5s, flag it
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    
+    setIsOnline(navigator.onLine);
+    
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  // Check offline snapshot
   useEffect(() => {
     if (isDemo) return;
+    if (isOnline) {
+      setIsOfflineAllowed(false);
+      setOfflineStatusDetermined(true);
+      return;
+    }
+    
+    // We are offline
+    const snapshot = getSessionSnapshot();
+    if (snapshot && isSessionSnapshotValid(snapshot)) {
+      setIsOfflineAllowed(true);
+    } else {
+      setIsOfflineAllowed(false);
+    }
+    setOfflineStatusDetermined(true);
+  }, [isOnline, isDemo]);
+
+  // Timeout failsafe: if Privy SDK hasn't initialized within 5s, flag it
+  useEffect(() => {
+    if (isDemo || !isOnline) return;
     if (!ready) {
       timeoutRef.current = setTimeout(() => {
         setHasTimedOut(true);
@@ -43,26 +86,62 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [ready, isDemo]);
+  }, [ready, isDemo, isOnline]);
 
   // Redirect on timeout (hung SDK) or expired session
   useEffect(() => {
     if (isDemo) return;
+    if (!isOnline) {
+      // Do not redirect to /locked here; let the render block show the "Please connect" UI.
+      return;
+    }
+    
     if (hasTimedOut && !ready) {
       router.replace("/locked");
     }
-  }, [hasTimedOut, ready, router, isDemo]);
+  }, [hasTimedOut, ready, router, isDemo, isOnline]);
 
   useEffect(() => {
-    if (isDemo) return;
+    if (isDemo || !isOnline) return;
     if (ready && !authenticated) {
       router.replace("/locked");
     }
-  }, [ready, authenticated, router, isDemo]);
+  }, [ready, authenticated, router, isDemo, isOnline]);
+
+  // Save snapshot when authenticated and online
+  useEffect(() => {
+    if (isDemo || !isOnline) return;
+    if (ready && authenticated && user) {
+      const activeWallet = wallets.find(w => w.walletClientType === 'privy') || wallets[0];
+      
+      saveSessionSnapshot({
+        walletAddress: activeWallet?.address || "",
+        privyUserId: user.id,
+        displayName: user.google?.name || user.twitter?.name || user.email?.address || "You"
+      });
+    }
+  }, [ready, authenticated, user, wallets, isDemo, isOnline]);
 
   // Bypass entirely for demo mode
   if (isDemo) {
     return <>{children}</>;
+  }
+
+  // If offline, check if allowed
+  if (!isOnline) {
+    if (!offlineStatusDetermined) {
+      return null;
+    }
+    if (isOfflineAllowed) {
+      return <>{children}</>;
+    }
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f5f5f7] dark:bg-[#0a0a0a]">
+        <div className="flex flex-col items-center gap-4 animate-in fade-in duration-300">
+          <p className="text-sm text-slate-400 dark:text-white/40 font-medium">Please connect to the internet to authenticate.</p>
+        </div>
+      </div>
+    );
   }
 
   // Privy still initializing — show a minimal branded loader

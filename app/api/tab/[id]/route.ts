@@ -11,18 +11,15 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const walletAddress = await getUserIdFromToken(authHeader);
     const isAuthenticated = !!walletAddress;
     
-    // Fallback logic for hackathon ease: 
-    // allow delete if not authenticated but provide a warning, 
-    // or strictly require auth. For now, we'll allow it if they are an admin/creator
-    // Since we track authorized_users, let's verify if authenticated.
-    
+    if (!isAuthenticated || !walletAddress) {
+      return NextResponse.json({ success: false, error: "UNAUTHORIZED" }, { status: 401 });
+    }
+
     const tabKey = `meshtab:${mode}:tab:${id}`;
 
-    if (isAuthenticated && walletAddress) {
-       const isMember = await redis.sismember(`${tabKey}:authorized_users`, walletAddress);
-       if (!isMember) {
-          return NextResponse.json({ success: false, error: "FORBIDDEN" }, { status: 403 });
-       }
+    const isMember = await redis.sismember(`${tabKey}:authorized_users`, walletAddress);
+    if (!isMember) {
+      return NextResponse.json({ success: false, error: "FORBIDDEN" }, { status: 403 });
     }
 
     const multi = redis.multi();

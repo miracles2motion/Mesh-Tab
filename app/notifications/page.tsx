@@ -22,7 +22,8 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "../../components/theme-toggle";
 import { MeshBuddy } from "../../components/ui/mesh-buddy";
-import { useNotifications, formatTimeAgo, NotificationType, AppNotification } from "../../lib/notifications";
+import { useNotifications, NotificationType, AppNotification } from "../../lib/notifications";
+import { LiveTime } from "@/components/ui/live-time";
 import { useWorkspaceMode } from "../../lib/user";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
@@ -270,7 +271,7 @@ function NotificationsContent() {
 
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="text-xs text-slate-400 dark:text-white/40 tabular-nums">
-                          {formatTimeAgo(notif.timestamp)}
+                          <LiveTime ts={notif.timestamp} variant="compact" fallback="Recent" />
                         </span>
                         {notif.unread && (
                           <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 ring-4 ring-indigo-500/20" />

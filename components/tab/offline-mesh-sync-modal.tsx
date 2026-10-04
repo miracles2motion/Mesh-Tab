@@ -147,7 +147,7 @@ export function OfflineMeshSyncModal({ isOpen, onClose, tabId }: OfflineMeshSync
           p: "Alice",
           a: 8500,
           d: "Offline Demo Transfer",
-          tm: "Just now",
+          ca: Date.now(),
           st: "equal",
           cat: "other"
         }

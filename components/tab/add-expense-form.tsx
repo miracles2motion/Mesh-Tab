@@ -11,7 +11,7 @@ import { useUserProfile, saveStoredExpense, useWorkspaceMode, ExpenseCategory } 
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { SUPPORTED_CURRENCIES, usePythRate } from "../../lib/pyth";
-import { useNetworkStatus } from "../../lib/network";
+import { useConnectivity } from "../../components/providers/connectivity-provider";
 
 export const EXPENSE_CATEGORIES = [
   { id: "dining", label: "Dining", icon: "🍽️" },
@@ -33,7 +33,7 @@ interface AddExpenseFormProps {
 export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, tabId = "lisbon-24", defaultCurrency }: AddExpenseFormProps) {
   const profile = useUserProfile();
   const { mode: workspaceMode } = useWorkspaceMode();
-  const { isEffectivelyOnline } = useNetworkStatus();
+  const { isEffectivelyOnline } = useConnectivity();
   const activeUser = currentUser || profile.name || "David";
 
   const rawList = members.length > 0 
@@ -432,7 +432,7 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
       payer: paidBy,
       amount: totalBillCents,
       desc: desc.trim(),
-      time: "Just now",
+      createdAt: Date.now(),
       splitType: splitType === 'percentage' || splitType === 'shares' ? 'exact' : splitType,
       splits: splitsMap,
       category,

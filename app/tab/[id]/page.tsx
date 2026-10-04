@@ -66,7 +66,8 @@ function DashboardContent() {
     role: isCurrentUserCreator ? ("Creator" as const) : ("Member" as const),
     creator: creatorName,
     memberCount: activeMembers.length > 0 ? activeMembers.length : 1,
-    lastActivity: "Just now"
+    createdAt: Date.now(),
+    lastActivityAt: Date.now()
   };
 
   // Find user's actual balance from active members or tab summary
@@ -207,7 +208,7 @@ function DashboardContent() {
     expenses.forEach(exp => {
       rows.push([
         exp.id,
-        exp.time || "Recent",
+        exp.createdAt ? new Date(exp.createdAt).toLocaleString() : (exp.time || "Recent"),
         `"${(exp.desc || "").replace(/"/g, '""')}"`,
         exp.payer,
         (exp.amount / 100).toFixed(2),
@@ -480,9 +481,6 @@ function DashboardContent() {
       <CashOutDrawer 
         isOpen={isCashOutOpen}
         onClose={() => setIsCashOutOpen(false)}
-        settledBalance={settledBalance}
-        totalOutstandingDebt={totalOutstandingDebt}
-        withdrawableAmount={withdrawableAmount}
         currentUserName={currentUser}
       />
 

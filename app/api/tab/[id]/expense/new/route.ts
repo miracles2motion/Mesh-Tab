@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { redis } from "@/lib/redis";
 import { getUserIdFromToken } from "@/lib/auth";
-
-// [OVERSEER MANDATE - Baseline 19 & 32]: Strict validation + String caps
+import { LUA_ADD_EXPENSE } from "@/lib/redis-scripts";
 const createExpenseSchema = z.object({
   expenseId: z.string().max(100),
   description: z.string().max(100),
@@ -51,35 +50,44 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ success: false, error: "FORBIDDEN" }, { status: 403 });
     }
 
-    // [OVERSEER MANDATE - Baseline 27]: Atomic Transaction Blocks
-    const multi = redis.multi();
-    
     // [OVERSEER MANDATE - Baseline 14]: Timestamp Authority
+    const serverSyncedAt = Date.now();
     const expenseRecord = {
        ...payload,
-       serverSyncedAt: Date.now()
+       serverSyncedAt
     };
     
-    // [OVERSEER MANDATE - Baseline 13]: Append-Only
-    multi.rpush(`${tabKey}:expenses`, JSON.stringify(expenseRecord));
-    
-    // [OVERSEER MANDATE - Baseline 26]: Infinite List Bloat Protection
-    multi.ltrim(`${tabKey}:expenses`, -5000, -1);
-    
-    // [OVERSEER MANDATE - Baseline 33]: Native Data Types / HINCRBY
+    // Compute split details for Lua
+    const splitMap = new Map<string, number>();
     for (const payer of payload.payers) {
-       multi.hincrbyfloat(`${tabKey}:members`, payer.name, payer.amount);
+      splitMap.set(payer.name, (splitMap.get(payer.name) || 0) + payer.amount);
     }
     for (const borrower of payload.borrowers) {
-       multi.hincrbyfloat(`${tabKey}:members`, borrower.name, -borrower.amount);
+      splitMap.set(borrower.name, (splitMap.get(borrower.name) || 0) - borrower.amount);
     }
-    
-    // [OVERSEER MANDATE - Baseline 34]: Storage Pruning (TTL refresh)
-    multi.expire(`${tabKey}:members`, 2592000); // 30 days
-    multi.expire(`${tabKey}:authorized_users`, 2592000);
-    multi.expire(tabKey, 2592000);
-    
-    await multi.exec();
+    const splitDetails = Array.from(splitMap.entries()).map(([name, delta]) => ({ name, delta: delta.toString() }));
+
+    const expenseHashKey = `${tabKey}:expenses_hash`;
+    const expenseZsetKey = `${tabKey}:expenses_zset`;
+    const membersKey = `${tabKey}:members`;
+
+    // [OVERSEER MANDATE - Baseline 12, 27]: Idempotency & Atomic Blocks
+    const result = await redis.eval(
+      LUA_ADD_EXPENSE,
+      [expenseHashKey, expenseZsetKey, membersKey, tabKey],
+      [
+        payload.expenseId,
+        serverSyncedAt.toString(),
+        JSON.stringify(expenseRecord),
+        "",
+        "",
+        JSON.stringify(splitDetails)
+      ]
+    ) as [number, string];
+
+    if (result[0] === 0 && result[1] === "alreadyApplied") {
+      return NextResponse.json({ success: true, alreadyApplied: true });
+    }
 
     return NextResponse.json({ success: true });
     

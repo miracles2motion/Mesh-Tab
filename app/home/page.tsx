@@ -5,9 +5,10 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode, Settings, Search, Filter, Crown, CheckCircle2, TrendingDown, TrendingUp, ArrowDownToLine, Coins, Sparkles, Award, Fingerprint, Copy } from "lucide-react";
 import { useState, useEffect } from "react";
 import { TransactionOverlay, TransactionState } from "../../components/ui/transaction-overlay";
-import { formatCurrency } from "../../lib/utils";
+import { formatCurrency, formatDistanceToNow } from "../../lib/utils";
 import { ThemeToggle } from "../../components/theme-toggle";
-import { useUserProfile, useStoredTabs, useVirtualBalance, useWorkspaceMode, useSettledPayoutBalance, getStoredTabMembers, useDeveloperMode } from "../../lib/user";
+import { useUserProfile, useStoredTabs, useVirtualBalance, useWorkspaceMode, getStoredTabMembers, useDeveloperMode } from "../../lib/user";
+import { useAvailableBalance, computeCrossTabPosition } from "../../lib/balance";
 import { useNotifications } from "../../lib/notifications";
 import { CashOutDrawer } from "../../components/tab/cash-out-drawer";
 import { PitchModal } from "../../components/home/pitch-modal";
@@ -17,6 +18,7 @@ import { sounds } from "../../lib/sounds";
 import { AnimatedCounter } from "../../components/ui/animated-counter";
 import { NetworkStatusBadge } from "../../components/ui/network-status-badge";
 import { GlobalNav } from "../../components/ui/global-nav";
+import { LiveTime } from "@/components/ui/live-time";
 
 import { useWallets, usePrivy } from "@privy-io/react-auth";
 import { AuthGuard } from "../../components/providers/auth-guard";
@@ -33,7 +35,7 @@ export default function GlobalHub() {
   const { tabs: mockTabs, saveTab } = useStoredTabs();
   const { balance: virtualBalance } = useVirtualBalance();
   const { mode: workspaceMode, setMode: setWorkspaceMode } = useWorkspaceMode();
-  const { settledBalance, totalOutstandingDebt, withdrawableAmount } = useSettledPayoutBalance();
+  const { totalCents, heldCents, availableCents, isStale, asOf, isLoading } = useAvailableBalance(profile.name || "David");
   const { unreadCount } = useNotifications();
 
   // Use workspaceMode as the source of truth, not the URL
@@ -89,13 +91,13 @@ export default function GlobalHub() {
   })();
 
   const activeTabsList = !mounted
-    ? []
+    ? ([] as typeof mockTabs)
     : (workspaceMode === "blank" 
         ? mockTabs.filter(t => t.id !== "lisbon-24") 
         : mockTabs
       ).filter(t => !archivedTabIds.includes(t.id));
 
-  const syncedTabs = !mounted
+  const syncedTabs: any[] = !mounted
     ? []
     : activeTabsList.map(tab => {
         const members = getStoredTabMembers(tab.id, currentUserName);
@@ -107,13 +109,14 @@ export default function GlobalHub() {
         };
       });
 
-  const totalYouOwe = syncedTabs.filter(t => t.balance < 0).reduce((acc, t) => acc + Math.abs(t.balance), 0);
-  const totalOwedToYou = syncedTabs.filter(t => t.balance > 0).reduce((acc, t) => acc + t.balance, 0);
+  const crossTab = computeCrossTabPosition(currentUserName);
+  const totalYouOwe = crossTab.totalOwe;
+  const totalOwedToYou = crossTab.totalOwedToYou;
 
   // The user's mental model for "Total Net Balance":
   // If they have withdrawable cash, show it (e.g. +230).
   // If they have withdrawn it all, their liquid net is just their active debt (e.g. -270).
-  const netBalance = withdrawableAmount > 0 ? withdrawableAmount : -totalYouOwe;
+  const netBalance = availableCents > 0 ? availableCents : -totalYouOwe;
 
   // Dynamic Greeting Logic
   const hour = new Date().getHours();
@@ -147,7 +150,9 @@ export default function GlobalHub() {
       role: "Member",
       balance: 0,
       memberCount: 3,
-      lastActivity: "Just joined"
+      createdAt: Date.now(),
+      lastActivityAt: Date.now(),
+      lastActivityKind: "joined"
     });
 
     setJoinCode("");
@@ -327,13 +332,13 @@ export default function GlobalHub() {
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
               <span className="text-slate-600 dark:text-white/70 font-semibold text-xs uppercase tracking-wider">
-                Total Net Balance
+                {isTestnetMode ? "Total Balance" : "Total Net Balance"}
               </span>
               {!mounted ? (
                 <div className="h-10 w-44 bg-slate-200 dark:bg-white/10 rounded-2xl animate-pulse mt-1 mb-2" />
               ) : (
-                <div className={`text-3xl sm:text-4xl md:text-5xl font-bold mt-1 tracking-tight break-words min-w-0 ${netBalance < 0 ? "text-rose-600 dark:text-rose-400" : netBalance > 0 ? "text-emerald-500 dark:text-emerald-400" : "text-slate-900 dark:text-white"}`}>
-                  {netBalance < 0 ? "-" : netBalance > 0 ? "+" : ""}<AnimatedCounter value={Math.abs(netBalance) / 100} prefix="$" decimals={2} />
+                <div className={`text-3xl sm:text-4xl md:text-5xl font-bold mt-1 tracking-tight break-words min-w-0 ${isTestnetMode ? "text-slate-900 dark:text-white" : netBalance < 0 ? "text-rose-600 dark:text-rose-400" : netBalance > 0 ? "text-emerald-500 dark:text-emerald-400" : "text-slate-900 dark:text-white"}`}>
+                  {!isTestnetMode && netBalance < 0 ? "-" : !isTestnetMode && netBalance > 0 ? "+" : ""}<AnimatedCounter value={isTestnetMode ? (totalCents / 100) : (Math.abs(netBalance) / 100)} prefix="$" decimals={2} />
                 </div>
               )}
               <p className="text-slate-500 dark:text-white/50 text-xs mt-2 font-medium">
@@ -348,29 +353,35 @@ export default function GlobalHub() {
                 <div className="mt-4 flex items-center gap-3 flex-wrap">
                   <button 
                     onClick={() => {
-                      if (withdrawableAmount > 0) {
+                      if (availableCents > 0) {
                         sounds.playClick();
                         setShowCashOutModal(true);
                       }
                     }}
-                    disabled={withdrawableAmount <= 0}
+                    disabled={availableCents <= 0}
                     className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-white text-xs font-bold shadow-md transition-all ${
-                      withdrawableAmount > 0 
+                      availableCents > 0 
                         ? "bg-emerald-600 hover:bg-emerald-700 active:scale-95 shadow-emerald-500/25 cursor-pointer" 
                         : "bg-slate-300 dark:bg-white/10 text-slate-500 dark:text-white/40 shadow-none cursor-not-allowed"
                     }`}
-                    title={withdrawableAmount > 0 ? "Withdraw settled funds to your bank account" : "You need a positive settled balance to withdraw"}
+                    title={availableCents > 0 ? "Cash Out" : heldCents > 0 ? "Settle what you owe to unlock" : "Needs connection"}
                   >
-                    <ArrowDownToLine className="w-4 h-4" /> Cash Out to Bank
+                    <ArrowDownToLine className="w-4 h-4" /> {availableCents > 0 ? "Cash Out" : "Cash Out to Bank"}
                   </button>
                   <span className={`text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 border ${
-                    withdrawableAmount > 0 
+                    availableCents > 0 
                       ? "text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20"
                       : "text-slate-500 dark:text-white/50 bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10"
                   }`}>
-                    <CheckCircle2 className={`w-3.5 h-3.5 ${withdrawableAmount > 0 ? "text-emerald-500" : "text-slate-400"}`} />
-                    <span>{formatCurrency(withdrawableAmount)} Ready for Transfer</span>
+                    <CheckCircle2 className={`w-3.5 h-3.5 ${availableCents > 0 ? "text-emerald-500" : "text-slate-400"}`} />
+                    <span>{formatCurrency(availableCents)} available</span>
                   </span>
+                  {heldCents > 0 && (
+                    <span className="text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 border text-slate-500 dark:text-white/50 bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10" title="Held for what you owe">
+                      <span className="w-3 h-3 flex items-center justify-center bg-slate-400 text-white rounded-full text-[8px]">i</span>
+                      <span>{formatCurrency(heldCents)} held for what you owe</span>
+                    </span>
+                  )}
                 </div>
               )}
 
@@ -401,12 +412,12 @@ export default function GlobalHub() {
                 <>
                   <div className="w-px h-8 bg-slate-200 dark:bg-white/10" />
                   <div className="space-y-0.5">
-                    <div className={`flex items-center gap-1 font-semibold ${settledBalance > 0 ? "text-indigo-600 dark:text-indigo-400" : "text-slate-500 dark:text-white/50"}`}>
+                    <div className={`flex items-center gap-1 font-semibold ${totalCents > 0 ? "text-indigo-600 dark:text-indigo-400" : "text-slate-500 dark:text-white/50"}`}>
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Settled Payouts</span>
+                      <span>{isTestnetMode ? "Wallet Balance" : "Settled Payouts"}</span>
                     </div>
-                    <div className={`font-bold text-base ${settledBalance > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-white/40"}`}>
-                      {formatCurrency(settledBalance)}
+                    <div className={`font-bold text-base ${totalCents > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-white/40"}`}>
+                      {formatCurrency(totalCents)}
                     </div>
                   </div>
                 </>
@@ -527,9 +538,8 @@ export default function GlobalHub() {
                 </div>
                 
                 <div className="flex items-center justify-between border-t border-slate-100 dark:border-white/10 pt-4 mt-4">
-                  <div className="flex items-center gap-2 text-slate-500 dark:text-white/50 text-xs font-medium">
-                    <Receipt className="w-3.5 h-3.5" />
-                    <span>{tab.lastActivity}</span>
+                  <div className="flex items-center text-xs font-medium">
+                    <LiveTime ts={tab.lastActivityAt} kind={tab.lastActivityKind} variant="activity" />
                   </div>
                   <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all text-slate-400 dark:text-white/30 shadow-sm">
                     <ArrowRight className="w-4 h-4" />
@@ -637,9 +647,6 @@ export default function GlobalHub() {
       <CashOutDrawer 
         isOpen={showCashOutModal} 
         onClose={() => setShowCashOutModal(false)} 
-        settledBalance={settledBalance}
-        totalOutstandingDebt={totalOutstandingDebt}
-        withdrawableAmount={withdrawableAmount}
         currentUserName={profile.name} 
       />
 

@@ -6,7 +6,6 @@ import { Modal } from "../ui/modal";
 import { Button } from "../ui/button";
 import { formatCurrency } from "../../lib/utils";
 import { ExpenseCategory, getStoredTabMembers, saveStoredTabMembers, saveStoredExpense, type TabMember } from "../../lib/user";
-import { pushTabStateToRedis } from "../../lib/sync";
 import { sounds } from "../../lib/sounds";
 import { fireSettlementConfetti } from "../../lib/confetti";
 import { toast } from "sonner";
@@ -207,8 +206,7 @@ Airport Van Logistics, 120.00, Sarah`;
       });
     });
 
-    // 5. Push to Redis for cross-device sync
-    pushTabStateToRedis(tabId);
+    // 5. SyncProvider will handle pushing this offline update
 
     // 6. Notify UI
     if (typeof window !== "undefined") {

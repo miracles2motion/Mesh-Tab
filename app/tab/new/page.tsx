@@ -46,19 +46,24 @@ export default function CreateTab() {
     
     try {
       const mode = getWorkspaceMode();
-      let token = "";
-      try { token = (await getAccessToken()) || ""; } catch (e) {}
-
-      await fetch("/api/tab/new", {
-         method: "POST",
-         headers: {
-            "Content-Type": "application/json",
-            "Authorization": token ? `Bearer ${token}` : ""
-         },
-         body: JSON.stringify({ tabId: newTabId, name: currentUserName, mode })
-      });
+      if (mode === "testnet") {
+        import("@/lib/outbox").then(({ queueOutboxOp }) => {
+          queueOutboxOp({
+            type: "createTab",
+            tabId: newTabId,
+            ownerWallet: userAddress,
+            payload: {
+              tabId: newTabId,
+              tabName: tabName.trim(),
+              creatorName: currentUserName,
+              currency,
+              timestamp: Date.now()
+            }
+          });
+        });
+      }
     } catch (e) {
-      console.error("Failed to create tab on server", e);
+      console.error("Failed to create tab in outbox", e);
     }
     
     saveNewTab({
@@ -68,7 +73,9 @@ export default function CreateTab() {
       role: "Creator",
       balance: 0,
       memberCount: 1,
-      lastActivity: "Just created"
+      createdAt: Date.now(),
+      lastActivityAt: Date.now(),
+      lastActivityKind: "created"
     });
 
     router.push(`/tab/${newTabId}`);

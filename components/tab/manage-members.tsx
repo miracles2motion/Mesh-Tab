@@ -16,8 +16,8 @@ interface MemberItem {
 }
 
 import { useUserProfile, saveStoredTabMembers, useWorkspaceMode, seedDemoExpenses } from "../../lib/user";
-import { pushTabStateToRedis } from "../../lib/sync";
 import { isEffectivelyOnline } from "../../lib/network";
+import { storageKey, safeSetItem } from "../../lib/storage-keys";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 
@@ -112,7 +112,7 @@ export function ManageMembers({
     setMemberList(prev => {
       const updated = [...prev, newMember];
       saveStoredTabMembers(tabId, updated);
-      pushTabStateToRedis(tabId);
+      // SyncProvider will handle offline syncing
       return updated;
     });
     setIsSimulating(false);
@@ -142,7 +142,7 @@ export function ManageMembers({
   const handleSeedDemo = () => {
     sounds.playClick();
     seedDemoExpenses(tabId, activeUser);
-    pushTabStateToRedis(tabId);
+    // SyncProvider will handle offline syncing
     sounds.playSuccessChime();
     try {
       confetti({
@@ -216,12 +216,12 @@ export function ManageMembers({
     // Remove tab from local dashboard
     try {
       const mode = workspaceMode;
-      const tabsKey = mode === "sample" ? "meshTab_sample_tabs" : "meshTab_clean_tabs";
+      const tabsKey = storageKey("tabs", mode);
       const saved = localStorage.getItem(tabsKey);
       if (saved) {
         const parsedTabs = JSON.parse(saved);
         const filteredTabs = parsedTabs.filter((t: any) => t.id !== tabId);
-        localStorage.setItem(tabsKey, JSON.stringify(filteredTabs));
+        safeSetItem(tabsKey, JSON.stringify(filteredTabs));
         window.dispatchEvent(new Event("meshTab-tabs-update"));
       }
     } catch (e) {}
@@ -242,31 +242,23 @@ export function ManageMembers({
     toast.info("Deleting tab from network...");
 
     try {
-      // API call to wipe from Redis if online
-      if (isEffectivelyOnline()) {
+      // API call to wipe from Redis if online and in testnet mode
+      if (workspaceMode === "testnet" && isEffectivelyOnline()) {
         await fetch(`/api/tab/${tabId}?mode=${workspaceMode}`, { method: "DELETE" }).catch(() => {});
       }
 
       // Wipe local storage
       const mode = workspaceMode;
-      const tabsKey = mode === "sample" ? "meshTab_sample_tabs" : "meshTab_clean_tabs";
+      const tabsKey = storageKey("tabs", mode);
       const saved = localStorage.getItem(tabsKey);
       if (saved) {
         const parsedTabs = JSON.parse(saved);
         const filteredTabs = parsedTabs.filter((t: any) => t.id !== tabId);
-        localStorage.setItem(tabsKey, JSON.stringify(filteredTabs));
+        safeSetItem(tabsKey, JSON.stringify(filteredTabs));
       }
       
-      const membersKey = mode === "sample"
-        ? `meshTab_members_${tabId}`
-        : mode === "testnet"
-          ? `meshTab_testnet_members_${tabId}`
-          : `meshTab_clean_members_${tabId}`;
-      const expensesKey = mode === "sample"
-        ? `meshTab_expenses_${tabId}`
-        : mode === "testnet"
-          ? `meshTab_testnet_expenses_${tabId}`
-          : `meshTab_clean_expenses_${tabId}`;
+      const membersKey = storageKey("members", mode, tabId);
+      const expensesKey = storageKey("expenses", mode, tabId);
       localStorage.removeItem(membersKey);
       localStorage.removeItem(expensesKey);
 

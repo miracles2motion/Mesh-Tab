@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { ThemeToggle } from "../theme-toggle";
 import { Settings } from "lucide-react";
-import { useUserProfile, useSettledPayoutBalance } from "../../lib/user";
+import { useUserProfile } from "../../lib/user";
+import { useAvailableBalance } from "../../lib/balance";
 import { useEffect, useState } from "react";
 import { ArrowDownToLine } from "lucide-react";
 import { CashOutDrawer } from "../tab/cash-out-drawer";
@@ -11,7 +12,7 @@ import { sounds } from "../../lib/sounds";
 
 export function GlobalNav() {
   const profile = useUserProfile();
-  const { settledBalance, totalOutstandingDebt, withdrawableAmount } = useSettledPayoutBalance();
+  const { totalCents: settledBalance, availableCents: withdrawableAmount, heldCents: totalOutstandingDebt } = useAvailableBalance(profile.name || "David");
   const [mounted, setMounted] = useState(false);
   const [showCashOutModal, setShowCashOutModal] = useState(false);
   
@@ -48,9 +49,6 @@ export function GlobalNav() {
               <CashOutDrawer 
                 isOpen={showCashOutModal}
                 onClose={() => setShowCashOutModal(false)}
-                settledBalance={settledBalance}
-                totalOutstandingDebt={totalOutstandingDebt}
-                withdrawableAmount={withdrawableAmount}
               />
             </>
           )}

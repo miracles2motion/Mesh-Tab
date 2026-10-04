@@ -3,23 +3,25 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Receipt, ShieldCheck, Activity, ChevronRight, CheckCircle2, Search, X, CloudUpload } from "lucide-react";
-import { formatCurrency } from "../../lib/utils";
+import { formatCurrency, formatDistanceToNow } from "../../lib/utils";
 import Image from "next/image";
 import { EnvioLogo, MonadLogo } from "../ui/partner-logo";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ExpenseCategory } from "../../lib/user";
+import { LiveTime } from "../ui/live-time";
 
 export interface ExpenseItem {
   id: string;
   payer: string;
   amount: number; // in cents
   desc: string;
-  time: string;
+  time?: string;
   category?: ExpenseCategory;
   originalCurrency?: string;
   originalAmount?: number;
-  syncStatus?: "synced" | "pending";
+  createdAt?: number;
+  syncStatus?: "synced" | "pending" | "failed";
 }
 
 interface FeedListProps {
@@ -317,7 +319,7 @@ export function FeedList({ expenses, currentUserName }: FeedListProps) {
                               <CloudUpload className="w-3 h-3" />
                             </span>
                           )}
-                          {item.time}
+                          <LiveTime ts={item.createdAt} kind={isSettlement ? "settled" : "expense"} variant="activity" fallback={item.time} />
                         </span>
                       </div>
                     </div>

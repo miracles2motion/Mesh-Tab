@@ -4,6 +4,8 @@ import "./globals.css";
 import { Toaster } from "sonner";
 import { PwaRegister } from "../components/pwa-register";
 import { Web3Provider } from "../components/providers/web3-provider";
+import { SyncProvider } from "../components/providers/sync-provider";
+import { ConnectivityProvider } from "../components/providers/connectivity-provider";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -73,9 +75,13 @@ export default function RootLayout({
           }}
         />
         <Web3Provider>
-          <main className="flex-1 flex flex-col w-full min-h-[100dvh] relative overflow-x-clip">
-            {children}
-          </main>
+          <ConnectivityProvider>
+            <SyncProvider>
+              <main className="flex-1 flex flex-col w-full min-h-[100dvh] relative overflow-x-clip">
+                {children}
+              </main>
+            </SyncProvider>
+          </ConnectivityProvider>
         </Web3Provider>
         <PwaRegister />
         <Toaster position="top-right" richColors closeButton />

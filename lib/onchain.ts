@@ -4,11 +4,15 @@ import { createPublicClient, http, formatUnits, erc20Abi, encodeFunctionData } f
 import { useState, useEffect, useCallback } from "react";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
 import { monadTestnet } from "./chains";
+import { isEffectivelyOnline } from "./network";
 
 export function useRealAusdBalance(workspaceMode: string) {
   const { client } = useSmartWallets();
   const [balance, setBalance] = useState<number>(0);
+  const [cents, setCents] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [at, setAt] = useState<number>(Date.now());
+  const [isStale, setIsStale] = useState<boolean>(false);
 
   const fetchBalance = useCallback(async () => {
     if (workspaceMode !== "testnet") {
@@ -16,7 +20,32 @@ export function useRealAusdBalance(workspaceMode: string) {
       return;
     }
     
-    if (!client?.account?.address) {
+    const walletAddress = client?.account?.address;
+    if (!walletAddress) {
+      return;
+    }
+
+    // Try to load cached snapshot first
+    try {
+      const cached = localStorage.getItem("meshTab_testnet_walletSnapshot");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.wallet === walletAddress) {
+          setCents(parsed.cents);
+          setBalance(parsed.cents / 100);
+          setAt(parsed.at);
+          // If older than 30 seconds and offline, mark stale
+          if (!isEffectivelyOnline() && Date.now() - parsed.at > 30000) {
+            setIsStale(true);
+          } else {
+            setIsStale(false);
+          }
+        }
+      }
+    } catch (e) {}
+
+    if (!isEffectivelyOnline()) {
+      setIsLoading(false);
       return;
     }
 
@@ -33,7 +62,17 @@ export function useRealAusdBalance(workspaceMode: string) {
       });
 
       const formatted = parseFloat(formatUnits(rawBalance as bigint, 6));
+      const newCents = Math.round(formatted * 100);
       setBalance(formatted);
+      setCents(newCents);
+      setAt(Date.now());
+      setIsStale(false);
+      
+      localStorage.setItem("meshTab_testnet_walletSnapshot", JSON.stringify({
+        cents: newCents,
+        at: Date.now(),
+        wallet: walletAddress
+      }));
     } catch (err) {
       console.error("Error fetching real AUSD balance:", err);
     } finally {
@@ -46,11 +85,19 @@ export function useRealAusdBalance(workspaceMode: string) {
     
     if (workspaceMode === "testnet") {
       const interval = setInterval(fetchBalance, 10000);
-      return () => clearInterval(interval);
+      const handleOnline = () => fetchBalance();
+      window.addEventListener("online", handleOnline);
+      window.addEventListener("meshTab-network-change", handleOnline);
+      
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener("online", handleOnline);
+        window.removeEventListener("meshTab-network-change", handleOnline);
+      };
     }
   }, [fetchBalance, workspaceMode]);
 
-  return { balance, isLoading, refetch: fetchBalance };
+  return { balance, cents, isLoading, at, isStale, refetch: fetchBalance };
 }
 
 export function useClaimWelcomeBonus(workspaceMode: string) {

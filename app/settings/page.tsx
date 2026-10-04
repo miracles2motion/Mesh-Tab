@@ -894,6 +894,10 @@ function SettingsContent() {
                 <button
                   onClick={async () => {
                     sounds.playClick();
+                    if (typeof window !== "undefined" && !navigator.onLine) {
+                      toast.error("Cannot sign out while offline");
+                      return;
+                    }
                     try {
                       await logout();
                       // Clear sensitive frontend caches

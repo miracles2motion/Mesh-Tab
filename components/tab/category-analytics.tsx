@@ -11,7 +11,7 @@ interface ExpenseItem {
   payer: string;
   amount: number;
   desc: string;
-  time: string;
+  time?: string;
   category?: ExpenseCategory;
 }
 

@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { getStoredTabMembers, getStoredExpenses, getWorkspaceMode, getStoredUser, getStoredTabs, TabMember, StoredExpense } from "./user";
 import { isEffectivelyOnline } from "./network";
+import { storageKey, safeSetItem } from "./storage-keys";
 
 const FAST_INTERVAL = 15000;  // 15s polling during active user interaction
 const SLOW_INTERVAL = 60000; // 60s back-off when idle to protect Upstash quota
@@ -46,88 +47,6 @@ function haveExpensesChanged(serverExpenses: StoredExpense[], localExpenses: Sto
   return false;
 }
 
-export async function pushTabStateToRedis(tabId: string, getAccessToken?: () => Promise<string | null>) {
-  if (typeof window === "undefined" || !tabId || tabId === "new") return;
-  if (!isEffectivelyOnline()) return;
-
-  const mode = getWorkspaceMode();
-  const expenses = getStoredExpenses(tabId);
-  const pendingExpenses = expenses.filter(e => e.syncStatus === "pending");
-  if (pendingExpenses.length === 0) return; // Skip — nothing to push
-
-  let token = "";
-  if (getAccessToken) {
-    try {
-      token = (await getAccessToken()) || "";
-    } catch (e) {
-      console.warn("Failed to get token for sync push");
-    }
-  }
-
-  for (const exp of pendingExpenses) {
-    // Transform to payload
-    const payload = {
-      expenseId: exp.id,
-      description: exp.desc,
-      originalAmount: exp.originalAmount || Math.floor(exp.amount / 100),
-      originalCurrency: exp.originalCurrency || "USD",
-      finalAmountUsd: exp.amount, // assuming everything is cents
-      timestamp: new Date(exp.time).getTime() || Date.now(), // approximation if time is string like "Just now"
-      mode: mode,
-      payers: [{ name: exp.payer, amount: exp.amount }],
-      borrowers: [] as {name: string, amount: number}[],
-      metadata: exp // Include full UI state
-    };
-    
-    // We can infer borrowers based on splitType
-    if (exp.splitType === "exact" && exp.splits) {
-       for (const [name, amount] of Object.entries(exp.splits)) {
-           payload.borrowers.push({ name, amount });
-       }
-    } else if (exp.participants && exp.participants.length > 0) {
-       const splitCount = exp.participants.length;
-       const baseShare = Math.floor(exp.amount / splitCount);
-       let remainder = exp.amount - (baseShare * splitCount);
-       for (const p of exp.participants) {
-          let owes = baseShare + (remainder > 0 ? 1 : 0);
-          if (remainder > 0) remainder--;
-          payload.borrowers.push({ name: p, amount: owes });
-       }
-    } else {
-       // fallback
-       payload.borrowers.push({ name: "Unknown", amount: exp.amount });
-    }
-
-    try {
-      const res = await fetch(`/api/tab/${tabId}/expense/new`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": token ? `Bearer ${token}` : ""
-        },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-         // Mark as synced locally
-         const currentExpenses = getStoredExpenses(tabId);
-         const idx = currentExpenses.findIndex(e => e.id === exp.id);
-         if (idx >= 0) {
-            currentExpenses[idx].syncStatus = "synced";
-            const storageKey = mode === "sample"
-              ? `meshTab_expenses_${tabId}`
-              : mode === "testnet"
-                ? `meshTab_testnet_expenses_${tabId}`
-                : `meshTab_clean_expenses_${tabId}`;
-            localStorage.setItem(storageKey, JSON.stringify(currentExpenses));
-            window.dispatchEvent(new CustomEvent("meshTab-expenses-update", { detail: { fromServer: true } }));
-         }
-      }
-    } catch (err) {
-      console.error("Failed to push expense", err);
-    }
-  }
-}
-
 export function useTabSync(tabId: string, getAccessToken?: () => Promise<string | null>) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<Date | null>(null);
@@ -153,6 +72,8 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
       
       try {
         const mode = getWorkspaceMode();
+        if (mode !== "testnet") return;
+        
         let token = "";
         if (getAccessToken) {
           try {
@@ -184,12 +105,8 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
                  role: "member"
               }));
 
-              const storageKey = mode === "sample" 
-                ? `meshTab_members_${tabId}`
-                : mode === "testnet" 
-                  ? `meshTab_testnet_members_${tabId}`
-                  : `meshTab_clean_members_${tabId}`;
-              localStorage.setItem(storageKey, JSON.stringify(updatedMembers));
+              const storageKeyStr = storageKey("members", mode, tabId);
+              safeSetItem(storageKeyStr, JSON.stringify(updatedMembers));
               window.dispatchEvent(new CustomEvent("meshTab-members-update", { detail: { fromServer: true } }));
               stateUpdated = true;
 
@@ -198,19 +115,15 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
                 const profile = getStoredUser();
                 const userMember = updatedMembers.find((m: any) => m.name.toLowerCase() === profile.name.toLowerCase());
                 if (userMember) {
-                  const key = mode === "sample"
-                    ? "meshTab_sample_tabs"
-                    : mode === "testnet"
-                      ? "meshTab_testnet_tabs"
-                      : "meshTab_clean_tabs";
+                  const key = storageKey("tabs", mode);
                   const tabs = getStoredTabs();
                   const nextTabs = tabs.map(t => {
                     if (t.id === tabId) {
-                      return { ...t, balance: userMember.balance, memberCount: updatedMembers.length, lastActivity: "Just now" };
+                      return { ...t, balance: userMember.balance, memberCount: updatedMembers.length, lastActivityAt: Date.now() };
                     }
                     return t;
                   });
-                  localStorage.setItem(key, JSON.stringify(nextTabs));
+                  safeSetItem(key, JSON.stringify(nextTabs));
                   window.dispatchEvent(new Event("meshTab-tabs-update"));
                 }
               } catch (e) {}
@@ -234,12 +147,8 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
             });
             const localExpenses = getStoredExpenses(tabId);
             if (haveExpensesChanged(mappedExpenses, localExpenses)) {
-              const storageKey = mode === "sample"
-                ? `meshTab_expenses_${tabId}`
-                : mode === "testnet"
-                  ? `meshTab_testnet_expenses_${tabId}`
-                  : `meshTab_clean_expenses_${tabId}`;
-              localStorage.setItem(storageKey, JSON.stringify(mappedExpenses));
+              const storageKeyStr = storageKey("expenses", mode, tabId);
+              safeSetItem(storageKeyStr, JSON.stringify(mappedExpenses));
               window.dispatchEvent(new CustomEvent("meshTab-expenses-update", { detail: { fromServer: true } }));
               stateUpdated = true;
             }
@@ -324,8 +233,7 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
 
     const handleOnline = () => {
       markUserActive();
-      // Push any offline-created expenses/members, then pull remote updates
-      pushTabStateToRedis(tabId, getAccessToken);
+      // Pull remote updates
       pullFromRedis();
     };
 
@@ -339,8 +247,6 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
       const isSimulatedOffline = localStorage.getItem("meshTab_simulatedOffline") === "true";
       if (navigator.onLine && !isSimulatedOffline) {
         markUserActive();
-        // Force push before the next poll can overwrite our pending offline data
-        pushTabStateToRedis(tabId, getAccessToken);
         pullFromRedis();
       }
     };
@@ -355,7 +261,6 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
     const handleLocalUpdate = (e: any) => {
       if (e?.detail?.fromServer) return;
       markUserActive();
-      pushTabStateToRedis(tabId, getAccessToken);
     };
 
     window.addEventListener("meshTab-members-update", handleLocalUpdate);

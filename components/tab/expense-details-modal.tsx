@@ -4,11 +4,11 @@ import { useState } from "react";
 import { X, Receipt, Clock, User, ArrowRight, Trash2, AlertTriangle, Loader2, Edit2, Check } from "lucide-react";
 import { formatCurrency } from "../../lib/utils";
 import { useUserProfile, getWorkspaceMode, getStoredTabMembers, getStoredExpenses, StoredExpense, deleteStoredExpense, updateStoredExpenseDescription } from "../../lib/user";
-import { pushTabStateToRedis } from "../../lib/sync";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
 import { MonadLogo, EnvioLogo, PythLogo } from "../ui/partner-logo";
 import { EXPENSE_CATEGORIES } from "./add-expense-form";
+import { LiveTime } from "../ui/live-time";
 
 interface ExpenseDetailsProps {
   onClose?: () => void;
@@ -41,7 +41,7 @@ export function ExpenseDetails({ onClose, expenseId, tabId }: ExpenseDetailsProp
   const desc = foundCustomExpense?.desc || (isMock1 ? "Villa booking" : isMock2 ? "Dinners & wine" : isMock3 ? "Excursions" : "Shared Group Expense");
   const amount = foundCustomExpense?.amount || (isMock1 ? 60000 : isMock2 ? 26000 : isMock3 ? 22000 : 0);
   const payer = foundCustomExpense?.payer || (isMock1 ? "Aisha" : isMock2 ? "Kemi" : isMock3 ? "Ben" : currentUserName);
-  const time = foundCustomExpense?.time || (isMock1 ? "October 12, 2024 at 10:42 AM" : isMock2 ? "October 11, 2024 at 8:15 PM" : "Just now");
+  const time = foundCustomExpense?.createdAt ? new Date(foundCustomExpense.createdAt).toLocaleString() : foundCustomExpense?.time || (isMock1 ? "October 12, 2024 at 10:42 AM" : isMock2 ? "October 11, 2024 at 8:15 PM" : "Just now");
 
   const categoryInfo = foundCustomExpense?.category
     ? EXPENSE_CATEGORIES.find(c => c.id === foundCustomExpense.category)
@@ -81,6 +81,7 @@ export function ExpenseDetails({ onClose, expenseId, tabId }: ExpenseDetailsProp
     amount,
     payer,
     time,
+    createdAt: foundCustomExpense?.createdAt,
     splitType,
     splits: dynamicSplits
   };
@@ -92,9 +93,6 @@ export function ExpenseDetails({ onClose, expenseId, tabId }: ExpenseDetailsProp
     if (res.success) {
       sounds.playSuccessChime();
       setIsEditing(false);
-      try {
-        await pushTabStateToRedis(tabId);
-      } catch {}
       toast.success("Expense Note Updated!");
     } else {
       toast.error(res.error || "Failed to update note");
@@ -114,10 +112,7 @@ export function ExpenseDetails({ onClose, expenseId, tabId }: ExpenseDetailsProp
       return;
     }
 
-    // Push state to Redis for cross-device sync
-    try {
-      await pushTabStateToRedis(tabId);
-    } catch {}
+    // SyncProvider will handle pushing this offline update
 
     setIsDeleting(false);
     toast.success("Expense Removed", {
@@ -188,7 +183,7 @@ export function ExpenseDetails({ onClose, expenseId, tabId }: ExpenseDetailsProp
             </div>
             <div className="flex items-center gap-2 text-slate-500 dark:text-white/50 text-sm mt-1">
               <Clock className="w-4 h-4" />
-              <span>{details.time}</span>
+              <LiveTime ts={details.createdAt} kind={expenseId.startsWith("settle-") ? "settled" : "expense"} variant="compact" fallback={details.time} />
             </div>
           </div>
         </div>

@@ -6,7 +6,8 @@ import { getUserIdFromToken } from "@/lib/auth";
 // [OVERSEER MANDATE - Baseline 19 & 32]: Strict validation + String caps
 const createTabSchema = z.object({
   tabId: z.string().max(100),
-  name: z.string().max(50),
+  tabName: z.string().max(50),
+  creatorName: z.string().max(50),
   currency: z.string().length(3).default("USD"),
   timestamp: z.number(),
   mode: z.enum(["clean", "demo", "testnet"]).default("clean")
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "INVALID_PAYLOAD" }, { status: 400 });
     }
 
-    const { tabId, name, currency, timestamp, mode } = parsed.data;
+    const { tabId, tabName, creatorName, currency, timestamp, mode } = parsed.data;
     const tabKey = `meshtab:${mode}:tab:${tabId}`;
     
     // [OVERSEER MANDATE - Baseline 12]: API Idempotency
@@ -44,11 +45,11 @@ export async function POST(req: NextRequest) {
     // [OVERSEER MANDATE - Baseline 30]: Request Batching (Multi)
     // [OVERSEER MANDATE - Baseline 34]: Storage Pruning (TTL)
     const multi = redis.multi();
-    const tabData = JSON.stringify({ id: tabId, name, currency, createdAt: timestamp, serverSyncedAt });
+    const tabData = JSON.stringify({ id: tabId, name: tabName, currency, createdAt: timestamp, serverSyncedAt });
     multi.set(tabKey, tabData, { ex: 2592000 }); // 30 days
     
     // [OVERSEER MANDATE - Baseline 33]: Native Data Types (raw float string for balances)
-    multi.hset(`${tabKey}:members`, { [name]: "0.00" });
+    multi.hset(`${tabKey}:members`, { [creatorName]: "0.00" });
     multi.expire(`${tabKey}:members`, 2592000);
     multi.sadd(`${tabKey}:authorized_users`, creatorAddress);
     multi.expire(`${tabKey}:authorized_users`, 2592000);

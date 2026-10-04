@@ -1,0 +1,61 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { redis } from "@/lib/redis";
+import { getUserIdFromToken } from "@/lib/auth";
+import { LUA_REMOVE_MEMBER } from "@/lib/redis-scripts";
+
+const memberSchema = z.object({
+  mode: z.enum(["clean", "demo", "testnet"]).default("clean"),
+  action: z.enum(["add", "remove"]),
+  name: z.string().max(50)
+});
+
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const authHeader = req.headers.get("Authorization");
+    const walletAddress = await getUserIdFromToken(authHeader);
+    
+    if (!walletAddress) {
+      return NextResponse.json({ success: false, error: "UNAUTHORIZED" }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const body = await req.json();
+    
+    const parsed = memberSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ success: false, error: "INVALID_PAYLOAD" }, { status: 400 });
+    }
+
+    const { mode, action, name } = parsed.data;
+    const tabKey = `meshtab:${mode}:tab:${id}`;
+
+    const isMember = await redis.sismember(`${tabKey}:authorized_users`, walletAddress);
+    if (!isMember) {
+      return NextResponse.json({ success: false, error: "FORBIDDEN" }, { status: 403 });
+    }
+
+    const membersKey = `${tabKey}:members`;
+
+    if (action === "add") {
+      // HSETNX is idempotent
+      await redis.hsetnx(membersKey, name, 0);
+    } else if (action === "remove") {
+      const result = await redis.eval(
+        LUA_REMOVE_MEMBER,
+        [membersKey],
+        [name]
+      ) as [number, string];
+
+      if (result[0] === 0) {
+        return NextResponse.json({ success: false, error: result[1] }, { status: 400 });
+      }
+    }
+
+    return NextResponse.json({ success: true });
+    
+  } catch (error) {
+    console.error("Member Action Error:", error);
+    return NextResponse.json({ success: false, error: "DATABASE_UNAVAILABLE" }, { status: 500 });
+  }
+}

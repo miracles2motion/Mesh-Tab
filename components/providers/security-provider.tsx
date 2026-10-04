@@ -61,7 +61,9 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
       const hasPasskey = user?.linkedAccounts?.some(acc => acc.type === 'passkey') || false;
       localStorage.setItem("mesh_last_passkey_status", hasPasskey.toString());
       
-      logout();
+      if (typeof window !== "undefined" && navigator.onLine) {
+        logout();
+      }
       router.replace("/locked");
     };
 

@@ -9,6 +9,7 @@ import Image from "next/image";
 import { AgoraLogo } from "../ui/partner-logo";
 
 import { DEFAULT_USER_NAME, useSettledPayoutBalance, useWorkspaceMode } from "../../lib/user";
+import { useAvailableBalance } from "../../lib/balance";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
 import { fireSettlementConfetti } from "../../lib/confetti";
@@ -18,21 +19,20 @@ import { TransactionOverlay, TransactionState } from "../ui/transaction-overlay"
 interface CashOutDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  settledBalance: number;
-  totalOutstandingDebt: number;
-  withdrawableAmount: number;
   currentUserName?: string;
 }
 
 export function CashOutDrawer({
   isOpen,
   onClose,
-  settledBalance,
-  totalOutstandingDebt,
-  withdrawableAmount,
   currentUserName = DEFAULT_USER_NAME
 }: CashOutDrawerProps) {
   const { withdrawPayout } = useSettledPayoutBalance();
+  const { totalCents, heldCents, availableCents } = useAvailableBalance(currentUserName);
+  const settledBalance = totalCents;
+  const totalOutstandingDebt = heldCents;
+  const withdrawableAmount = availableCents;
+
   const { mode: workspaceMode } = useWorkspaceMode();
   const [method, setMethod] = useState<"card" | "bank">("card");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -279,13 +279,19 @@ export function CashOutDrawer({
             </div>
 
             <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-              Transfer Initiated!
+              {workspaceMode === "testnet" ? "Funds are SAFU! 🛡️" : "Transfer Initiated!"}
             </h3>
             <p className="text-slate-500 dark:text-white/60 text-sm max-w-xs mb-6 leading-relaxed text-center">
-              <span className="font-semibold text-slate-900 dark:text-white">
-                {formatCurrency(withdrawnAmount)}
-              </span>{" "}
-              is on its way to your {method === "card" ? "Debit Card" : "Bank Account"}.
+              {workspaceMode === "testnet" ? (
+                <>Since you are on the Monad testnet, your real funds were never touched. The walkthrough is complete.</>
+              ) : (
+                <>
+                  <span className="font-semibold text-slate-900 dark:text-white">
+                    {formatCurrency(withdrawnAmount)}
+                  </span>{" "}
+                  is on its way to your {method === "card" ? "Debit Card" : "Bank Account"}.
+                </>
+              )}
             </p>
 
             <div className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-4 mb-6 text-xs text-slate-500 dark:text-white/60 space-y-2 text-left">

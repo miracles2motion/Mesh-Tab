@@ -33,22 +33,50 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const start = page * limit;
     const end = start + limit - 1;
     
-    // Batch fetch members and expenses in one pipeline
+    // Batch fetch members, legacy expenses, and new expense IDs in one pipeline
     const pipeline = redis.pipeline();
-    pipeline.lrange(`${tabKey}:expenses`, start, end);
+    pipeline.lrange(`${tabKey}:expenses`, start, end); // Legacy list
+    pipeline.zrange(`${tabKey}:expenses_zset`, start, end, { rev: true }); // New zset
     pipeline.hgetall(`${tabKey}:members`);
     const results = await pipeline.exec();
     
-    const expensesRaw = results[0] as unknown[];
-    const membersMap = results[1] as Record<string, string>;
+    const legacyExpensesRaw = results[0] as unknown[];
+    const newExpenseIds = results[1] as string[];
+    const membersMap = results[2] as Record<string, string>;
     
-    const expenses = expensesRaw.map(e => {
-       try {
-           return typeof e === 'string' ? JSON.parse(e) : e;
-       } catch (err) {
-           return null;
-       }
+    // Fetch new expenses from hash
+    let newExpensesRaw: unknown[] = [];
+    if (newExpenseIds && newExpenseIds.length > 0) {
+      const hmres = await redis.hmget(`${tabKey}:expenses_hash`, ...newExpenseIds);
+      if (hmres && typeof hmres === 'object') {
+        newExpensesRaw = Object.values(hmres);
+      } else if (Array.isArray(hmres)) {
+        newExpensesRaw = hmres;
+      }
+    }
+    
+    // Parse and merge
+    const parsedLegacy = legacyExpensesRaw.map(e => {
+       try { return typeof e === 'string' ? JSON.parse(e) : e; } catch (err) { return null; }
     }).filter(e => e !== null);
+    
+    const parsedNew = newExpensesRaw.map(e => {
+       try { return typeof e === 'string' ? JSON.parse(e) : e; } catch (err) { return null; }
+    }).filter(e => e !== null);
+
+    // Merge and deduplicate by expenseId (new hash takes precedence over legacy)
+    const expensesMap = new Map<string, any>();
+    for (const exp of parsedLegacy) {
+      if (exp && exp.expenseId) expensesMap.set(exp.expenseId, exp);
+    }
+    for (const exp of parsedNew) {
+      if (exp && exp.expenseId) expensesMap.set(exp.expenseId, exp);
+    }
+    
+    const expenses = Array.from(expensesMap.values());
+    
+    // Sort combined expenses by serverSyncedAt descending
+    expenses.sort((a, b) => (b.serverSyncedAt || 0) - (a.serverSyncedAt || 0));
 
     const members = Object.keys(membersMap || {}).map(name => ({
       name,
@@ -60,7 +88,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       expenses, 
       members,
       page, 
-      hasMore: expenses.length === limit 
+      hasMore: (parsedLegacy.length === limit) || (parsedNew.length === limit)
     });
     
   } catch (error) {

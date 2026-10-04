@@ -6,7 +6,8 @@ import { Settings, Edit3, Archive, RotateCcw, Globe, Trash2, X, Check, AlertTria
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { SUPPORTED_CURRENCIES } from "../../lib/pyth";
-
+import { getWorkspaceMode } from "../../lib/user";
+import { storageKey } from "../../lib/storage-keys";
 interface TabSettingsDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -64,7 +65,8 @@ export function TabSettingsDrawer({ isOpen, onClose, tabId, tabName, tabCurrency
     
     // In demo mode: mark the tab as archived in localStorage
     try {
-      const archivedKey = "meshTab_archived";
+      const mode = getWorkspaceMode();
+      const archivedKey = storageKey("archived", mode);
       const raw = localStorage.getItem(archivedKey);
       const archived: string[] = raw ? JSON.parse(raw) : [];
       if (!archived.includes(tabId)) {
@@ -80,10 +82,12 @@ export function TabSettingsDrawer({ isOpen, onClose, tabId, tabName, tabCurrency
         label: "Undo",
         onClick: () => {
           try {
-            const raw = localStorage.getItem("meshTab_archived");
+            const mode = getWorkspaceMode();
+            const archivedKey = storageKey("archived", mode);
+            const raw = localStorage.getItem(archivedKey);
             const archived: string[] = raw ? JSON.parse(raw) : [];
             const updated = archived.filter(id => id !== tabId);
-            localStorage.setItem("meshTab_archived", JSON.stringify(updated));
+            localStorage.setItem(archivedKey, JSON.stringify(updated));
             window.dispatchEvent(new Event("meshTab-tabs-update"));
             toast.info("Tab Restored");
           } catch (e) { /* ignore */ }

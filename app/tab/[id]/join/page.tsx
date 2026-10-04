@@ -90,7 +90,9 @@ export default function JoinTabPage() {
       role: "Member",
       balance: 0,
       memberCount: updatedMembers.length,
-      lastActivity: "Just joined"
+      createdAt: Date.now(),
+      lastActivityAt: Date.now(),
+      lastActivityKind: "joined"
     });
 
     sounds.playSuccessChime();

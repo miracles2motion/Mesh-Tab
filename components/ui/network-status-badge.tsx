@@ -1,13 +1,13 @@
 "use client";
 
-import { useNetworkStatus } from "../../lib/network";
+import { useConnectivity } from "../../components/providers/connectivity-provider";
 import { WifiOff, Activity, Plane, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 export function NetworkStatusBadge({ compact = false }: { compact?: boolean }) {
-  const { isSimulatedOffline, isEffectivelyOnline, pendingCount, toggleAirplaneMode } = useNetworkStatus();
+  const { isSimulatedOffline, isEffectivelyOnline, pendingCount, toggleAirplaneMode } = useConnectivity();
   
   const [justReconnected, setJustReconnected] = useState(false);
 
