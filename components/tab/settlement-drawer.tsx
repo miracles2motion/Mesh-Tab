@@ -1,19 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { Zap, AlertCircle, Coins, CreditCard, Sparkles, Check } from "lucide-react";
+import { Zap, AlertCircle, Coins, CreditCard, Sparkles, Check, Plus } from "lucide-react";
 import { Sheet } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { formatCurrency } from "../../lib/utils";
 import { ReceiptView } from "../ReceiptView";
 import { MonadLogo, AgoraLogo, PythLogo } from "../ui/partner-logo";
+import { AddFundsDrawer } from "./add-funds-drawer";
 
 import { useUserProfile, settleTab, useVirtualBalance, deductSettledPayout, useStoredTabMembers, useWorkspaceMode } from "../../lib/user";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { fireSettlementConfetti, fireFaucetConfetti } from "../../lib/confetti";
 import { SUPPORTED_CURRENCIES, usePythRate } from "../../lib/pyth";
-import { erc20Abi, encodeFunctionData, createPublicClient, http } from "viem";
+import { erc20Abi, encodeFunctionData, createPublicClient, http, isAddress } from "viem";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
 import { useRealAusdBalance } from "../../lib/onchain";
 
@@ -44,8 +45,9 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
   const profile = useUserProfile();
   const { mode: workspaceMode } = useWorkspaceMode();
   const { client } = useSmartWallets();
-  const { balance: testnetBalance } = useRealAusdBalance(workspaceMode);
+  const { balance: testnetBalance, refetch: refetchTestnetBalance } = useRealAusdBalance(workspaceMode);
   const { balance: virtualBalance, deduct, topUp } = useVirtualBalance();
+  const [showAddFunds, setShowAddFunds] = useState(false);
   const activeUser = currentUserName || profile.name || "David";
   const { members: tabMembers } = useStoredTabMembers(tabId, activeUser);
   
@@ -88,10 +90,25 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
         // debtAmount is in cents. AUSD has 6 decimals.
         const amountWei = BigInt(debtAmount) * BigInt(10 ** 4); 
 
-        // We use a mock creditor address for the demo since users aren't mapped to on-chain addresses in the local state
-        const mockCreditorAddress = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"; // vitalik.eth
+        // Resolve creditor member dynamically from tab roster
+        const creditorMember = tabMembers.find(
+          m => m.name.toLowerCase() === (primaryCreditor || "").toLowerCase()
+        );
 
-        toast.loading("Processing payment securely...", { id: "tx-toast" });
+        const rawCreditorAddress = creditorMember?.walletAddress;
+
+        // [OVERSEER MANDATE - Baseline 3 & 10]: Strict EVM verification on testnet (Zero Mock Fallback)
+        if (!rawCreditorAddress || !isAddress(rawCreditorAddress)) {
+          toast.error("Creditor wallet not found", {
+            description: `${primaryCreditor || "The creditor"} has not linked their Monad wallet to this tab yet. Please ask them to open and sync the tab.`
+          });
+          setIsProcessing(false);
+          return;
+        }
+
+        const targetCreditorAddress = rawCreditorAddress as `0x${string}`;
+
+        toast.loading(`Processing settlement with ${primaryCreditor || "creditor"}...`, { id: "tx-toast" });
 
         const approveHash = await client.sendTransaction({
           to: ausdAddress,
@@ -112,7 +129,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
           data: encodeFunctionData({
             abi: MeshTabLedgerABI,
             functionName: "payNettedDebt",
-            args: [tabId, mockCreditorAddress, amountWei]
+            args: [tabId, targetCreditorAddress, amountWei]
           })
         });
 
@@ -163,7 +180,8 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
   }
 
   return (
-    <Sheet isOpen={isOpen} onClose={onClose} size="4xl">
+    <>
+      <Sheet isOpen={isOpen} onClose={onClose} size="4xl">
       <div className="p-6 md:p-8 flex flex-col items-center bg-white dark:bg-[#0a0a0a] text-slate-900 dark:text-white">
         <div className="w-full">
           <div className="text-center mb-8">
@@ -319,20 +337,38 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
                 </div>
               )}
 
-              <Button 
-                onClick={handleSettle}
-                disabled={paymentMethod === "ausd" && !hasEnoughVirtual}
-                variant="primary" 
-                size="lg" 
-                className="w-full h-14 font-bold text-base shadow-xl hover:-translate-y-0.5 transition-all cursor-pointer"
-                isLoading={isProcessing}
-              >
-                {paymentMethod === "ausd"
-                  ? (hasEnoughVirtual 
-                      ? (workspaceMode === "testnet" ? `Confirm ${formatCurrency(debtAmount)} with Mesh Balance` : `Confirm ${formatCurrency(debtAmount)} with Account Balance`)
-                      : `Insufficient Balance (${formatCurrency(activeBalance)})`)
-                  : `Pay ${pythConfig?.symbol || "$"}${formattedConverted} ${payCurrency} with Card`}
-              </Button>
+              {paymentMethod === "ausd" && !hasEnoughVirtual ? (
+                <div className="space-y-3 w-full">
+                  <div className="p-3.5 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-2xl flex items-center justify-between text-xs text-amber-800 dark:text-amber-300">
+                    <span>Account Balance: <strong>{formatCurrency(activeBalance)}</strong></span>
+                    <span>Required: <strong>{formatCurrency(debtAmount)}</strong></span>
+                  </div>
+                  <Button 
+                    onClick={() => {
+                      sounds.playClick();
+                      setShowAddFunds(true);
+                    }}
+                    variant="primary" 
+                    size="lg" 
+                    className="w-full h-14 font-bold text-base shadow-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2 text-white"
+                  >
+                    <Plus className="w-5 h-5" /> Add Funds to Settle
+                  </Button>
+                </div>
+              ) : (
+                <Button 
+                  onClick={handleSettle}
+                  disabled={paymentMethod === "ausd" && !hasEnoughVirtual}
+                  variant="primary" 
+                  size="lg" 
+                  className="w-full h-14 font-bold text-base shadow-xl hover:-translate-y-0.5 transition-all cursor-pointer"
+                  isLoading={isProcessing}
+                >
+                  {paymentMethod === "ausd"
+                    ? (workspaceMode === "testnet" ? `Confirm ${formatCurrency(debtAmount)} with Mesh Balance` : `Confirm ${formatCurrency(debtAmount)} with Account Balance`)
+                    : `Pay ${pythConfig?.symbol || "$"}${formattedConverted} ${payCurrency} with Card`}
+                </Button>
+              )}
             </div>
           </div>
           
@@ -350,5 +386,16 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
       </div>
       </div>
     </Sheet>
+
+    <AddFundsDrawer 
+      isOpen={showAddFunds} 
+      onClose={() => setShowAddFunds(false)} 
+      onSuccess={() => {
+        if (workspaceMode === "testnet") {
+          refetchTestnetBalance();
+        }
+      }} 
+    />
+  </>
   );
 }

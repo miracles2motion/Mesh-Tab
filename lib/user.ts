@@ -386,6 +386,7 @@ export interface TabMember {
   balance: number; // in cents
   type: "creditor" | "debtor" | "settled";
   role?: "admin" | "member";
+  walletAddress?: string;
 }
 
 export const DEFAULT_LISBON_MEMBERS: TabMember[] = [

@@ -27,8 +27,10 @@ import {
   addSettledPayout, 
   topUpVirtualBalance, 
   useSettledPayoutBalance, 
-  useUserProfile 
+  useUserProfile,
+  useWorkspaceMode
 } from "@/lib/user";
+import { useRealAusdBalance, useClaimWelcomeBonus } from "@/lib/onchain";
 import { addNotification } from "@/lib/notifications";
 import { formatCurrency } from "@/lib/utils";
 import { sounds } from "@/lib/sounds";
@@ -53,22 +55,35 @@ const QUICK_CHIPS = [
 export function AddFundsDrawer({ isOpen, onClose, onSuccess }: AddFundsDrawerProps) {
   const profile = useUserProfile();
   const { settledBalance } = useSettledPayoutBalance();
+  const { mode: workspaceMode } = useWorkspaceMode();
+  const isTestnet = workspaceMode === "testnet";
+  const { balance: testnetBalance, refetch: refetchTestnetBalance } = useRealAusdBalance(workspaceMode);
+  const { claimBonus, isClaiming: isTestnetClaiming, hasClaimed, checkHasClaimed } = useClaimWelcomeBonus(workspaceMode);
 
-  const [amountStr, setAmountStr] = useState("100.00");
+  const [amountStr, setAmountStr] = useState(isTestnet ? "5000.00" : "100.00");
   const [selectedMethod, setSelectedMethod] = useState<DepositMethod>("card");
   const [currentStep, setCurrentStep] = useState<"select" | "details" | "success">("select");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [lastDepositedCents, setLastDepositedCents] = useState(10000);
+  const [lastDepositedCents, setLastDepositedCents] = useState(isTestnet ? 500000 : 10000);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Compute integer cents from input string
+  useEffect(() => {
+    if (isTestnet) {
+      setAmountStr("5000.00");
+      checkHasClaimed();
+    }
+  }, [isTestnet, checkHasClaimed]);
+
+  // Compute integer cents from input string or fixed 5k on testnet
   const parsedFloat = parseFloat(amountStr) || 0;
-  const depositCents = Math.max(0, Math.round(parsedFloat * 100));
-  const newProjectedBalance = settledBalance + depositCents;
+  const depositCents = isTestnet ? 500000 : Math.max(0, Math.round(parsedFloat * 100));
+  const currentActiveBalance = isTestnet ? Math.round(testnetBalance * 100) : settledBalance;
+  const newProjectedBalance = currentActiveBalance + depositCents;
+  const isAlreadyAllocated = isTestnet && (hasClaimed || testnetBalance >= 5000);
 
   const handleChipClick = (centsToAdd: number) => {
     sounds.playClick();
@@ -97,12 +112,21 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess }: AddFundsDrawerPro
     setIsProcessing(true);
     sounds.playClick();
 
-    // 1.5s simulated loading for Privy on-ramp execution
-    await new Promise((r) => setTimeout(r, 1500));
-
-    // Symmetrically mutate both demo balance stores
-    addSettledPayout(depositCents);
-    topUpVirtualBalance(depositCents);
+    if (isTestnet) {
+      const { success, error } = await claimBonus();
+      if (!success) {
+        setIsProcessing(false);
+        toast.error("Deposit Failed", { description: error || "Could not complete testnet deposit." });
+        return;
+      }
+      refetchTestnetBalance();
+    } else {
+      // 1.5s simulated loading for Demo mode
+      await new Promise((r) => setTimeout(r, 1500));
+      // Symmetrically mutate both demo balance stores
+      addSettledPayout(depositCents);
+      topUpVirtualBalance(depositCents);
+    }
 
     // Audio & celebratory feedback
     sounds.playCoinClink();
@@ -117,7 +141,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess }: AddFundsDrawerPro
     try {
       addNotification({
         type: "faucet",
-        title: "Deposit Received",
+        title: isTestnet ? "Testnet Deposit Received" : "Deposit Received",
         desc: `Added ${formatCurrency(depositCents)} via ${methodLabel}.`,
         actor: "You",
         amount: depositCents,
@@ -148,8 +172,67 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess }: AddFundsDrawerPro
     <Sheet isOpen={isOpen} onClose={handleClose} size="4xl">
       <div className="p-6 md:p-8 flex flex-col items-center bg-white dark:bg-[#0a0a0a] text-slate-900 dark:text-white">
         <AnimatePresence mode="wait">
+          {/* ALLOCATION ALREADY ACTIVE (TESTNET 1-TIME LIMIT ENFORCED) */}
+          {isAlreadyAllocated && currentStep !== "success" ? (
+            <motion.div
+              key="allocation-active-view"
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.2 }}
+              className="py-6 flex flex-col items-center max-w-md mx-auto text-center"
+            >
+              <div className="w-16 h-16 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-4 text-purple-600 dark:text-purple-400 shadow-lg shadow-purple-500/10">
+                <ShieldCheck className="w-8 h-8" />
+              </div>
+
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 text-xs font-semibold mb-3">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Monad Testnet • 1-Time Allocation</span>
+              </div>
+
+              <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                Allocation Active
+              </h3>
+              <p className="text-slate-500 dark:text-white/60 text-sm mb-6 leading-relaxed">
+                Your wallet has already received the 1-time <strong className="text-slate-900 dark:text-white font-semibold">$5,000.00 Testnet Welcome Allocation</strong>. To prevent faucet exhaustion, each wallet address is provisioned once on Monad Testnet.
+              </p>
+
+              {/* Status details card */}
+              <div className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-4 mb-6 text-xs space-y-2.5 text-left">
+                <div className="flex justify-between items-center text-slate-600 dark:text-white/70">
+                  <span>Available Balance:</span>
+                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+                    {formatCurrency(Math.round(testnetBalance * 100))}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-slate-600 dark:text-white/70">
+                  <span>Settlement Asset:</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">Agora AUSD (ERC-20)</span>
+                </div>
+                <div className="flex justify-between items-center text-slate-600 dark:text-white/70">
+                  <span>Network:</span>
+                  <span className="font-semibold text-purple-600 dark:text-purple-400">Monad Testnet (10143)</span>
+                </div>
+                <div className="flex justify-between items-center text-slate-600 dark:text-white/70">
+                  <span>Gas Policy:</span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">Pimlico Paymaster (Sponsored)</span>
+                </div>
+              </div>
+
+              <Button 
+                onClick={handleClose} 
+                variant="primary" 
+                size="lg"
+                className="w-full h-12 font-bold shadow-md bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-all cursor-pointer"
+              >
+                Got It
+              </Button>
+            </motion.div>
+          ) : null}
+
           {/* STEP 1: SELECT METHOD & AMOUNT */}
-          {currentStep === "select" && (
+          {!isAlreadyAllocated && currentStep === "select" && (
             <motion.div 
               key="select-step"
               initial={{ opacity: 0, x: -15 }}
@@ -163,9 +246,13 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess }: AddFundsDrawerPro
                 <div className="w-16 h-16 rounded-full bg-indigo-500/10 flex items-center justify-center mb-4 border border-indigo-500/20 mx-auto">
                   <ArrowDownLeft className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
                 </div>
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Add Funds</h2>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+                  {isTestnet ? "Testnet Welcome Allocation" : "Add Funds"}
+                </h2>
                 <p className="text-slate-500 dark:text-white/60 text-sm max-w-sm mx-auto">
-                  Instant account funding with zero fees, powered by Privy on-ramps.
+                  {isTestnet 
+                    ? "Claim your initial $5,000.00 Agora AUSD testnet balance to test shared tabs."
+                    : "Instant account funding with zero fees, powered by Privy on-ramps."}
                 </p>
               </div>
 
@@ -175,7 +262,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess }: AddFundsDrawerPro
                   {/* Amount Input Card */}
                   <div className="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 shadow-sm">
                     <label className="text-slate-500 dark:text-white/40 font-semibold text-xs uppercase tracking-wider block mb-2">
-                      Deposit Amount (USD)
+                      {isTestnet ? "Allocation Amount (USD)" : "Deposit Amount (USD)"}
                     </label>
 
                     <div className="relative flex items-center">
@@ -185,34 +272,42 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess }: AddFundsDrawerPro
                         step="any"
                         min="1"
                         max="10000"
-                        value={amountStr}
-                        onChange={(e) => setAmountStr(e.target.value)}
+                        value={isTestnet ? "5000.00" : amountStr}
+                        disabled={isTestnet}
+                        onChange={(e) => !isTestnet && setAmountStr(e.target.value)}
                         placeholder="100.00"
-                        className="w-full bg-transparent text-4xl sm:text-5xl font-extrabold text-slate-900 dark:text-white focus:outline-none tabular-nums tracking-tight"
+                        className={`w-full bg-transparent text-4xl sm:text-5xl font-extrabold text-slate-900 dark:text-white focus:outline-none tabular-nums tracking-tight ${isTestnet ? "cursor-not-allowed opacity-90" : ""}`}
                       />
                     </div>
 
-                    {/* Quick Adjustment Chips */}
-                    <div className="mt-4 flex items-center gap-2 flex-wrap">
-                      {QUICK_CHIPS.map((chip) => (
-                        <button
-                          key={chip.label}
-                          type="button"
-                          onClick={() => handleChipClick(chip.value)}
-                          className="px-3 py-1.5 rounded-full bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-700 dark:text-white/80 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:border-indigo-300 dark:hover:border-indigo-500/30 transition-all cursor-pointer active:scale-95 shadow-sm"
-                        >
-                          {chip.label}
-                        </button>
-                      ))}
-                    </div>
+                    {/* Quick Adjustment Chips (Demo) or 1-Time Allocation Tag (Testnet) */}
+                    {isTestnet ? (
+                      <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 text-xs font-semibold">
+                        <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                        <span>Monad Testnet 1-Time Allocation ($5,000.00)</span>
+                      </div>
+                    ) : (
+                      <div className="mt-4 flex items-center gap-2 flex-wrap">
+                        {QUICK_CHIPS.map((chip) => (
+                          <button
+                            key={chip.label}
+                            type="button"
+                            onClick={() => handleChipClick(chip.value)}
+                            className="px-3 py-1.5 rounded-full bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-700 dark:text-white/80 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:border-indigo-300 dark:hover:border-indigo-500/30 transition-all cursor-pointer active:scale-95 shadow-sm"
+                          >
+                            {chip.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Dynamic Balance Preview Card */}
                   <div className="p-4 rounded-2xl bg-indigo-50/60 dark:bg-indigo-500/10 border border-indigo-200/60 dark:border-indigo-500/20 text-xs space-y-2">
                     <div className="flex justify-between items-center text-slate-600 dark:text-white/70">
-                      <span>Current Account Cash:</span>
+                      <span>{isTestnet ? "Current Monad AUSD:" : "Current Account Cash:"}</span>
                       <span className="font-semibold text-slate-800 dark:text-white font-mono">
-                        {formatCurrency(settledBalance)}
+                        {formatCurrency(currentActiveBalance)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center text-indigo-700 dark:text-indigo-300 font-bold">
@@ -486,7 +581,9 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess }: AddFundsDrawerPro
                   size="lg"
                   className="w-full h-14 font-bold text-base shadow-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-all cursor-pointer"
                 >
-                  {isProcessing ? "Securing deposit via Privy..." : `Confirm ${formatCurrency(depositCents)} Deposit`}
+                  {isProcessing 
+                    ? (isTestnet ? "Securing allocation via Monad & Pimlico..." : "Securing deposit via Privy...") 
+                    : (isTestnet ? "Confirm $5,000.00 Allocation" : `Confirm ${formatCurrency(depositCents)} Deposit`)}
                 </Button>
               </div>
 
@@ -534,15 +631,17 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess }: AddFundsDrawerPro
                 <div className="flex justify-between">
                   <span>Funding Method</span>
                   <span className="font-semibold text-slate-800 dark:text-white">
-                    {selectedMethod === "card" ? "Visa Platinum Debit (Instant)" :
-                     selectedMethod === "bank" ? "Direct Bank (FedNow)" : 
-                     "Google Pay"}
+                    {isTestnet
+                      ? "Monad Testnet AUSD Allocation"
+                      : (selectedMethod === "card" ? "Visa Platinum Debit (Instant)" :
+                         selectedMethod === "bank" ? "Direct Bank (FedNow)" : 
+                         "Google Pay")}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>New Available Balance</span>
                   <span className="font-bold text-indigo-600 dark:text-indigo-400 font-mono">
-                    {formatCurrency(settledBalance)}
+                    {formatCurrency(isTestnet ? Math.round(testnetBalance * 100) : settledBalance)}
                   </span>
                 </div>
                 <div className="flex justify-between">

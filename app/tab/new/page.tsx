@@ -9,9 +9,10 @@ import { Button } from "../../../components/ui/button";
 import Image from "next/image";
 import { MonadLogo, AgoraLogo, PythLogo } from "../../../components/ui/partner-logo";
 
-import { saveNewTab, getStoredUser, DEFAULT_USER_NAME, getWorkspaceMode } from "../../../lib/user";
+import { saveNewTab, getStoredUser, DEFAULT_USER_NAME, getWorkspaceMode, saveStoredTabMembers } from "../../../lib/user";
 import { SUPPORTED_CURRENCIES } from "../../../lib/pyth";
 import { useWallets, usePrivy } from "@privy-io/react-auth";
+import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
 
 async function generateSecureSuffix(address: string) {
   const timestamp = Date.now().toString();
@@ -29,9 +30,11 @@ export default function CreateTab() {
   const [tabName, setTabName] = useState("");
   const [currency, setCurrency] = useState<string>("USD");
   
-  const { getAccessToken } = usePrivy();
+  const { getAccessToken, user } = usePrivy();
   const { wallets } = useWallets();
-  const userAddress = wallets?.[0]?.address || "anonymous";
+  const { client } = useSmartWallets();
+  const smartWalletAddress = client?.account?.address || user?.wallet?.address;
+  const userAddress = smartWalletAddress || wallets?.[0]?.address || "anonymous";
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +60,8 @@ export default function CreateTab() {
               tabName: tabName.trim(),
               creatorName: currentUserName,
               currency,
-              timestamp: Date.now()
+              timestamp: Date.now(),
+              creatorWallet: smartWalletAddress && /^0x[a-fA-F0-9]{40}$/.test(smartWalletAddress) ? smartWalletAddress : undefined
             }
           });
         });
@@ -66,6 +70,15 @@ export default function CreateTab() {
       console.error("Failed to create tab in outbox", e);
     }
     
+    // Seed initial member with verified wallet address
+    saveStoredTabMembers(newTabId, [{
+      name: currentUserName,
+      balance: 0,
+      type: "settled",
+      role: "admin",
+      walletAddress: smartWalletAddress || undefined
+    }]);
+
     saveNewTab({
       id: newTabId,
       name: tabName.trim(),

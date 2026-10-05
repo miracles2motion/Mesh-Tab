@@ -10,16 +10,17 @@ const createTabSchema = z.object({
   creatorName: z.string().max(50),
   currency: z.string().length(3).default("USD"),
   timestamp: z.number(),
-  mode: z.enum(["clean", "demo", "testnet"]).default("clean")
+  mode: z.enum(["clean", "demo", "testnet"]).default("clean"),
+  creatorWallet: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional()
 });
 
 export async function POST(req: NextRequest) {
   try {
     // [OVERSEER MANDATE - Baseline 10]: Zero-Trust Payloads
     const authHeader = req.headers.get("Authorization");
-    const creatorAddress = await getUserIdFromToken(authHeader);
+    const creatorUserId = await getUserIdFromToken(authHeader);
     
-    if (!creatorAddress) {
+    if (!creatorUserId) {
       return NextResponse.json({ success: false, error: "UNAUTHORIZED" }, { status: 401 });
     }
 
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "INVALID_PAYLOAD" }, { status: 400 });
     }
 
-    const { tabId, tabName, creatorName, currency, timestamp, mode } = parsed.data;
+    const { tabId, tabName, creatorName, currency, timestamp, mode, creatorWallet } = parsed.data;
     const tabKey = `meshtab:${mode}:tab:${tabId}`;
     
     // [OVERSEER MANDATE - Baseline 12]: API Idempotency
@@ -51,9 +52,17 @@ export async function POST(req: NextRequest) {
     // [OVERSEER MANDATE - Baseline 33]: Native Data Types (raw float string for balances)
     multi.hset(`${tabKey}:members`, { [creatorName]: "0.00" });
     multi.expire(`${tabKey}:members`, 2592000);
-    multi.sadd(`${tabKey}:authorized_users`, creatorAddress);
+    
+    // [OVERSEER MANDATE - Baseline 10 & 18]: Verified Peer-to-Peer Member EVM Wallet Mapping
+    if (creatorWallet) {
+      multi.hset(`${tabKey}:member_wallets`, { [creatorName]: creatorWallet });
+      multi.expire(`${tabKey}:member_wallets`, 2592000);
+    }
+    
+    // Authorization set uses authenticated Privy DID for cryptographic access control
+    multi.sadd(`${tabKey}:authorized_users`, creatorUserId);
     multi.expire(`${tabKey}:authorized_users`, 2592000);
-    multi.sadd(`meshtab:${mode}:user:${creatorAddress}:tabs`, tabId);
+    multi.sadd(`meshtab:${mode}:user:${creatorUserId}:tabs`, tabId);
     
     await multi.exec();
 

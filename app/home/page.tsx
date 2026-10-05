@@ -347,17 +347,15 @@ export default function GlobalHub() {
 
               {mounted && (
                 <div className="mt-4 flex items-center gap-3 flex-wrap">
-                  {!isTestnetMode && (
-                    <button
-                      onClick={() => {
-                        sounds.playClick();
-                        setShowAddFundsModal(true);
-                      }}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold shadow-md shadow-indigo-500/25 transition-all cursor-pointer hover:scale-105"
-                    >
-                      <Plus className="w-4 h-4" /> Add Funds
-                    </button>
-                  )}
+                  <button
+                    onClick={() => {
+                      sounds.playClick();
+                      setShowAddFundsModal(true);
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold shadow-md shadow-indigo-500/25 transition-all cursor-pointer hover:scale-105"
+                  >
+                    <Plus className="w-4 h-4" /> Add Funds
+                  </button>
                   <button 
                     onClick={() => {
                       if (availableCents > 0) {

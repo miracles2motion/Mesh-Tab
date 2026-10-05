@@ -25,6 +25,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const multi = redis.multi();
     multi.del(tabKey);
     multi.del(`${tabKey}:members`);
+    multi.del(`${tabKey}:member_wallets`);
     multi.del(`${tabKey}:expenses`);
     multi.del(`${tabKey}:authorized_users`);
 

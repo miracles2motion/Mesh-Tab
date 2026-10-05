@@ -6,16 +6,17 @@ import { getUserIdFromToken } from "@/lib/auth";
 const joinTabSchema = z.object({
   tabId: z.string().max(100),
   name: z.string().max(50),
-  mode: z.enum(["clean", "demo", "testnet"]).default("clean")
+  mode: z.enum(["clean", "demo", "testnet"]).default("clean"),
+  walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional()
 });
 
 export async function POST(req: NextRequest) {
   try {
     // [OVERSEER MANDATE - Baseline 10]: Zero-Trust Payloads
     const authHeader = req.headers.get("Authorization");
-    const walletAddress = await getUserIdFromToken(authHeader);
+    const userId = await getUserIdFromToken(authHeader);
     
-    if (!walletAddress) {
+    if (!userId) {
       return NextResponse.json({ success: false, error: "UNAUTHORIZED" }, { status: 401 });
     }
 
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "INVALID_PAYLOAD" }, { status: 400 });
     }
 
-    const { tabId, name, mode } = parsed.data;
+    const { tabId, name, mode, walletAddress } = parsed.data;
     
     const tabKey = `meshtab:${mode}:tab:${tabId}`;
     
@@ -37,22 +38,31 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if already a member
-    const isMember = await redis.sismember(`${tabKey}:authorized_users`, walletAddress);
+    const isMember = await redis.sismember(`${tabKey}:authorized_users`, userId);
     if (isMember) {
+       // [OVERSEER MANDATE - Baseline 12]: Idempotent refresh of member wallet mapping
+       if (walletAddress) {
+         await redis.hset(`${tabKey}:member_wallets`, { [name]: walletAddress });
+       }
        return NextResponse.json({ success: true, message: "Already a member" });
     }
     
     const multi = redis.multi();
     // [OVERSEER MANDATE - Baseline 33]: Native Data Types (raw float string)
     multi.hset(`${tabKey}:members`, { [name]: "0.00" });
-    multi.sadd(`${tabKey}:authorized_users`, walletAddress);
+    // [OVERSEER MANDATE - Baseline 10 & 18]: Verified Peer-to-Peer Member EVM Wallet Mapping
+    if (walletAddress) {
+      multi.hset(`${tabKey}:member_wallets`, { [name]: walletAddress });
+      multi.expire(`${tabKey}:member_wallets`, 2592000);
+    }
+    multi.sadd(`${tabKey}:authorized_users`, userId);
     
     // [OVERSEER MANDATE - Baseline 34]: Storage Pruning (TTL refresh)
     multi.expire(`${tabKey}:members`, 2592000); // 30 days
     multi.expire(`${tabKey}:authorized_users`, 2592000);
     multi.expire(tabKey, 2592000);
     
-    multi.sadd(`meshtab:${mode}:user:${walletAddress}:tabs`, tabId);
+    multi.sadd(`meshtab:${mode}:user:${userId}:tabs`, tabId);
     
     await multi.exec();
 

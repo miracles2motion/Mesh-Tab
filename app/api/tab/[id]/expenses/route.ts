@@ -33,16 +33,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const start = page * limit;
     const end = start + limit - 1;
     
-    // Batch fetch members, legacy expenses, and new expense IDs in one pipeline
+    // Batch fetch members, wallets, legacy expenses, and new expense IDs in one pipeline
     const pipeline = redis.pipeline();
     pipeline.lrange(`${tabKey}:expenses`, start, end); // Legacy list
     pipeline.zrange(`${tabKey}:expenses_zset`, start, end, { rev: true }); // New zset
     pipeline.hgetall(`${tabKey}:members`);
+    pipeline.hgetall(`${tabKey}:member_wallets`);
     const results = await pipeline.exec();
     
     const legacyExpensesRaw = results[0] as unknown[];
     const newExpenseIds = results[1] as string[];
     const membersMap = results[2] as Record<string, string>;
+    const memberWalletsMap = (results[3] || {}) as Record<string, string>;
     
     // Fetch new expenses from hash
     let newExpensesRaw: unknown[] = [];
@@ -80,7 +82,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const members = Object.keys(membersMap || {}).map(name => ({
       name,
-      balance: parseFloat(membersMap[name] || "0")
+      balance: parseFloat(membersMap[name] || "0"),
+      walletAddress: memberWalletsMap[name] || undefined
     }));
 
     return NextResponse.json({ 

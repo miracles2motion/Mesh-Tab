@@ -26,7 +26,7 @@ function haveMembersChanged(serverMembers: TabMember[], localMembers: TabMember[
   for (const sm of serverMembers) {
     const lm = localMembers.find(m => m.name.toLowerCase() === sm.name.toLowerCase());
     if (!lm) return true;
-    if (lm.balance !== sm.balance || lm.type !== sm.type || lm.role !== sm.role) {
+    if (lm.balance !== sm.balance || lm.type !== sm.type || lm.role !== sm.role || lm.walletAddress !== sm.walletAddress) {
       return true;
     }
   }
@@ -97,13 +97,17 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
           // Smart Deep Merge for Members
           if (members && Array.isArray(members) && members.length > 0) {
             const localMembers = getStoredTabMembers(tabId);
-              // Apply member types (creditor, debtor) to match UI
-              const updatedMembers = members.map((m: any) => ({
-                 name: m.name,
-                 balance: m.balance,
-                 type: m.balance === 0 ? "settled" : m.balance > 0 ? "creditor" : "debtor",
-                 role: "member"
-              }));
+              // Apply member types (creditor, debtor) and preserve wallet addresses
+              const updatedMembers = members.map((m: any) => {
+                 const localMatch = localMembers.find(lm => lm.name.toLowerCase() === m.name.toLowerCase());
+                 return {
+                    name: m.name,
+                    balance: m.balance,
+                    type: m.balance === 0 ? ("settled" as const) : m.balance > 0 ? ("creditor" as const) : ("debtor" as const),
+                    role: localMatch?.role || "member",
+                    walletAddress: m.walletAddress || localMatch?.walletAddress
+                 };
+              });
 
               const storageKeyStr = storageKey("members", mode, tabId);
               safeSetItem(storageKeyStr, JSON.stringify(updatedMembers));

@@ -103,6 +103,37 @@ export function useRealAusdBalance(workspaceMode: string) {
 export function useClaimWelcomeBonus(workspaceMode: string) {
   const { client } = useSmartWallets();
   const [isClaiming, setIsClaiming] = useState(false);
+  const [hasClaimed, setHasClaimed] = useState<boolean>(false);
+
+  const checkHasClaimed = useCallback(async () => {
+    if (workspaceMode !== "testnet" || !client?.account?.address) {
+      return;
+    }
+    try {
+      const publicClient = createPublicClient({
+        transport: http(process.env.NEXT_PUBLIC_MONAD_RPC_URL || "https://testnet-rpc.monad.xyz")
+      });
+      const claimed = await publicClient.readContract({
+        address: (process.env.NEXT_PUBLIC_MOCK_AUSD_ADDRESS as `0x${string}`) || "0xF9bA02Cd0aFc210e0867852eEb0E994B07d9957F",
+        abi: [{
+          inputs: [{ name: "", type: "address" }],
+          name: "hasReceivedBonus",
+          outputs: [{ name: "", type: "bool" }],
+          stateMutability: "view",
+          type: "function"
+        }],
+        functionName: "hasReceivedBonus",
+        args: [client.account.address as `0x${string}`],
+      });
+      setHasClaimed(Boolean(claimed));
+    } catch (e) {
+      // fallback
+    }
+  }, [client, workspaceMode]);
+
+  useEffect(() => {
+    checkHasClaimed();
+  }, [checkHasClaimed]);
 
   const claimBonus = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
     if (!client) {
@@ -139,6 +170,7 @@ export function useClaimWelcomeBonus(workspaceMode: string) {
       });
       await publicClient.waitForTransactionReceipt({ hash: txHash });
 
+      setHasClaimed(true);
       return { success: true };
     } catch (err: any) {
       const userMessage = err?.message?.includes("Unsupported chain")
@@ -152,5 +184,5 @@ export function useClaimWelcomeBonus(workspaceMode: string) {
     }
   }, [client, workspaceMode]);
 
-  return { claimBonus, isClaiming };
+  return { claimBonus, isClaiming, hasClaimed, checkHasClaimed };
 }

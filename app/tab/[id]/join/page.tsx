@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { getStoredTabMembers, saveStoredTabMembers, type TabMember, saveNewTab, saveStoredUser, getWorkspaceMode } from "../../../../lib/user";
 import { isEffectivelyOnline } from "../../../../lib/network";
 import { usePrivy } from "@privy-io/react-auth";
+import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
 import { sounds } from "../../../../lib/sounds";
 import confetti from "canvas-confetti";
 
@@ -17,7 +18,9 @@ export default function JoinTabPage() {
   const paramName = searchParams?.get("n");
   const tabName = paramName || tabId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   const router = useRouter();
-  const { getAccessToken, authenticated, login } = usePrivy();
+  const { getAccessToken, authenticated, user } = usePrivy();
+  const { client } = useSmartWallets();
+  const smartWalletAddress = client?.account?.address || user?.wallet?.address;
   const [name, setName] = useState("");
   const [step, setStep] = useState<"name" | "auth" | "success">("name");
 
@@ -36,10 +39,9 @@ export default function JoinTabPage() {
     
     // Simulate biometric authentication delay or actual Privy login if needed
     if (!authenticated) {
-       // If not authenticated, we could trigger privy login
-       // For hackathon flow, we'll assume they login or have a mock token
+       // If not authenticated, we assume they login or have a mock token
     } else {
-       await new Promise(r => setTimeout(r, 1800));
+       await new Promise(r => setTimeout(r, 1200));
     }
     
     let token = "";
@@ -48,7 +50,7 @@ export default function JoinTabPage() {
     } catch (e) {}
 
     const mode = getWorkspaceMode();
-    if (isEffectivelyOnline()) {
+    if (isEffectivelyOnline() && mode === "testnet") {
        try {
           const res = await fetch("/api/tab/join", {
              method: "POST",
@@ -56,13 +58,21 @@ export default function JoinTabPage() {
                 "Content-Type": "application/json",
                 "Authorization": token ? `Bearer ${token}` : ""
              },
-             body: JSON.stringify({ tabId, name: trimmedName, mode })
+             body: JSON.stringify({ 
+                tabId, 
+                name: trimmedName, 
+                mode,
+                walletAddress: smartWalletAddress && /^0x[a-fA-F0-9]{40}$/.test(smartWalletAddress) ? smartWalletAddress : undefined
+             })
           });
           if (!res.ok) {
-             console.error("Failed to join tab on server");
+             const errData = await res.json().catch(() => ({}));
+             console.warn("Server join response:", errData);
+             toast.error("Sync Notice", { description: "Joined locally; server sync will retry when connection stabilizes." });
           }
        } catch (e) {
           console.error("Failed to push join to server:", e);
+          toast.info("Offline Join", { description: "Saved locally. Tab will sync when back online." });
        }
     }
 
@@ -76,9 +86,16 @@ export default function JoinTabPage() {
         name: trimmedName,
         balance: 0,
         type: "settled",
-        role: "member"
+        role: "member",
+        walletAddress: smartWalletAddress || undefined
       };
       updatedMembers = [...members, newMember];
+    } else if (smartWalletAddress && !existing.walletAddress) {
+      updatedMembers = members.map(m => 
+        m.name.toLowerCase() === trimmedName.toLowerCase() 
+          ? { ...m, walletAddress: smartWalletAddress }
+          : m
+      );
     }
     
     saveStoredTabMembers(tabId, updatedMembers);

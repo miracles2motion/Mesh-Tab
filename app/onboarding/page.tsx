@@ -24,18 +24,7 @@ import confetti from "canvas-confetti";
 import Image from "next/image";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
-import { encodeFunctionData } from "viem";
 import { AuthGuard } from "../../components/providers/auth-guard";
-
-const MockAUSD_ABI = [
-  {
-    "inputs": [],
-    "name": "claimWelcomeBonus",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  }
-];
 
 function OnboardingContent() {
   const router = useRouter();
@@ -46,6 +35,7 @@ function OnboardingContent() {
   const intent = searchParams.get("intent");
   const { user, linkPasskey } = usePrivy();
   const { client } = useSmartWallets();
+  const smartWalletAddress = client?.account?.address || user?.wallet?.address;
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
   // Step 1: Passkey enrollment
@@ -68,7 +58,7 @@ function OnboardingContent() {
     sounds.playClick();
 
     const finalName = name.trim();
-    const result = await saveStoredUser(finalName, selectedColorIdx, user?.wallet?.address);
+    const result = await saveStoredUser(finalName, selectedColorIdx, smartWalletAddress);
     if (result.error) {
       toast.error("Error", { description: result.error });
       setIsSubmitting(false);
@@ -136,29 +126,6 @@ function OnboardingContent() {
 
   const finishOnboarding = async () => {
     setStep(3);
-
-    // Trigger Welcome Bonus Gasless Transaction if in testnet mode
-    if (intent === "testnet") {
-      toast.info("Setting up your account...", { description: "Adding your $5,000 welcome bonus..." });
-      try {
-      if (client) {
-        // Call the smart contract silently (Privy pays gas via sponsorship policy)
-        await client.sendTransaction({
-          to: process.env.NEXT_PUBLIC_MOCK_AUSD_ADDRESS as `0x${string}`,
-          data: encodeFunctionData({
-            abi: MockAUSD_ABI,
-            functionName: "claimWelcomeBonus",
-            args: []
-          })
-        });
-
-        // Short delay to let the TX broadcast smoothly
-        await new Promise((resolve) => setTimeout(resolve, 800));
-      }
-      } catch (err) {
-        console.warn("Welcome bonus failed or already claimed:", err);
-      }
-    }
 
     sounds.playSuccessChime();
     try {

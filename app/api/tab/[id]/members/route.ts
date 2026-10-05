@@ -7,15 +7,16 @@ import { LUA_REMOVE_MEMBER } from "@/lib/redis-scripts";
 const memberSchema = z.object({
   mode: z.enum(["clean", "demo", "testnet"]).default("clean"),
   action: z.enum(["add", "remove"]),
-  name: z.string().max(50)
+  name: z.string().max(50),
+  walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional()
 });
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const authHeader = req.headers.get("Authorization");
-    const walletAddress = await getUserIdFromToken(authHeader);
+    const userId = await getUserIdFromToken(authHeader);
     
-    if (!walletAddress) {
+    if (!userId) {
       return NextResponse.json({ success: false, error: "UNAUTHORIZED" }, { status: 401 });
     }
 
@@ -27,10 +28,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ success: false, error: "INVALID_PAYLOAD" }, { status: 400 });
     }
 
-    const { mode, action, name } = parsed.data;
+    const { mode, action, name, walletAddress } = parsed.data;
     const tabKey = `meshtab:${mode}:tab:${id}`;
 
-    const isMember = await redis.sismember(`${tabKey}:authorized_users`, walletAddress);
+    const isMember = await redis.sismember(`${tabKey}:authorized_users`, userId);
     if (!isMember) {
       return NextResponse.json({ success: false, error: "FORBIDDEN" }, { status: 403 });
     }
@@ -40,6 +41,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (action === "add") {
       // HSETNX is idempotent
       await redis.hsetnx(membersKey, name, 0);
+      if (walletAddress) {
+        await redis.hset(`${tabKey}:member_wallets`, { [name]: walletAddress });
+      }
     } else if (action === "remove") {
       const result = await redis.eval(
         LUA_REMOVE_MEMBER,
@@ -50,6 +54,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       if (result[0] === 0) {
         return NextResponse.json({ success: false, error: result[1] }, { status: 400 });
       }
+
+      await redis.hdel(`${tabKey}:member_wallets`, name);
     }
 
     return NextResponse.json({ success: true });
