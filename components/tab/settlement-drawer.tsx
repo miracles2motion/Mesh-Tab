@@ -383,6 +383,8 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
 
     <AddFundsDrawer 
       isOpen={showAddFunds} 
+      suggestedAmountCents={Math.max(0, debtAmount - activeBalance) || debtAmount}
+      reason="Settle Tab Debt"
       onClose={() => setShowAddFunds(false)} 
       onSuccess={() => {
         if (workspaceMode === "testnet") {

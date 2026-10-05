@@ -1446,11 +1446,13 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
       {/* Add Funds Drawer for Live Balance Top Up */}
       <AddFundsDrawer 
         isOpen={isAddFundsOpen}
+        suggestedAmountCents={shortageCents > 0 ? shortageCents : undefined}
+        reason="Cover Visa Card Shortage"
         onClose={() => setIsAddFundsOpen(false)}
         onSuccess={() => {
           setIsAddFundsOpen(false);
           toast.success("Card Balance Topped Up!", {
-            description: "Your available card balance has been refreshed."
+            description: "Your available card balance has been refreshed and is ready to pay."
           });
         }}
       />

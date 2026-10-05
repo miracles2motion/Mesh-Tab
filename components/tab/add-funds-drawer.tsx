@@ -41,6 +41,8 @@ interface AddFundsDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: (amountCents: number) => void;
+  suggestedAmountCents?: number;
+  reason?: string;
 }
 
 type DepositMethod = "card" | "bank" | "gpay";
@@ -52,7 +54,7 @@ const QUICK_CHIPS = [
   { label: "+$250", value: 25000 }
 ];
 
-export function AddFundsDrawer({ isOpen, onClose, onSuccess }: AddFundsDrawerProps) {
+export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCents, reason }: AddFundsDrawerProps) {
   const profile = useUserProfile();
   const { settledBalance } = useSettledPayoutBalance();
   const { mode: workspaceMode } = useWorkspaceMode();
@@ -60,7 +62,13 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess }: AddFundsDrawerPro
   const { balance: testnetBalance, refetch: refetchTestnetBalance } = useRealAusdBalance(workspaceMode);
   const { claimBonus, isClaiming: isTestnetClaiming, hasClaimed, checkHasClaimed } = useClaimWelcomeBonus(workspaceMode);
 
-  const [amountStr, setAmountStr] = useState(isTestnet ? "5000.00" : "100.00");
+  const initialAmount = isTestnet 
+    ? "5000.00" 
+    : suggestedAmountCents && suggestedAmountCents > 0 
+      ? (suggestedAmountCents / 100).toFixed(2) 
+      : "100.00";
+
+  const [amountStr, setAmountStr] = useState(initialAmount);
   const [selectedMethod, setSelectedMethod] = useState<DepositMethod>("card");
   const [currentStep, setCurrentStep] = useState<"select" | "details" | "success">("select");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -71,12 +79,21 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess }: AddFundsDrawerPro
     setMounted(true);
   }, []);
 
+  // When drawer opens, reset step and prefill exact shortage if provided
   useEffect(() => {
-    if (isTestnet) {
-      setAmountStr("5000.00");
-      checkHasClaimed();
+    if (isOpen) {
+      setCurrentStep("select");
+      setIsProcessing(false);
+      if (isTestnet) {
+        setAmountStr("5000.00");
+        checkHasClaimed();
+      } else if (suggestedAmountCents && suggestedAmountCents > 0) {
+        setAmountStr((suggestedAmountCents / 100).toFixed(2));
+      } else {
+        setAmountStr("100.00");
+      }
     }
-  }, [isTestnet, checkHasClaimed]);
+  }, [isOpen, isTestnet, suggestedAmountCents, checkHasClaimed]);
 
   // Compute integer cents from input string or fixed 5k on testnet
   const parsedFloat = parseFloat(amountStr) || 0;
@@ -265,6 +282,25 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess }: AddFundsDrawerPro
                       {isTestnet ? "Allocation Amount (USD)" : "Deposit Amount (USD)"}
                     </label>
 
+                    {suggestedAmountCents && suggestedAmountCents > 0 && !isTestnet && (
+                      <div className="mb-3 p-2.5 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-xs flex items-center justify-between text-indigo-800 dark:text-indigo-300">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                          <span>{reason || "Shortage to Cover"}: <strong>{formatCurrency(suggestedAmountCents)}</strong></span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            sounds.playClick();
+                            setAmountStr((suggestedAmountCents / 100).toFixed(2));
+                          }}
+                          className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 underline cursor-pointer hover:opacity-80"
+                        >
+                          Reset to exact
+                        </button>
+                      </div>
+                    )}
+
                     <div className="relative flex items-center">
                       <span className="text-3xl font-extrabold text-slate-400 dark:text-white/40 mr-2">$</span>
                       <input 
@@ -288,6 +324,22 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess }: AddFundsDrawerPro
                       </div>
                     ) : (
                       <div className="mt-4 flex items-center gap-2 flex-wrap">
+                        {suggestedAmountCents && suggestedAmountCents > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              sounds.playClick();
+                              setAmountStr((suggestedAmountCents / 100).toFixed(2));
+                            }}
+                            className={`px-3 py-1.5 rounded-full border text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-sm ${
+                              depositCents === suggestedAmountCents
+                                ? "bg-indigo-600 text-white border-indigo-600 shadow-indigo-500/25"
+                                : "bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100"
+                            }`}
+                          >
+                            Exact ({formatCurrency(suggestedAmountCents)})
+                          </button>
+                        )}
                         {QUICK_CHIPS.map((chip) => (
                           <button
                             key={chip.label}
