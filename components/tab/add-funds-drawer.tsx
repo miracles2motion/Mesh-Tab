@@ -26,10 +26,10 @@ import {
 import { 
   addSettledPayout, 
   topUpVirtualBalance, 
-  useSettledPayoutBalance, 
   useUserProfile,
   useWorkspaceMode
 } from "@/lib/user";
+import { useAvailableBalance } from "@/lib/balance";
 import { useRealAusdBalance, useClaimWelcomeBonus } from "@/lib/onchain";
 import { addNotification } from "@/lib/notifications";
 import { formatCurrency } from "@/lib/utils";
@@ -56,9 +56,9 @@ const QUICK_CHIPS = [
 
 export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCents, reason }: AddFundsDrawerProps) {
   const profile = useUserProfile();
-  const { settledBalance } = useSettledPayoutBalance();
   const { mode: workspaceMode } = useWorkspaceMode();
   const isTestnet = workspaceMode === "testnet";
+  const { totalCents, heldCents, availableCents } = useAvailableBalance(profile.name || "David");
   const { balance: testnetBalance, refetch: refetchTestnetBalance } = useRealAusdBalance(workspaceMode);
   const { claimBonus, isClaiming: isTestnetClaiming, hasClaimed, checkHasClaimed } = useClaimWelcomeBonus(workspaceMode);
 
@@ -98,8 +98,9 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
   // Compute integer cents from input string or fixed 5k on testnet
   const parsedFloat = parseFloat(amountStr) || 0;
   const depositCents = isTestnet ? 500000 : Math.max(0, Math.round(parsedFloat * 100));
-  const currentActiveBalance = isTestnet ? Math.round(testnetBalance * 100) : settledBalance;
-  const newProjectedBalance = currentActiveBalance + depositCents;
+  // Total Net Available Balance across all tabs (funds available to spend right now)
+  const currentNetBalance = availableCents;
+  const newProjectedBalance = currentNetBalance + depositCents;
   const isAlreadyAllocated = isTestnet && (hasClaimed || testnetBalance >= 5000);
 
   const handleChipClick = (centsToAdd: number) => {
@@ -173,13 +174,12 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
     setLastDepositedCents(depositCents);
     setIsProcessing(false);
     setCurrentStep("success");
-
-    if (onSuccess) {
-      onSuccess(depositCents);
-    }
   };
 
   const handleClose = () => {
+    if (currentStep === "success" && onSuccess) {
+      onSuccess(lastDepositedCents);
+    }
     setCurrentStep("select");
     setIsProcessing(false);
     onClose();
@@ -357,11 +357,19 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
                   {/* Dynamic Balance Preview Card */}
                   <div className="p-4 rounded-2xl bg-indigo-50/60 dark:bg-indigo-500/10 border border-indigo-200/60 dark:border-indigo-500/20 text-xs space-y-2">
                     <div className="flex justify-between items-center text-slate-600 dark:text-white/70">
-                      <span>{isTestnet ? "Current Monad AUSD:" : "Current Account Cash:"}</span>
+                      <span>{isTestnet ? "Current Available Monad AUSD:" : "Current Net Available Balance:"}</span>
                       <span className="font-semibold text-slate-800 dark:text-white font-mono">
-                        {formatCurrency(currentActiveBalance)}
+                        {formatCurrency(currentNetBalance)}
                       </span>
                     </div>
+                    {heldCents > 0 && !isTestnet && (
+                      <div className="flex justify-between items-center text-slate-500 dark:text-white/50 text-[11px]">
+                        <span>Reserved for Group Tab Debt:</span>
+                        <span className="font-mono text-amber-600 dark:text-amber-400 font-medium">
+                          -{formatCurrency(heldCents)}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between items-center text-indigo-700 dark:text-indigo-300 font-bold">
                       <span>Projected Balance After Deposit:</span>
                       <span className="font-mono text-sm">
@@ -693,7 +701,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
                 <div className="flex justify-between">
                   <span>New Available Balance</span>
                   <span className="font-bold text-indigo-600 dark:text-indigo-400 font-mono">
-                    {formatCurrency(isTestnet ? Math.round(testnetBalance * 100) : settledBalance)}
+                    {formatCurrency(availableCents)}
                   </span>
                 </div>
                 <div className="flex justify-between">

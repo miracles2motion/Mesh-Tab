@@ -50,17 +50,19 @@ export function EarnTicker({ tabId = "lisbon-24", className = "" }: EarnTickerPr
 
   // Demo mode: Pure in-memory tick every 1.5s — Zero storage I/O thrashing
   useEffect(() => {
-    if (isTestnet) return; // Zero simulated ticking on Testnet
+    if (isTestnet || workspaceMode === "blank" || idleCents <= 0) return; // Zero simulated ticking on Testnet or Clean Slate
     const interval = setInterval(() => {
       setTickerTime(Date.now());
     }, 1500);
     return () => clearInterval(interval);
-  }, [isTestnet]);
+  }, [isTestnet, workspaceMode, idleCents]);
 
   const live = useMemo(() => {
-    if (isTestnet) return { totalYieldCents: 0, unharvestedCents: 0, displayYieldUsd: "0.00" };
+    if (isTestnet || workspaceMode === "blank" || idleCents <= 0) {
+      return { totalYieldCents: 0, unharvestedCents: 0, displayYieldUsd: "0.00" };
+    }
     return calculateLiveYield(idleCents, settings, tickerTime);
-  }, [idleCents, settings, tickerTime, isTestnet]);
+  }, [idleCents, settings, tickerTime, isTestnet, workspaceMode]);
 
   const handleHarvest = () => {
     sounds.playClick();
@@ -83,6 +85,11 @@ export function EarnTicker({ tabId = "lisbon-24", className = "" }: EarnTickerPr
     setSettings(getEarnSettings(workspaceMode));
     setIsModalOpen(false);
   };
+
+  // OVERSEER Isolation: Never show false APY yield on clean slate or when no funds exist
+  if (workspaceMode === "blank") return null;
+  if (!isTestnet && idleCents <= 0) return null;
+  if (isTestnet && (!testnetAusdBalance || testnetAusdBalance <= 0)) return null;
 
   return (
     <>

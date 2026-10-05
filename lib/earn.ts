@@ -12,17 +12,29 @@ export interface EarnSettings {
   vaultName: string;
 }
 
-const DEFAULT_EARN_SETTINGS: EarnSettings = {
+const SAMPLE_EARN_SETTINGS: EarnSettings = {
   enabled: true,
   apy: 0.048, // 4.8% APY
-  lastAccruedAt: Date.now() - 86400000 * 2, // simulated 2 days of idle accrual
+  lastAccruedAt: Date.now() - 86400000 * 2, // simulated 2 days of idle accrual for Lisbon benchmark
   accruedCents: 185, // starts with $1.85 accrued on the Lisbon benchmark
   totalHarvestedCents: 0,
   vaultName: "Privy Earn Agora Vault",
 };
 
+const CLEAN_EARN_SETTINGS: EarnSettings = {
+  enabled: true,
+  apy: 0.048,
+  lastAccruedAt: Date.now(),
+  accruedCents: 0, // Clean slate and testnet start strictly at 0 accrued yield
+  totalHarvestedCents: 0,
+  vaultName: "Privy Earn Agora Vault",
+};
+
 export function getEarnSettings(mode: WorkspaceMode): EarnSettings {
-  if (typeof window === "undefined") return DEFAULT_EARN_SETTINGS;
+  const isSample = mode === "sample";
+  const defaultSettings = isSample ? SAMPLE_EARN_SETTINGS : CLEAN_EARN_SETTINGS;
+
+  if (typeof window === "undefined") return defaultSettings;
 
   const key = storageKey("earnSettings", mode);
   try {
@@ -30,13 +42,18 @@ export function getEarnSettings(mode: WorkspaceMode): EarnSettings {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed.apy === "number") {
+        // OVERSEER check: Clean slate or testnet must never inherit the sample $1.85 benchmark
+        if (!isSample && parsed.accruedCents === 185) {
+          parsed.accruedCents = 0;
+          safeSetItem(key, JSON.stringify(parsed));
+        }
         return parsed;
       }
     }
   } catch (e) {}
 
-  safeSetItem(key, JSON.stringify(DEFAULT_EARN_SETTINGS));
-  return DEFAULT_EARN_SETTINGS;
+  safeSetItem(key, JSON.stringify(defaultSettings));
+  return defaultSettings;
 }
 
 export function saveEarnSettings(mode: WorkspaceMode, settings: EarnSettings): void {
@@ -55,12 +72,12 @@ export function calculateLiveYield(idleCents: number, settings: EarnSettings, no
   unharvestedCents: number;
   displayYieldUsd: string;
 } {
+  // OVERSEER isolation: If idle balance is zero or negative, or earn is disabled, yield cannot accrue
   if (!settings.enabled || idleCents <= 0) {
-    const total = settings.accruedCents;
     return {
-      totalYieldCents: total,
-      unharvestedCents: total,
-      displayYieldUsd: (total / 100).toFixed(4),
+      totalYieldCents: 0,
+      unharvestedCents: 0,
+      displayYieldUsd: "0.00",
     };
   }
 
