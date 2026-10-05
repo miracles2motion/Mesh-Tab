@@ -5,13 +5,14 @@ import { Button } from "../ui/button";
 import { TransactionOverlay, TransactionState } from "../ui/transaction-overlay";
 import Image from "next/image";
 import { PythLogo, PimlicoLogo } from "../ui/partner-logo";
-import { Check, ChevronDown, Sparkles, Camera, Mic, Zap, Loader2, Upload, FileText, SplitSquareHorizontal, AlertCircle, Globe, CloudUpload } from "lucide-react";
+import { Check, ChevronDown, Sparkles, Camera, Mic, Zap, Loader2, Upload, FileText, SplitSquareHorizontal, AlertCircle, Globe, CloudUpload, CreditCard, ChevronRight } from "lucide-react";
 
 import { useUserProfile, saveStoredExpense, useWorkspaceMode, ExpenseCategory } from "../../lib/user";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { SUPPORTED_CURRENCIES, usePythRate } from "../../lib/pyth";
 import { useConnectivity } from "../../components/providers/connectivity-provider";
+import { VirtualCardDrawer } from "./virtual-card-drawer";
 
 export const EXPENSE_CATEGORIES = [
   { id: "dining", label: "Dining", icon: "🍽️" },
@@ -50,6 +51,7 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
   const [isRecording, setIsRecording] = useState(false);
   const [showDraft, setShowDraft] = useState(false);
   const [receiptImageName, setReceiptImageName] = useState<string | null>(null);
+  const [isCardDrawerOpen, setIsCardDrawerOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -499,6 +501,26 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
               />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Virtual Card Fast-Tap Option */}
+                <div 
+                  onClick={() => setIsCardDrawerOpen(true)}
+                  className="p-3.5 border-2 border-dashed border-indigo-200 dark:border-indigo-500/20 hover:border-indigo-500 rounded-2xl flex items-center gap-3.5 bg-indigo-50/50 dark:bg-indigo-500/5 cursor-pointer transition-all hover:scale-[1.01] sm:col-span-2"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-300 shrink-0">
+                    <CreditCard className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5 truncate">
+                      Pay with Personal Visa Card
+                      <span className="text-[9px] bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-bold px-1.5 py-0.5 rounded-full">Privy × Stripe</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-white/50 mt-0.5 truncate">
+                      Tap to pay in person & auto-split across the group
+                    </p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-indigo-400 shrink-0" />
+                </div>
+
                 {/* Receipt Upload Card */}
                 <div 
                   onClick={handleTriggerUpload}
@@ -1067,6 +1089,17 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
           </div>
         </div>
       </form>
+
+      {/* Shared Virtual Visa Card Drawer */}
+      <VirtualCardDrawer 
+        isOpen={isCardDrawerOpen} 
+        onClose={() => {
+          setIsCardDrawerOpen(false);
+          onSuccess?.();
+        }}
+        tabId={tabId}
+        tabName={tabId === "lisbon-24" ? "Lisbon Weekend" : undefined}
+      />
     </>
   );
 }

@@ -75,7 +75,7 @@ export function PitchModal({ isOpen, onClose }: PitchModalProps) {
           Executive Summary
         </h3>
         <p className="text-xs md:text-sm text-slate-700 dark:text-white/80 leading-relaxed font-medium">
-          Group bills are full of friction: people forget to pay, manual calculations get messy, and crypto apps scare users away with gas fees and wallet popups. <strong className="text-purple-600 dark:text-purple-400 font-bold">MeshTab</strong> combines Monad's 10,000 TPS parallel EVM, biometric passkeys, and graph netting to make bill splitting feel as smooth as Apple Pay while running on decentralised infrastructure.
+          Group bills are full of friction: people forget to pay, manual calculations get messy, and crypto apps scare users away with gas fees and wallet popups. <strong className="text-purple-600 dark:text-purple-400 font-bold">MeshTab</strong> combines Monad's 10,000 TPS parallel EVM, biometric passkeys, and graph netting to make bill splitting feel as smooth as a contactless card tap while running on decentralised infrastructure.
         </p>
       </div>
 

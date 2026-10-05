@@ -285,7 +285,7 @@ export function speak(text: string, persona: VoicePersona, options: SpeakOptions
       utterance.voice = voice;
     }
 
-    // Siri / Apple Assistant Prosody Standards:
+    // Modern AI Voice Prosody Standards:
     // 1. Pitch = 1.0 STRICTLY. NEVER artificially pitch-shift with DSP, which introduces
     //    the tremolo/choked-up/crying artifacts!
     // 2. Rate = 1.04. Upbeat, brisk, confident conversational pace without dragging clauses.

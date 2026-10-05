@@ -54,7 +54,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
   // Dynamically identify who paid for the expenses (creditor with positive balance)
   const primaryCreditor = tabMembers.find(m => m.balance > 0)?.name || (workspaceMode === "sample" && tabId === "lisbon-24" ? "Aisha" : undefined);
 
-  const [paymentMethod, setPaymentMethod] = useState<"ausd" | "apple-pay">("ausd");
+  const [paymentMethod, setPaymentMethod] = useState<"ausd" | "card">("ausd");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [justToppedUp, setJustToppedUp] = useState(false);
@@ -251,9 +251,9 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
                 {/* Option B: Debit / Credit Card */}
                 <button
                   type="button"
-                  onClick={() => setPaymentMethod("apple-pay")}
+                  onClick={() => setPaymentMethod("card")}
                   className={`w-full p-4 rounded-2xl border transition-all flex items-center justify-between ${
-                    paymentMethod === "apple-pay"
+                    paymentMethod === "card"
                       ? "border-indigo-600 bg-indigo-50/50 dark:bg-indigo-500/10 shadow-sm"
                       : "border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10"
                   }`}
@@ -273,19 +273,19 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
                   </div>
                   <div
                     className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                      paymentMethod === "apple-pay"
+                      paymentMethod === "card"
                         ? "border-indigo-600 bg-indigo-600"
                         : "border-slate-300 dark:border-white/30"
                     }`}
                   >
-                    {paymentMethod === "apple-pay" && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    {paymentMethod === "card" && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                   </div>
                 </button>
               </div>
 
 
 
-              {paymentMethod === "apple-pay" && (
+              {paymentMethod === "card" && (
                 <div className="w-full space-y-3 mb-6 text-left">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-white/60">

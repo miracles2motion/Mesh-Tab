@@ -137,7 +137,7 @@ function SettingsContent() {
     sounds.playClick();
     window.dispatchEvent(new Event("theme-change"));
     toast.success("Theme Updated", {
-      description: mode === "system" ? "Set to Automatic System Mode (reacts to device OS)." : mode === "dark" ? "Set to Sleek Dark Mode." : "Set to Clean Apple White Light Mode."
+      description: mode === "system" ? "Set to Automatic System Mode (reacts to device OS)." : mode === "dark" ? "Set to Sleek Dark Mode." : "Set to Clean Studio White Light Mode."
     });
   };
 
@@ -382,7 +382,7 @@ function SettingsContent() {
                     </div>
                     <div>
                       <h2 className="text-lg font-bold text-slate-900 dark:text-white">Interface Theme</h2>
-                      <p className="text-xs text-slate-500 dark:text-white/50">MeshTab dynamically adapts between Clean Apple White and Sleek Dark.</p>
+                      <p className="text-xs text-slate-500 dark:text-white/50">MeshTab dynamically adapts between Clean Studio White and Sleek Dark.</p>
                     </div>
                   </div>
                 </div>
@@ -391,7 +391,7 @@ function SettingsContent() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold text-slate-700 dark:text-white/80">Active Mode</span>
                     <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-200/60 dark:bg-white/10 text-slate-700 dark:text-white/70">
-                      {themeMode === "system" ? "System Auto" : themeMode === "dark" ? "Sleek Dark" : "Apple White Light"}
+                      {themeMode === "system" ? "System Auto" : themeMode === "dark" ? "Sleek Dark" : "Studio White Light"}
                     </span>
                   </div>
 
@@ -437,7 +437,7 @@ function SettingsContent() {
                     </button>
                   </div>
                   <p className="text-xs text-slate-500 dark:text-white/40">
-                    Auto mode monitors your device&apos;s OS settings in real time and automatically transitions between Apple White and Sleek Dark.
+                    Auto mode monitors your device&apos;s OS settings in real time and automatically transitions between Studio White and Sleek Dark.
                   </p>
                 </div>
               </div>

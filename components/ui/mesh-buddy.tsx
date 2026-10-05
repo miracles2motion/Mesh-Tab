@@ -509,7 +509,7 @@ export function MeshBuddy() {
         `2. ⚡ **Instant, Simultaneous Updates**:\n` +
         `Everyone in the group can snap receipts, split dinners, and confirm payments at the exact same instant without lag, waiting, or delays.\n\n` +
         `3. 🔑 **Touch ID & Face ID Sign-In**:\n` +
-        `No passwords to remember. You join tabs and approve payments with your thumbprint or Face ID—just like Apple Pay. There are zero network transfer fees.\n\n` +
+        `No passwords to remember. You join tabs and approve payments with your thumbprint or Face ID in a single tap. There are zero network transfer fees.\n\n` +
         `4. 💵 **Digital Dollars (AUSD)**:\n` +
         `All tabs use 1:1 digital dollars ($1 AUSD = $1.00 USD) that never lose value. When friends pay you back, you can cash out directly to your debit card or bank account in seconds.`;
 
@@ -861,7 +861,7 @@ export function MeshBuddy() {
         { label: "🌀 Learn About Netting", action: () => handleAskQuestion("how does netting work") },
       ];
     } else if (/passkey|passkeys|privy|biometric|webauthn|touch id|face id/i.test(q)) {
-      replyText = `MeshTab uses Touch ID and Face ID passkeys built right into your phone or laptop. You approve group expenses with your fingerprint or face just like Apple Pay—no passwords to forget, no 2FA text codes, and no account setup hassle!`;
+      replyText = `MeshTab uses Touch ID and Face ID passkeys built right into your phone or laptop. You approve group expenses with your fingerprint or face in one tap—no passwords to forget, no 2FA text codes, and no account setup hassle!`;
       actionItems = [
         { label: "🔑 Test Passkey in Settings", action: () => router.push(pathname ? `/settings?from=${encodeURIComponent(pathname)}` : "/settings") },
         { label: "👥 Manage Group Members", action: () => router.push(currentTabId ? `/tab/${currentTabId}/members` : "/home") },

@@ -41,7 +41,7 @@ export const LANDING_CONTENT = {
       { step: "01", title: "Create a Smart Tab", desc: "Name your trip and invite your friends via a simple link." },
       { step: "02", title: "Claim with a Passkey", desc: "Friends tap their name and use FaceID to instantly bind a gasless smart account." },
       { step: "03", title: "Tangle Netting", desc: "Log expenses in any currency. When the trip is over, MeshTab calculates the most efficient settlement map." },
-      { step: "04", title: "Stablecoin Settlement", desc: "Pay your exact residual debt in AUSD, funded instantly via Apple Pay." }
+      { step: "04", title: "Stablecoin Settlement", desc: "Pay your exact residual debt in AUSD, funded instantly via Card or Bank Transfer." }
     ]
   },
   features: [
@@ -57,7 +57,7 @@ export const LANDING_CONTENT = {
     },
     {
       title: "Digital Dollar Settlement",
-      description: "Bypass international bank wire fees entirely. Debts are settled instantly using 1:1 Digital Dollars, funded effortlessly via Apple Pay.",
+      description: "Bypass international bank wire fees entirely. Debts are settled instantly using 1:1 Digital Dollars, funded effortlessly via Card or Bank Transfer.",
       icon: "Wallet",
     },
     {
@@ -92,7 +92,7 @@ export const LANDING_CONTENT = {
     },
     {
       question: "How do I fund and cash out my balance?",
-      answer: "When it's time to settle, you can fund your balance instantly using Apple Pay, Google Pay, or a debit card. You can cash out to your bank account or Visa card in seconds."
+      answer: "When it's time to settle, you can fund your balance instantly using your Virtual Visa Card, debit card, or bank transfer. You can cash out to your bank account or Visa card in seconds."
     }
   ],
   finalCta: {

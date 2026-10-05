@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { Activity, Plus, ArrowLeft, Settings, SlidersHorizontal, Users, Download, CheckCircle2, LayoutGrid, Sparkles, Crown, Upload, Award, Bell, Wifi, MoreHorizontal } from "lucide-react";
+import { Activity, Plus, ArrowLeft, Settings, SlidersHorizontal, Users, Download, CheckCircle2, LayoutGrid, Sparkles, Crown, Upload, Award, Bell, Wifi, MoreHorizontal, CreditCard } from "lucide-react";
 import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { BalanceCard } from "../../../components/tab/balance-card";
 import { SettlementDrawer } from "../../../components/tab/settlement-drawer";
 import { CashOutDrawer } from "../../../components/tab/cash-out-drawer";
+import { VirtualCardDrawer } from "../../../components/tab/virtual-card-drawer";
+import { EarnTicker } from "../../../components/tab/earn-ticker";
 import { RosterCarousel } from "../../../components/tab/roster-carousel";
 import { MemberDetailsDrawer } from "../../../components/tab/member-details-drawer";
 import { PaymentRequestDrawer } from "../../../components/tab/payment-request-drawer";
@@ -93,6 +95,7 @@ function DashboardContent() {
   const [isSettlementOpen, setIsSettlementOpen] = useState(false);
   const [isPaymentDrawerOpen, setIsPaymentDrawerOpen] = useState(false);
   const [isCashOutOpen, setIsCashOutOpen] = useState(false);
+  const [isCardDrawerOpen, setIsCardDrawerOpen] = useState(false);
   const [isNettingModalOpen, setIsNettingModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isCertificateOpen, setIsCertificateOpen] = useState(false);
@@ -291,6 +294,7 @@ function DashboardContent() {
                 </span>
               )}
               <NetworkStatusBadge compact />
+              <EarnTicker tabId={rawTabId} />
               <Link 
                 href={`/notifications?from=/tab/${rawTabId}`} 
                 className="relative w-8 h-8 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shadow-sm text-slate-700 dark:text-white/80 shrink-0"
@@ -429,6 +433,13 @@ function DashboardContent() {
       <div className="fixed bottom-6 lg:bottom-10 inset-x-0 z-40 flex justify-center pointer-events-none px-4">
         <div className="bg-white/95 dark:bg-[#121212]/95 backdrop-blur-2xl border border-slate-200/90 dark:border-white/15 rounded-full p-2 flex items-center justify-between gap-2 shadow-2xl w-full max-w-sm md:max-w-lg lg:max-w-xl mx-auto pointer-events-auto">
           <button 
+            onClick={() => setIsCardDrawerOpen(true)}
+            className="border font-bold py-3 sm:py-3.5 px-3.5 rounded-full flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-all active:scale-95 text-xs sm:text-sm bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white border-slate-200 dark:border-white/10"
+            title="Shared Virtual Visa Card"
+          >
+            <CreditCard className="w-4 h-4 text-indigo-500" /> <span>Card</span>
+          </button>
+          <button 
             onClick={() => setIsNettingModalOpen(true)}
             className={`flex-[1.5] border font-bold py-3 sm:py-3.5 px-4 rounded-full flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all active:scale-95 text-xs sm:text-sm ${
               hasOutstandingTabDebt 
@@ -481,6 +492,14 @@ function DashboardContent() {
         isOpen={isCashOutOpen}
         onClose={() => setIsCashOutOpen(false)}
         currentUserName={currentUser}
+      />
+
+      {/* Shared Virtual Visa Card Drawer */}
+      <VirtualCardDrawer
+        isOpen={isCardDrawerOpen}
+        onClose={() => setIsCardDrawerOpen(false)}
+        tabId={rawTabId}
+        tabName={currentTab.name}
       />
 
       {/* Member Details Breakdown Drawer */}

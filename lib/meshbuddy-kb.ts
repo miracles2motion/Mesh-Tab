@@ -142,7 +142,7 @@ export const KB_ARTICLES: KBArticle[] = [
     categoryId: "monad-web3",
     title: "How does MeshTab achieve instant, sub-second settlement?",
     keywords: ["speed", "instant", "subsecond", "real-time", "fast", "settlement", "network", "performance"],
-    summary: "MeshTab runs on a high-throughput transaction engine with sub-second finality, keeping group ledgers as instantaneous as Apple Pay.",
+    summary: "MeshTab runs on a high-throughput transaction engine with sub-second finality, keeping group ledgers instantaneous and tap-to-pay fast.",
     detailedContent: "Traditional bank transfers and older payment networks take hours or days, with volatile fees. MeshTab processes transactions in under 400 milliseconds. Netting calculations, receipt approvals, and debt settlements reflect immediately for all members without spinning wheels or lag.",
     actions: [
       { label: "Account Settings", type: "navigate", destination: "/settings" }
@@ -343,9 +343,9 @@ export const KB_ARTICLES: KBArticle[] = [
     id: "security-no-seed-phrase",
     categoryId: "security",
     title: "Why don't I need passwords or recovery phrases?",
-    keywords: ["password", "recovery phrase", "passkey", "seed phrase", "login", "biometrics", "security", "apple pay"],
+    keywords: ["password", "recovery phrase", "passkey", "seed phrase", "login", "biometrics", "security", "passkeys"],
     summary: "MeshTab eliminates clunky passwords and fragile recovery codes. Your account is secured by your device's hardware chip and biometric sensors.",
-    detailedContent: "Traditional passwords get forgotten, breached, and phished. MeshTab works just like Apple Pay or modern banking apps: your device's secure hardware chip validates your identity instantly via Face ID, Touch ID, or your device PIN. Fast, seamless, and completely un-phishable.",
+    detailedContent: "Traditional passwords get forgotten, breached, and phished. MeshTab works just like modern biometric banking apps: your device's secure hardware chip validates your identity instantly via Face ID, Touch ID, or your device PIN. Fast, seamless, and completely un-phishable.",
     actions: [
       { label: "Account Settings", type: "navigate", destination: "/settings" }
     ]

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Fingerprint, Wallet, ChevronDown, CheckCircle2, Apple } from "lucide-react";
+import { Fingerprint, Wallet, ChevronDown, CheckCircle2, CreditCard } from "lucide-react";
 import { useState } from "react";
 import { ReceiptView } from "./ReceiptView";
 
@@ -13,10 +13,10 @@ export function SettlementDrawer({
 }: { 
   isOpen: boolean; 
   onClose: () => void; 
-  amount?: number;
+  amount?: number; 
   recipient?: string;
 }) {
-  const [method, setMethod] = useState<"ausd" | "apple">("apple");
+  const [method, setMethod] = useState<"ausd" | "card">("card");
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -62,19 +62,19 @@ export function SettlementDrawer({
 
             <div className="space-y-3 mb-8">
               <button 
-                onClick={() => setMethod("apple")}
-                className={`w-full p-4 rounded-2xl border flex items-center justify-between transition-all ${method === "apple" ? "bg-white/10 border-white/30" : "bg-black/20 border-white/5 hover:border-white/10"}`}
+                onClick={() => setMethod("card")}
+                className={`w-full p-4 rounded-2xl border flex items-center justify-between transition-all ${method === "card" ? "bg-white/10 border-white/30" : "bg-black/20 border-white/5 hover:border-white/10"}`}
               >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center">
-                    <Apple className="w-5 h-5 fill-current" />
+                    <CreditCard className="w-5 h-5" />
                   </div>
                   <div className="text-left">
-                    <p className="text-white font-semibold text-lg leading-tight">Apple Pay</p>
-                    <p className="text-white/40 text-sm">Powered by Monad</p>
+                    <p className="text-white font-semibold text-lg leading-tight">Virtual Visa Card</p>
+                    <p className="text-white/40 text-sm">Privy × Stripe Instant Rails</p>
                   </div>
                 </div>
-                {method === "apple" && <CheckCircle2 className="w-5 h-5 text-white" />}
+                {method === "card" && <CheckCircle2 className="w-5 h-5 text-white" />}
               </button>
 
               <button 

@@ -37,6 +37,16 @@ export function storageKey(entity: string, mode: WorkspaceMode, id?: string): st
   if (entity === "sessionSnapshot") {
     return activeMode === "testnet" ? "meshTab_testnet_sessionSnapshot" : ""; // only valid for testnet
   }
+  if (entity === "virtualCard") {
+    return activeMode === "sample" ? "meshTab_sample_virtualCard"
+         : activeMode === "testnet" ? "meshTab_testnet_virtualCard"
+         : "meshTab_clean_virtualCard";
+  }
+  if (entity === "earnSettings") {
+    return activeMode === "sample" ? "meshTab_sample_earnSettings"
+         : activeMode === "testnet" ? "meshTab_testnet_earnSettings"
+         : "meshTab_clean_earnSettings";
+  }
   if (entity === "archived") {
     return activeMode === "sample" ? "meshTab_sample_archived"
          : activeMode === "testnet" ? "meshTab_testnet_archived"

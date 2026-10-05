@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode, Settings, Search, Filter, Crown, CheckCircle2, TrendingDown, TrendingUp, ArrowDownToLine, Coins, Sparkles, Award, Fingerprint, Copy } from "lucide-react";
+import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode, Settings, Search, Filter, Crown, CheckCircle2, TrendingDown, TrendingUp, ArrowDownToLine, Coins, Sparkles, Award, Fingerprint, Copy, CreditCard } from "lucide-react";
 import { useState, useEffect } from "react";
 import { TransactionOverlay, TransactionState } from "../../components/ui/transaction-overlay";
 import { formatCurrency, formatDistanceToNow } from "../../lib/utils";
@@ -12,6 +12,8 @@ import { useAvailableBalance, computeCrossTabPosition } from "../../lib/balance"
 import { useNotifications } from "../../lib/notifications";
 import { CashOutDrawer } from "../../components/tab/cash-out-drawer";
 import { AddFundsDrawer } from "../../components/tab/add-funds-drawer";
+import { VirtualCardDrawer } from "../../components/tab/virtual-card-drawer";
+import { EarnTicker } from "../../components/tab/earn-ticker";
 import { PitchModal } from "../../components/home/pitch-modal";
 import { MeshBuddy } from "../../components/ui/mesh-buddy";
 import { toast } from "sonner";
@@ -50,6 +52,7 @@ export default function GlobalHub() {
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showAddFundsModal, setShowAddFundsModal] = useState(false);
   const [showCashOutModal, setShowCashOutModal] = useState(false);
+  const [showVirtualCardModal, setShowVirtualCardModal] = useState(false);
   const [showPitchModal, setShowPitchModal] = useState(false);
   const [showFaucetModal, setShowFaucetModal] = useState(false);
   const [joinCode, setJoinCode] = useState("");
@@ -373,6 +376,17 @@ export default function GlobalHub() {
                   >
                     <ArrowDownToLine className="w-4 h-4" /> {availableCents > 0 ? "Cash Out" : "Cash Out to Bank"}
                   </button>
+                  <button
+                    onClick={() => {
+                      sounds.playClick();
+                      setShowVirtualCardModal(true);
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 dark:text-black text-white text-xs font-bold shadow-md transition-all cursor-pointer hover:scale-105 active:scale-95"
+                    title="MeshTab Virtual Visa Card"
+                  >
+                    <CreditCard className="w-4 h-4 text-indigo-400 dark:text-indigo-600" /> Virtual Card
+                  </button>
+                  <EarnTicker className="hidden sm:inline-flex" />
                   <span className={`text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 border ${
                     availableCents > 0 
                       ? "text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20"
@@ -659,6 +673,14 @@ export default function GlobalHub() {
         isOpen={showCashOutModal} 
         onClose={() => setShowCashOutModal(false)} 
         currentUserName={profile.name} 
+      />
+
+      {/* Virtual Visa Card Drawer */}
+      <VirtualCardDrawer 
+        isOpen={showVirtualCardModal} 
+        onClose={() => setShowVirtualCardModal(false)}
+        tabId={activeTabsList[0]?.id || "lisbon-24"}
+        tabName={activeTabsList[0]?.name || "Lisbon Weekend"}
       />
 
 

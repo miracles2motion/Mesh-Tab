@@ -1172,6 +1172,15 @@ export function deductVirtualBalance(amountCents: number): boolean {
   return true;
 }
 
+export function deductCashBalance(amountCents: number): boolean {
+  if (typeof window === "undefined") return false;
+  const current = getSettledPayoutBalance();
+  if (current < amountCents) return false;
+  deductSettledPayout(amountCents);
+  deductVirtualBalance(amountCents);
+  return true;
+}
+
 export function useVirtualBalance() {
   const [balance, setBalance] = useState<number>(getVirtualBalance);
 

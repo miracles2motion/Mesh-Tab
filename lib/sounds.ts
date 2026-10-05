@@ -18,7 +18,7 @@ class SoundEngine {
     return this.ctx;
   }
 
-  // Apple Pay / Settlement Success Chime (Crisp high-frequency harmonic chord)
+  // POS / Settlement Success Chime (Crisp high-frequency harmonic chord)
   playSuccessChime() {
     const ctx = this.getContext();
     if (!ctx) return;
