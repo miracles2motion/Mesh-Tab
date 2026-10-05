@@ -26,7 +26,6 @@ import {
   getVirtualCard, 
   saveVirtualCard, 
   toggleCardFreeze, 
-  executeCardPayment, 
   issueVirtualCard,
   resetVirtualCard,
   VirtualCard 
@@ -34,12 +33,9 @@ import {
 import { 
   useUserProfile, 
   useWorkspaceMode, 
-  useSettledPayoutBalance, 
-  getStoredTabs 
 } from "@/lib/user";
-import { useRealAusdBalance } from "@/lib/onchain";
+import { useAvailableBalance } from "@/lib/balance";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
-import { erc20Abi, encodeFunctionData } from "viem";
 import { formatCurrency } from "@/lib/utils";
 import { sounds } from "@/lib/sounds";
 import { toast } from "sonner";
@@ -53,16 +49,10 @@ interface VirtualCardDrawerProps {
   tabName?: string;
 }
 
-const PRESETS = [
-  { label: "🍷 Wine Bar & Tapas", merchant: "Wine Bar & Tapas", cents: 6400 },
-  { label: "🚕 Airport Van Transfer", merchant: "Airport Van Transfer", cents: 3200 },
-  { label: "🥐 Pastéis de Belém", merchant: "Pastéis de Belém Cafe", cents: 1850 },
-];
-
 export function VirtualCardDrawer({
   isOpen,
   onClose,
-  tabId = "lisbon-24",
+  tabId,
   tabName
 }: VirtualCardDrawerProps) {
   const profile = useUserProfile();
@@ -70,17 +60,15 @@ export function VirtualCardDrawer({
   const isTestnet = workspaceMode === "testnet";
 
   const { client } = useSmartWallets();
-  const { settledBalance } = useSettledPayoutBalance();
-  const { balance: testnetAusdBalance, refetch: refetchTestnet } = useRealAusdBalance(workspaceMode);
+  
+  // Use unified cross-tab available balance (total funds minus held debt)
+  const { availableCents, totalCents, heldCents } = useAvailableBalance(profile.name || "David");
+  const effectiveBalanceCents = availableCents;
 
   // Card state
   const [card, setCard] = useState<VirtualCard>(() => getVirtualCard(workspaceMode, profile.name));
   const [showDetails, setShowDetails] = useState(false);
-  const [selectedPresetIndex, setSelectedPresetIndex] = useState<number>(0);
-  const [customAmountStr, setCustomAmountStr] = useState<string>("");
-  const [isProcessing, setIsProcessing] = useState(false);
   const [isAddFundsOpen, setIsAddFundsOpen] = useState(false);
-  const [lastTxHash, setLastTxHash] = useState<string | null>(null);
 
   // 2-Step Issuance Flow State
   const [issuanceStep, setIssuanceStep] = useState<"preferences" | "authenticating" | "countdown">("preferences");
@@ -110,22 +98,6 @@ export function VirtualCardDrawer({
     }
   }, [profile.name]);
 
-  // Determine current effective balance in cents
-  const effectiveBalanceCents = isTestnet
-    ? Math.round(testnetAusdBalance * 100)
-    : settledBalance;
-
-  // Determine target amount
-  const selectedCents = customAmountStr
-    ? Math.round((parseFloat(customAmountStr) || 0) * 100)
-    : PRESETS[selectedPresetIndex]?.cents || 6400;
-
-  const selectedMerchant = customAmountStr
-    ? "In-Store Purchase"
-    : PRESETS[selectedPresetIndex]?.merchant || "Wine Bar & Tapas";
-
-  const isInsufficient = effectiveBalanceCents < selectedCents;
-
   const handleToggleFreeze = () => {
     sounds.playClick();
     const nextState = toggleCardFreeze(workspaceMode);
@@ -139,175 +111,94 @@ export function VirtualCardDrawer({
   const handleResetCard = () => {
     sounds.playClick();
     resetVirtualCard(workspaceMode);
+    setCard(getVirtualCard(workspaceMode, profile.name));
     setIssuanceStep("preferences");
     toast.info("Card Reset", {
-      description: "You can now experience the 2-step issuance and countdown flow again.",
+      description: "You can now test the 2-step personal card issuance flow again.",
     });
   };
 
   // -------------------------------------------------------------
-  // Issuance Flow: Authenticate & 3-Second Celebratory Countdown
+  // 2-Step Issuance Flow with 3-Second Live Countdown
   // -------------------------------------------------------------
   const handleStartIssuance = async () => {
     sounds.playClick();
     setIssuanceStep("authenticating");
 
+    // Testnet Mode: Real biometric passkey signing via Smart Wallet client
     if (isTestnet) {
       if (!client) {
-        toast.error("Smart Wallet Required", {
-          description: "Please connect your Privy Smart Account to issue a card on Monad Testnet.",
+        toast.error("Smart Account Not Ready", {
+          description: "Please ensure your Privy embedded wallet is connected.",
         });
         setIssuanceStep("preferences");
         return;
       }
+
       try {
-        // Real WebAuthn passkey authentication on Testnet
+        const messageToSign = `Authorize MeshTab Personal Visa Card Issuance\nCardholder: ${cardholderInput.toUpperCase()}\nSmart Account: ${client.account.address}\nNetwork: Monad Testnet\nTimestamp: ${new Date().toISOString()}`;
+        
         await client.signMessage({
-          message: `Authorize MeshTab Personal Visa Card Issuance for ${cardholderInput || profile.name} on Monad Testnet (${new Date().toISOString()})`,
+          message: messageToSign,
+        });
+
+        sounds.playSuccessChime();
+        toast.success("Biometrics Verified via Passkey", {
+          description: "Smart Account authenticated successfully.",
         });
       } catch (err: any) {
-        toast.error("Authentication Cancelled", {
-          description: "Passkey authentication is required. The card will not be issued.",
-        });
         setIssuanceStep("preferences");
+        toast.error("Passkey Authentication Cancelled", {
+          description: "Biometric approval is required to issue your on-chain card.",
+        });
         return;
       }
     } else {
-      // Demo Mode: simulated biometric pulse
-      await new Promise((r) => setTimeout(r, 700));
+      // Demo Mode: Fast simulated biometric auth
+      await new Promise((r) => setTimeout(r, 600));
+      sounds.playSuccessChime();
     }
 
-    // Begin 3-Second Celebration Countdown
+    // Step 2: 3-Second Live Countdown
     setIssuanceStep("countdown");
     setCountdown(3);
-    setCountdownText("Minting virtual card on Stripe Issuing rails...");
-    sounds.playPing();
+    setCountdownText("Minting on Stripe Issuing rails...");
 
-    setTimeout(() => {
+    const timer1 = setTimeout(() => {
       setCountdown(2);
-      setCountdownText(isTestnet ? "Binding to Privy Smart Account on Monad..." : "Binding to your personal cash reserves...");
-      sounds.playPing();
+      setCountdownText("Encrypting CVV & personal PAN...");
+      sounds.playClick();
     }, 1000);
 
-    setTimeout(() => {
+    const timer2 = setTimeout(() => {
       setCountdown(1);
-      setCountdownText("Activating Monad JIT settlement clearing...");
-      sounds.playPing();
+      setCountdownText("Binding to Monad Smart Account...");
+      sounds.playClick();
     }, 2000);
 
-    setTimeout(() => {
-      setCountdown(0);
-      const limitCents = limitChoice === "unlimited" ? -1 : Math.round((parseFloat(customLimitDollars) || 500) * 100);
-      const issued = issueVirtualCard(workspaceMode, {
-        cardholderName: cardholderInput || profile.name,
-        dailyLimitCents: limitCents,
+    const timer3 = setTimeout(() => {
+      const dailyCap = limitChoice === "custom" ? Math.max(1000, (parseFloat(customLimitDollars) || 500) * 100) : -1;
+      
+      const newCard = issueVirtualCard(workspaceMode, {
+        cardholderName: cardholderInput,
+        dailyLimitCents: dailyCap,
       });
-      setCard(issued);
+      setCard(newCard);
+
       sounds.playSuccessChime();
       try {
-        confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+        confetti({
+          particleCount: 70,
+          spread: 80,
+          origin: { y: 0.55 },
+        });
       } catch {}
+
       toast.success("🎉 Personal Visa Card Issued!", {
         description: "Your card is active and ready for in-store tap-to-pay and group tab splits.",
       });
       setIssuanceStep("preferences");
     }, 3000);
-  };
-
-  // -------------------------------------------------------------
-  // Card Payment Execution
-  // -------------------------------------------------------------
-  const handleAuthorizePayment = async () => {
-    if (!card.isIssued) {
-      toast.error("Card Not Issued", {
-        description: "Please issue and activate your personal card first.",
-      });
-      return;
-    }
-
-    if (card.isFrozen) {
-      toast.error("Card is Frozen", {
-        description: "Please unfreeze the card above before authorizing a payment.",
-      });
-      return;
-    }
-
-    if (isInsufficient) {
-      toast.error("Insufficient Card Balance", {
-        description: "Please top up your card to complete this payment.",
-      });
-      setIsAddFundsOpen(true);
-      return;
-    }
-
-    // OVERSEER Blank Mode Guard: Ensure active tab exists
-    const availableTabs = getStoredTabs();
-    const effectiveTabId = tabId || (availableTabs[0]?.id);
-    if (!effectiveTabId) {
-      toast.error("No Group Tab Found", {
-        description: "Please create a group tab first to auto-split this card purchase.",
-      });
-      return;
-    }
-
-    setIsProcessing(true);
-    sounds.playClick();
-
-    try {
-      // Testnet Onchain Execution: Transfer AUSD to MeshTabLedger
-      const onchainTransfer = isTestnet && client ? async () => {
-        const ledgerAddress = (process.env.NEXT_PUBLIC_MESH_TAB_LEDGER_ADDRESS || "0x43405B9D8E30ff76910009E79131200c862fCA7d") as `0x${string}`;
-        const ausdAddress = (process.env.NEXT_PUBLIC_MOCK_AUSD_ADDRESS || "0xF9bA02Cd0aFc210e0867852eEb0E994B07d9957F") as `0x${string}`;
-        const amountWei = BigInt(selectedCents) * BigInt(10 ** 4); // 6 decimals
-
-        const hash = await client.sendTransaction({
-          to: ausdAddress,
-          data: encodeFunctionData({
-            abi: erc20Abi,
-            functionName: "transfer",
-            args: [ledgerAddress, amountWei],
-          }),
-        });
-
-        setLastTxHash(hash);
-        return hash;
-      } : undefined;
-
-      const result = await executeCardPayment({
-        tabId: effectiveTabId,
-        tabName,
-        amountCents: selectedCents,
-        merchantName: selectedMerchant,
-        payerName: profile.name || "David",
-        mode: workspaceMode,
-        onchainTransfer,
-      });
-
-      if (!result.success) {
-        setIsProcessing(false);
-        toast.error("Payment Declined", { description: result.error });
-        return;
-      }
-
-      // POS Terminal Sound & Confetti feedback
-      sounds.playSuccessChime();
-
-      toast.success("💳 Visa Approved!", {
-        description: `${formatCurrency(selectedCents)} auto-split across ${tabName || "group tab"}.`,
-      });
-
-      if (isTestnet) {
-        refetchTestnet();
-      }
-
-      setIsProcessing(false);
-      onClose();
-    } catch (err: any) {
-      setIsProcessing(false);
-      toast.error("Transaction Failed", {
-        description: err?.message || "Could not complete card payment.",
-      });
-    }
   };
 
   return (
@@ -359,23 +250,19 @@ export function VirtualCardDrawer({
                   </p>
                 </div>
               ) : (
-                /* Step 1: Preferences & Ghost Card Silhouette */
-                <div className="space-y-5">
-                  {/* Holographic Ghost Card Silhouette */}
-                  <div className="relative w-full aspect-[1.58/1] rounded-2xl p-6 text-white overflow-hidden shadow-lg border-2 border-dashed border-indigo-300 dark:border-indigo-500/30 bg-gradient-to-br from-indigo-950/20 via-slate-900/40 to-slate-950/60 backdrop-blur-md flex flex-col justify-between">
+                /* Card Preview Before Issuance */
+                <div className="space-y-4">
+                  <div className="relative w-full aspect-[1.58/1] rounded-2xl p-6 text-white overflow-hidden shadow-xl border border-white/10 bg-gradient-to-br from-[#18181b] via-[#111113] to-[#27272a] opacity-90">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-9 h-7 rounded bg-amber-400/40 border border-amber-300/50" />
-                        <Wifi className="w-4 h-4 text-white/40 rotate-90" />
-                      </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/10 text-white/70 tracking-wider uppercase">
-                        Not Yet Issued
+                      <div className="w-10 h-7 rounded bg-amber-400/80 border border-amber-300/40 shadow-inner" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-full border border-indigo-400/30">
+                        {isTestnet ? "Monad Testnet Visa" : "Virtual Visa Preview"}
                       </span>
                     </div>
 
-                    <div>
-                      <p className="font-mono text-lg font-bold tracking-widest text-white/50">
-                        4242 •••• •••• ••••
+                    <div className="my-5">
+                      <p className="font-mono text-lg font-bold tracking-widest text-white/60">
+                        4242 •••• •••• 9812
                       </p>
                       <div className="mt-3 flex items-center justify-between text-xs font-mono">
                         <span className="text-white/80 font-bold uppercase tracking-wide">
@@ -449,22 +336,27 @@ export function VirtualCardDrawer({
                             value={customLimitDollars}
                             onChange={(e) => setCustomLimitDollars(e.target.value)}
                             placeholder="500"
-                            className="w-full px-3 py-1.5 rounded-lg bg-white dark:bg-white/5 border border-slate-300 dark:border-white/15 text-sm font-semibold text-slate-900 dark:text-white"
+                            className="w-32 px-3 py-1.5 rounded-lg bg-white dark:bg-white/5 border border-slate-300 dark:border-white/15 text-sm font-bold font-mono focus:outline-none focus:border-indigo-500"
                           />
-                          <span className="text-xs text-slate-500 dark:text-white/50 shrink-0">USD / day</span>
+                          <span className="text-xs text-slate-400">USD per 24 hours</span>
                         </div>
                       )}
                     </div>
+                  </div>
 
-                    {/* Cost & Fee Transparency */}
-                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between text-xs">
-                      <div>
-                        <span className="font-bold text-emerald-800 dark:text-emerald-300">Issuance Cost: $0.00 Free</span>
-                        <p className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80 mt-0.5">
-                          100% Sponsored by MeshTab • 0% Foreign Transaction Markup
-                        </p>
-                      </div>
-                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">FREE</span>
+                  {/* Highlights Bullet points */}
+                  <div className="p-3.5 rounded-2xl bg-indigo-50/50 dark:bg-indigo-500/5 border border-indigo-100 dark:border-indigo-500/10 space-y-2 text-xs">
+                    <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+                      <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                      <span><strong>100% Personal Card:</strong> Spend in-store or online anywhere Visa is accepted.</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+                      <Zap className="w-4 h-4 text-amber-500 shrink-0" />
+                      <span><strong>Just-In-Time Balance:</strong> Debits directly from your available tab cash reserves.</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+                      <Lock className="w-4 h-4 text-indigo-500 shrink-0" />
+                      <span><strong>Zero Card Fees:</strong> Minting and maintenance covered on Monad rails.</span>
                     </div>
                   </div>
 
@@ -472,7 +364,7 @@ export function VirtualCardDrawer({
                   <Button
                     onClick={handleStartIssuance}
                     isLoading={issuanceStep === "authenticating"}
-                    className="w-full py-6 text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl shadow-indigo-500/25 flex items-center justify-center gap-2"
+                    className="w-full py-6 text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl shadow-indigo-500/25 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <Fingerprint className="w-5 h-5" />
                     {isTestnet
@@ -484,7 +376,7 @@ export function VirtualCardDrawer({
             </div>
           ) : (
             /* ========================================================= */
-            /* FLOW B: ACTIVE PERSONAL CARD VIEW & IN-STORE TRANSACTIONS */
+            /* FLOW B: ACTIVE PERSONAL CARD VIEW & CREDENTIAL CONTROLS  */
             /* ========================================================= */
             <div className="space-y-6">
               {/* 1. The Obsidian-Glass Virtual Card */}
@@ -567,7 +459,7 @@ export function VirtualCardDrawer({
               <div className="flex items-center justify-between gap-2 p-1.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10">
                 <button
                   onClick={() => setShowDetails(!showDetails)}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-white/10 rounded-lg transition-all"
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-white/10 rounded-lg transition-all cursor-pointer"
                 >
                   {showDetails ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   {showDetails ? "Hide Details" : "Show Details"}
@@ -575,7 +467,7 @@ export function VirtualCardDrawer({
 
                 <button
                   onClick={handleToggleFreeze}
-                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold rounded-lg transition-all ${
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
                     card.isFrozen
                       ? "bg-sky-500 text-white hover:bg-sky-600"
                       : "text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-white/10"
@@ -586,133 +478,59 @@ export function VirtualCardDrawer({
                 </button>
               </div>
 
-              {/* 3. Live Card Balance Display */}
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 flex items-center justify-between">
+              {/* 3. Live Card Balance Display (Mirrors Net Available Balance) */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 flex items-center justify-between">
                 <div>
                   <span className="text-[11px] text-slate-500 dark:text-white/50 font-medium">Available Card Balance</span>
-                  <p className="text-lg font-bold text-slate-900 dark:text-white font-mono">
+                  <p className="text-2xl font-bold text-slate-900 dark:text-white font-mono mt-0.5">
                     {formatCurrency(effectiveBalanceCents)}
-                    {isTestnet && <span className="text-xs text-indigo-500 font-sans ml-1">AUSD</span>}
+                    {isTestnet && <span className="text-xs text-indigo-500 font-sans ml-1 font-bold">AUSD</span>}
+                  </p>
+                  {heldCents > 0 && (
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium mt-1 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
+                      <span>{formatCurrency(heldCents)} reserved for tab debt</span>
+                    </p>
+                  )}
+                </div>
+                <Button
+                  variant="glass"
+                  size="sm"
+                  onClick={() => setIsAddFundsOpen(true)}
+                  className="text-xs border-indigo-500/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 font-bold cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1" /> Top Up Card
+                </Button>
+              </div>
+
+              {/* 4. Card Details & Limits Specification Box */}
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="p-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.02]">
+                  <span className="text-[10px] uppercase text-slate-400 font-semibold">Daily Spend Limit</span>
+                  <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">
+                    {card.dailyLimitCents > 0 ? formatCurrency(card.dailyLimitCents) : "Unlimited"}
                   </p>
                 </div>
-                {isInsufficient && (
-                  <Button
-                    variant="glass"
-                    size="sm"
-                    onClick={() => setIsAddFundsOpen(true)}
-                    className="text-xs border-indigo-500/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
-                  >
-                    <Plus className="w-3.5 h-3.5 mr-1" /> Top Up Card
-                  </Button>
-                )}
-              </div>
-
-              {/* 4. Insufficient Funds Warning Banner */}
-              {isInsufficient && (
-                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 flex items-start gap-2.5 text-xs">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-500" />
-                  <div>
-                    <strong className="font-semibold">Insufficient Card Balance:</strong> Available balance ({formatCurrency(effectiveBalanceCents)}) cannot cover this purchase ({formatCurrency(selectedCents)}).
-                  </div>
+                <div className="p-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.02]">
+                  <span className="text-[10px] uppercase text-slate-400 font-semibold">Issuing Rails</span>
+                  <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">Stripe × Visa</p>
                 </div>
-              )}
-
-              {/* 5. In-Tab Purchase Simulation Presets */}
-              <div className="space-y-2">
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
-                  Simulate In-Store Tap-to-Pay
-                </span>
-                <div className="grid grid-cols-3 gap-2">
-                  {PRESETS.map((p, idx) => (
-                    <button
-                      key={p.merchant}
-                      type="button"
-                      onClick={() => {
-                        sounds.playClick();
-                        setSelectedPresetIndex(idx);
-                        setCustomAmountStr("");
-                      }}
-                      className={`p-2.5 rounded-xl border text-left transition-all ${
-                        selectedPresetIndex === idx && !customAmountStr
-                          ? "border-indigo-600 bg-indigo-50/50 dark:bg-indigo-500/10 text-indigo-900 dark:text-white shadow-xs"
-                          : "border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 text-slate-700 dark:text-white/70"
-                      }`}
-                    >
-                      <p className="text-[11px] font-medium truncate">{p.label}</p>
-                      <p className="text-xs font-bold font-mono mt-0.5 text-slate-900 dark:text-white">
-                        ${(p.cents / 100).toFixed(2)}
-                      </p>
-                    </button>
-                  ))}
+                <div className="p-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.02]">
+                  <span className="text-[10px] uppercase text-slate-400 font-semibold">Custody</span>
+                  <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">Non-Custodial</p>
+                </div>
+                <div className="p-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.02]">
+                  <span className="text-[10px] uppercase text-slate-400 font-semibold">In-Store Payments</span>
+                  <p className="font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">Select in Add Expense</p>
                 </div>
               </div>
-
-              {/* 6. Custom Amount Input */}
-              <div>
-                <label className="text-[11px] font-medium text-slate-500 dark:text-white/50 mb-1 block">
-                  Or Enter Custom In-Store Charge (USD)
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/40 font-mono text-sm">
-                    $
-                  </span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={customAmountStr}
-                    onChange={(e) => setCustomAmountStr(e.target.value)}
-                    className="w-full pl-8 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 text-sm font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              {/* 7. Action Button: Authorize & Auto-Split */}
-              <Button
-                onClick={handleAuthorizePayment}
-                disabled={isProcessing || isInsufficient || card.isFrozen}
-                className={`w-full py-6 text-sm font-bold shadow-lg transition-all ${
-                  isInsufficient
-                    ? "bg-amber-600 hover:bg-amber-700 text-white"
-                    : "bg-indigo-600 hover:bg-indigo-700 text-white"
-                }`}
-              >
-                {isProcessing ? (
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Authorizing Visa Swipe...
-                  </span>
-                ) : isInsufficient ? (
-                  <span className="flex items-center gap-1.5">
-                    <Plus className="w-4 h-4" /> Top Up Card to Pay {formatCurrency(selectedCents)}
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1.5">
-                    <CreditCard className="w-5 h-5" /> Pay {formatCurrency(selectedCents)} & Split with Tab
-                  </span>
-                )}
-              </Button>
-
-              {/* Testnet Explorer Link if available */}
-              {lastTxHash && isTestnet && (
-                <div className="text-center pt-2">
-                  <a
-                    href={`https://testnet.monadexplorer.com/tx/${lastTxHash}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-500 hover:underline"
-                  >
-                    View Last Card Clearing on MonadExplorer <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
-              )}
 
               {/* Re-Issue / Reset Demo Card Link */}
               <div className="pt-2 text-center">
                 <button
                   type="button"
                   onClick={handleResetCard}
-                  className="inline-flex items-center gap-1 text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-white/70 transition-colors"
+                  className="inline-flex items-center gap-1 text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-white/70 transition-colors cursor-pointer"
                 >
                   <RotateCcw className="w-3 h-3" /> Reset Card to Test Issuance Flow
                 </button>
@@ -728,7 +546,6 @@ export function VirtualCardDrawer({
         onClose={() => setIsAddFundsOpen(false)}
         onSuccess={() => {
           setIsAddFundsOpen(false);
-          if (isTestnet) refetchTestnet();
         }}
       />
     </>

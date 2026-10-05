@@ -1,7 +1,16 @@
 "use client";
 
 import { storageKey, safeSetItem, WorkspaceMode } from "./storage-keys";
-import { getStoredUser, DEFAULT_USER_NAME, getSettledPayoutBalance, deductCashBalance, saveStoredExpense, getWorkspaceMode } from "./user";
+import { 
+  getStoredUser, 
+  DEFAULT_USER_NAME, 
+  getSettledPayoutBalance, 
+  deductCashBalance, 
+  saveStoredExpense, 
+  getWorkspaceMode,
+  getTotalOutstandingDebt,
+  getWithdrawableAmount
+} from "./user";
 
 export interface VirtualCard {
   id: string;
@@ -161,10 +170,13 @@ export async function executeCardPayment({
   if (mode !== "testnet") {
     // Demo Mode (Sample & Blank): Symmetrical dual-balance deduction
     const currentBalance = getSettledPayoutBalance();
-    if (currentBalance < amountCents) {
+    const totalDebt = getTotalOutstandingDebt(payerName);
+    const availableSpendable = getWithdrawableAmount(currentBalance, totalDebt);
+
+    if (availableSpendable < amountCents) {
       return {
         success: false,
-        error: "Insufficient card balance. Please add funds to your wallet.",
+        error: `Insufficient available card balance ($${(availableSpendable / 100).toFixed(2)} available). Funds are reserved for outstanding tab debts.`,
       };
     }
 

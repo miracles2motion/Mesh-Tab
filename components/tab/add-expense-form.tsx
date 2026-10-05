@@ -5,14 +5,18 @@ import { Button } from "../ui/button";
 import { TransactionOverlay, TransactionState } from "../ui/transaction-overlay";
 import Image from "next/image";
 import { PythLogo, PimlicoLogo } from "../ui/partner-logo";
-import { Check, ChevronDown, Sparkles, Camera, Mic, Zap, Loader2, Upload, FileText, SplitSquareHorizontal, AlertCircle, Globe, CloudUpload, CreditCard, ChevronRight } from "lucide-react";
+import { Check, ChevronDown, Sparkles, Camera, Mic, Zap, Loader2, Upload, FileText, SplitSquareHorizontal, AlertCircle, Globe, CloudUpload, CreditCard, ChevronRight, Coins } from "lucide-react";
 
-import { useUserProfile, saveStoredExpense, useWorkspaceMode, ExpenseCategory } from "../../lib/user";
+import { useUserProfile, saveStoredExpense, useWorkspaceMode, ExpenseCategory, deductCashBalance } from "../../lib/user";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { SUPPORTED_CURRENCIES, usePythRate } from "../../lib/pyth";
 import { useConnectivity } from "../../components/providers/connectivity-provider";
 import { VirtualCardDrawer } from "./virtual-card-drawer";
+import { getVirtualCard, VirtualCard } from "../../lib/card";
+import { useAvailableBalance } from "../../lib/balance";
+import { formatCurrency } from "../../lib/utils";
+import confetti from "canvas-confetti";
 
 export const EXPENSE_CATEGORIES = [
   { id: "dining", label: "Dining", icon: "🍽️" },
@@ -52,6 +56,21 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
   const [showDraft, setShowDraft] = useState(false);
   const [receiptImageName, setReceiptImageName] = useState<string | null>(null);
   const [isCardDrawerOpen, setIsCardDrawerOpen] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "cash">("cash");
+
+  const { availableCents } = useAvailableBalance(activeUser);
+  const [virtualCard, setVirtualCard] = useState<VirtualCard>(() => getVirtualCard(workspaceMode, activeUser));
+
+  useEffect(() => {
+    const sync = () => setVirtualCard(getVirtualCard(workspaceMode, activeUser));
+    sync();
+    window.addEventListener("meshTab-card-update", sync);
+    window.addEventListener("meshTab-workspace-update", sync);
+    return () => {
+      window.removeEventListener("meshTab-card-update", sync);
+      window.removeEventListener("meshTab-workspace-update", sync);
+    };
+  }, [workspaceMode, activeUser]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -420,20 +439,47 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
       }
     }
 
+    // Card Balance & Authorization Guard (if paying with personal Visa card)
+    if (paymentMethod === "card") {
+      if (!virtualCard.isIssued) {
+        toast.error("Card Not Issued", {
+          description: "Please issue and activate your personal Visa card first.",
+        });
+        setIsCardDrawerOpen(true);
+        return;
+      }
+      if (virtualCard.isFrozen) {
+        toast.error("Card Frozen", {
+          description: "Please unfreeze your virtual card in card settings to authorize.",
+        });
+        setIsCardDrawerOpen(true);
+        return;
+      }
+      if (availableCents < totalBillCents) {
+        toast.error("Insufficient Available Balance", {
+          description: `Available card balance (${formatCurrency(availableCents)}) cannot cover $${(totalBillCents / 100).toFixed(2)}.`,
+        });
+        return;
+      }
+      if (workspaceMode !== "testnet") {
+        deductCashBalance(totalBillCents);
+      }
+    }
+
     // 1. Mock Passkey Prompt (Browser Native equivalent)
     setTxState("authenticating");
-    await new Promise(r => setTimeout(r, 1500));
+    await new Promise(r => setTimeout(r, 1200));
     
     // 2. Mock Pimlico Paymaster/Bundler Processing
     setTxState("processing");
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise(r => setTimeout(r, 1500));
     
     // 3. Save to persistent ledger
     saveStoredExpense(tabId, {
       id: String(Date.now()),
       payer: paidBy,
       amount: totalBillCents,
-      desc: desc.trim(),
+      desc: paymentMethod === "card" ? `${desc.trim()} (Visa Card)` : desc.trim(),
       createdAt: Date.now(),
       splitType: splitType === 'percentage' || splitType === 'shares' ? 'exact' : splitType,
       splits: splitsMap,
@@ -445,9 +491,19 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
     // 4. Success
     setTxState("success");
     sounds.playSuccessChime();
-    toast.success("Expense Logged to Ledger", {
-      description: `${currency !== "USD" ? `${activeCurrencyInfo.symbol}${amount} (≈ $${(totalBillCents / 100).toFixed(2)} USD)` : `$${amount}`} logged for "${desc.trim()}". ${splitType === 'exact' ? 'Exact split recorded.' : 'Split equally.'}`
-    });
+    if (paymentMethod === "card") {
+      try {
+        confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+      } catch {}
+    }
+    toast.success(
+      paymentMethod === "card" ? "💳 Paid via Personal Visa Card!" : "Expense Logged to Ledger",
+      {
+        description: paymentMethod === "card"
+          ? `$${(totalBillCents / 100).toFixed(2)} debited from available cash and split with ${splitBetween.length} members.`
+          : `${currency !== "USD" ? `${activeCurrencyInfo.symbol}${amount} (≈ $${(totalBillCents / 100).toFixed(2)} USD)` : `$${amount}`} logged for "${desc.trim()}". ${splitType === 'exact' ? 'Exact split recorded.' : 'Split equally.'}`
+      }
+    );
     await new Promise(r => setTimeout(r, 1000));
     
     setTxState("idle");
@@ -503,8 +559,23 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Virtual Card Fast-Tap Option */}
                 <div 
-                  onClick={() => setIsCardDrawerOpen(true)}
-                  className="p-3.5 border-2 border-dashed border-indigo-200 dark:border-indigo-500/20 hover:border-indigo-500 rounded-2xl flex items-center gap-3.5 bg-indigo-50/50 dark:bg-indigo-500/5 cursor-pointer transition-all hover:scale-[1.01] sm:col-span-2"
+                  onClick={() => {
+                    sounds.playClick();
+                    if (!virtualCard.isIssued) {
+                      setIsCardDrawerOpen(true);
+                    } else {
+                      setPaymentMethod("card");
+                      setEntryMode("manual");
+                      toast.info("Personal Visa Card Selected", {
+                        description: `Available balance: ${formatCurrency(availableCents)}. Fill in amount and details to split.`
+                      });
+                    }
+                  }}
+                  className={`p-3.5 border-2 border-dashed rounded-2xl flex items-center gap-3.5 cursor-pointer transition-all hover:scale-[1.01] sm:col-span-2 ${
+                    paymentMethod === "card"
+                      ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10"
+                      : "border-indigo-200 dark:border-indigo-500/20 hover:border-indigo-500 bg-indigo-50/50 dark:bg-indigo-500/5"
+                  }`}
                 >
                   <div className="w-10 h-10 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-300 shrink-0">
                     <CreditCard className="w-5 h-5" />
@@ -515,7 +586,9 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
                       <span className="text-[9px] bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-bold px-1.5 py-0.5 rounded-full">Privy × Stripe</span>
                     </div>
                     <p className="text-[11px] text-slate-500 dark:text-white/50 mt-0.5 truncate">
-                      Tap to pay in person & auto-split across the group
+                      {virtualCard.isIssued 
+                        ? `Tap to pay in person with Visa (${formatCurrency(availableCents)} available)`
+                        : "Tap to issue your free virtual card in 2 steps"}
                     </p>
                   </div>
                   <ChevronRight className="w-4 h-4 text-indigo-400 shrink-0" />
@@ -831,6 +904,55 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
               )}
             </div>
 
+            {/* Paid With Payment Method Selector */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between ml-1">
+                <label className="text-sm font-semibold text-slate-700 dark:text-white/80">Paid With</label>
+                {paymentMethod === "card" && (
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono font-bold">
+                    {formatCurrency(availableCents)} Avail
+                  </span>
+                )}
+              </div>
+              <div className="flex p-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl h-[48px] items-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    sounds.playClick();
+                    if (!virtualCard.isIssued) {
+                      setIsCardDrawerOpen(true);
+                    } else {
+                      setPaymentMethod("card");
+                    }
+                  }}
+                  className={`flex-1 h-full rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    paymentMethod === "card"
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : "text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
+                  }`}
+                  title={virtualCard.isIssued ? `Personal Visa Card (${formatCurrency(availableCents)} Available)` : "Issue Personal Visa Card"}
+                >
+                  <CreditCard className="w-3.5 h-3.5" />
+                  <span>Visa Card</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    sounds.playClick();
+                    setPaymentMethod("cash");
+                  }}
+                  className={`flex-1 h-full rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    paymentMethod === "cash"
+                      ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-sm"
+                      : "text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
+                  }`}
+                >
+                  <Coins className="w-3.5 h-3.5" />
+                  <span>Cash</span>
+                </button>
+              </div>
+            </div>
+
             {/* Split Type */}
             <div className="space-y-2 col-span-2">
               <label className="text-sm font-semibold text-slate-700 dark:text-white/80 ml-1">Split Method</label>
@@ -1070,7 +1192,9 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
               ? remainingCents > 0
                 ? `Allocate Remaining $${(remainingCents / 100).toFixed(2)}`
                 : `Exceeds Total by $${(Math.abs(remainingCents) / 100).toFixed(2)}`
-              : "Log Expense"}
+              : paymentMethod === "card" && totalBillCents > 0
+                ? `Pay $${(totalBillCents / 100).toFixed(2)} with Personal Visa Card`
+                : "Log Expense"}
           </Button>
           
           <div className="mt-4 flex items-center justify-between text-slate-500 dark:text-white/50 text-xs font-medium px-1">

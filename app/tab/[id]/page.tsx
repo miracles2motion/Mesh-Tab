@@ -7,8 +7,6 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { BalanceCard } from "../../../components/tab/balance-card";
 import { SettlementDrawer } from "../../../components/tab/settlement-drawer";
 import { CashOutDrawer } from "../../../components/tab/cash-out-drawer";
-import { VirtualCardDrawer } from "../../../components/tab/virtual-card-drawer";
-import { EarnTicker } from "../../../components/tab/earn-ticker";
 import { RosterCarousel } from "../../../components/tab/roster-carousel";
 import { MemberDetailsDrawer } from "../../../components/tab/member-details-drawer";
 import { PaymentRequestDrawer } from "../../../components/tab/payment-request-drawer";
@@ -95,7 +93,6 @@ function DashboardContent() {
   const [isSettlementOpen, setIsSettlementOpen] = useState(false);
   const [isPaymentDrawerOpen, setIsPaymentDrawerOpen] = useState(false);
   const [isCashOutOpen, setIsCashOutOpen] = useState(false);
-  const [isCardDrawerOpen, setIsCardDrawerOpen] = useState(false);
   const [isNettingModalOpen, setIsNettingModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isCertificateOpen, setIsCertificateOpen] = useState(false);
@@ -294,29 +291,6 @@ function DashboardContent() {
                 </span>
               )}
               <NetworkStatusBadge compact />
-              <EarnTicker tabId={rawTabId} />
-              <Link 
-                href={`/notifications?from=/tab/${rawTabId}`} 
-                className="relative w-8 h-8 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shadow-sm text-slate-700 dark:text-white/80 shrink-0"
-                title={`Notifications ${mounted && unreadCount > 0 ? `(${unreadCount} unread)` : ""}`}
-              >
-                <Bell className="w-4 h-4" />
-                {mounted && unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-0.5 bg-rose-500 text-white text-[9px] font-extrabold rounded-full flex items-center justify-center border-2 border-[#f5f5f7] dark:border-[#0a0a0a] shadow-sm">
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </span>
-                )}
-              </Link>
-              {workspaceMode === "sample" && rawTabId === "lisbon-24" && (
-                <Link
-                  href={`/demo?from=/tab/${rawTabId}`}
-                  className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full border transition-all shrink-0 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/20 hover:bg-indigo-100"
-                  title="Switch Sandbox Mode"
-                >
-                  <Sparkles className="w-3 h-3" />
-                  <span>Lisbon Demo</span>
-                </Link>
-              )}
             </div>
           </div>
         </div>
@@ -431,17 +405,10 @@ function DashboardContent() {
 
       {/* Modern Web2 Sticky Bottom Action Dock on Mobile & Desktop */}
       <div className="fixed bottom-6 lg:bottom-10 inset-x-0 z-40 flex justify-center pointer-events-none px-4">
-        <div className="bg-white/95 dark:bg-[#121212]/95 backdrop-blur-2xl border border-slate-200/90 dark:border-white/15 rounded-full p-2 flex items-center justify-between gap-2 shadow-2xl w-full max-w-sm md:max-w-lg lg:max-w-xl mx-auto pointer-events-auto">
-          <button 
-            onClick={() => setIsCardDrawerOpen(true)}
-            className="border font-bold py-3 sm:py-3.5 px-3.5 rounded-full flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-all active:scale-95 text-xs sm:text-sm bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 text-slate-800 dark:text-white border-slate-200 dark:border-white/10"
-            title="Shared Virtual Visa Card"
-          >
-            <CreditCard className="w-4 h-4 text-indigo-500" /> <span>Card</span>
-          </button>
+        <div className="bg-white/95 dark:bg-[#121212]/95 backdrop-blur-2xl border border-slate-200/90 dark:border-white/15 rounded-full p-2 flex items-center justify-between gap-3 shadow-2xl w-full max-w-sm md:max-w-md mx-auto pointer-events-auto">
           <button 
             onClick={() => setIsNettingModalOpen(true)}
-            className={`flex-[1.5] border font-bold py-3 sm:py-3.5 px-4 rounded-full flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all active:scale-95 text-xs sm:text-sm ${
+            className={`flex-1 border font-bold py-3.5 px-4 rounded-full flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all active:scale-95 text-xs sm:text-sm ${
               hasOutstandingTabDebt 
                 ? "bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30" 
                 : "bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30"
@@ -459,10 +426,10 @@ function DashboardContent() {
           </button>
           <Link 
             href={`/tab/${params?.id || 'default'}/expense/new`} 
-            className="flex-1 bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-white/90 py-3 sm:py-3.5 px-4 rounded-full font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-transform"
+            className="flex-1 bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-white/90 py-3.5 px-4 rounded-full font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-transform"
             aria-label="Add Expense"
           >
-            <Plus className="w-4 h-4 sm:w-5 sm:h-5" /> <span>Expense</span>
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" /> <span>Add Expense</span>
           </Link>
         </div>
       </div>
@@ -492,14 +459,6 @@ function DashboardContent() {
         isOpen={isCashOutOpen}
         onClose={() => setIsCashOutOpen(false)}
         currentUserName={currentUser}
-      />
-
-      {/* Shared Virtual Visa Card Drawer */}
-      <VirtualCardDrawer
-        isOpen={isCardDrawerOpen}
-        onClose={() => setIsCardDrawerOpen(false)}
-        tabId={rawTabId}
-        tabName={currentTab.name}
       />
 
       {/* Member Details Breakdown Drawer */}
