@@ -28,7 +28,7 @@ import { NetworkStatusBadge } from "../../../components/ui/network-status-badge"
 import { GlobalNav } from "../../../components/ui/global-nav";
 import { PaymentDrawer } from "../../../components/ui/payment-drawer";
 
-import { useUserProfile, useStoredTabs, useStoredExpenses, useStoredTabMembers, useWorkspaceMode, useSettledPayoutBalance, settleTab, useVirtualBalance } from "../../../lib/user";
+import { useUserProfile, useStoredTabs, useStoredExpenses, useStoredTabMembers, useWorkspaceMode, useSettledPayoutBalance, settleTab, useVirtualBalance, deductSettledPayout } from "../../../lib/user";
 import { useTabSync } from "../../../lib/sync";
 import { useNotifications } from "../../../lib/notifications";
 import { fireSettlementConfetti } from "../../../lib/confetti";
@@ -113,8 +113,10 @@ function DashboardContent() {
     setPaymentTxState("processing");
     await new Promise(r => setTimeout(r, 2000));
     
-    // Clear the debt in the local store
+    // Clear the debt in the local store and deduct from balances symmetrically
     const debtAmount = Math.abs(currentUserData.balance || 0);
+    deduct(debtAmount);
+    deductSettledPayout(debtAmount);
     settleTab(rawTabId, currentUser, debtAmount);
     
     setPaymentTxState("success");
