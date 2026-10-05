@@ -19,6 +19,7 @@ import { getSessionSnapshot, saveSessionSnapshot, isSessionSnapshotValid } from 
  */
 
 const SDK_TIMEOUT_MS = 5000; // 5 second failsafe
+const PUBLIC_ROUTES = ["/", "/login", "/demo", "/onboarding", "/locked"];
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { ready, authenticated, user } = usePrivy();
@@ -35,6 +36,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const [offlineStatusDetermined, setOfflineStatusDetermined] = useState(false);
 
   const isDemo = mode !== "testnet";
+  const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -55,7 +57,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   // Check offline snapshot
   useEffect(() => {
-    if (isDemo) return;
+    if (isDemo || isPublicRoute) return;
     if (isOnline) {
       setIsOfflineAllowed(false);
       setOfflineStatusDetermined(true);
@@ -70,11 +72,11 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       setIsOfflineAllowed(false);
     }
     setOfflineStatusDetermined(true);
-  }, [isOnline, isDemo]);
+  }, [isOnline, isDemo, isPublicRoute]);
 
   // Timeout failsafe: if Privy SDK hasn't initialized within 5s, flag it
   useEffect(() => {
-    if (isDemo || !isOnline) return;
+    if (isDemo || isPublicRoute || !isOnline) return;
     if (!ready) {
       timeoutRef.current = setTimeout(() => {
         setHasTimedOut(true);
@@ -86,11 +88,11 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [ready, isDemo, isOnline]);
+  }, [ready, isDemo, isPublicRoute, isOnline]);
 
   // Redirect on timeout (hung SDK) or expired session
   useEffect(() => {
-    if (isDemo) return;
+    if (isDemo || isPublicRoute) return;
     if (!isOnline) {
       // Do not redirect to /locked here; let the render block show the "Please connect" UI.
       return;
@@ -99,18 +101,18 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     if (hasTimedOut && !ready) {
       router.replace("/locked");
     }
-  }, [hasTimedOut, ready, router, isDemo, isOnline]);
+  }, [hasTimedOut, ready, router, isDemo, isPublicRoute, isOnline]);
 
   useEffect(() => {
-    if (isDemo || !isOnline) return;
+    if (isDemo || isPublicRoute || !isOnline) return;
     if (ready && !authenticated) {
       router.replace("/locked");
     }
-  }, [ready, authenticated, router, isDemo, isOnline]);
+  }, [ready, authenticated, router, isDemo, isPublicRoute, isOnline]);
 
   // Save snapshot when authenticated and online
   useEffect(() => {
-    if (isDemo || !isOnline) return;
+    if (isDemo || isPublicRoute || !isOnline) return;
     if (ready && authenticated && user) {
       const activeWallet = wallets.find(w => w.walletClientType === 'privy') || wallets[0];
       
@@ -120,10 +122,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         displayName: user.google?.name || user.twitter?.name || user.email?.address || "You"
       });
     }
-  }, [ready, authenticated, user, wallets, isDemo, isOnline]);
+  }, [ready, authenticated, user, wallets, isDemo, isPublicRoute, isOnline]);
 
-  // Bypass entirely for demo mode
-  if (isDemo) {
+  // Bypass entirely for demo mode or public marketing/onboarding routes
+  if (isDemo || isPublicRoute) {
     return <>{children}</>;
   }
 

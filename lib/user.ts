@@ -1037,14 +1037,13 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
     createdAt: Date.now()
   }, true);
 
-  // 4. Credit the accumulated settled payouts (cashable balance)
-  // Only add if the current user is receiving the money, not paying it.
-  // We deduce this if the currentUserName is NOT the one paying, or if we handle payout separately.
-  // Actually, settleTab is called when a user settles their own debt. So they are paying.
-  // If they are paying, their payout balance shouldn't increase.
-  // The only way it increases is if someone ELSE pays them.
-  // Since we don't have multiplayer real-time yet, we will just not add to payout here.
-  // (Removed addSettledPayout(amount) from here to fix M2)
+  // 4. In demo mode (sample / blank), when the user settles their own debt,
+  // deduct the amount from their cashable payout balance and virtual balance
+  const mode = getWorkspaceMode();
+  if (mode !== "testnet") {
+    deductSettledPayout(amount);
+    deductVirtualBalance(amount);
+  }
 }
 
 // -------------------------------------------------------------
@@ -1053,24 +1052,21 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
 export function getSettledPayoutBalance(): number {
   if (typeof window === "undefined") return 0;
   const mode = getWorkspaceMode();
+  const key = storageKey("settledPayoutBalance", mode);
+  const val = localStorage.getItem(key);
   
-  if (mode === "blank" || mode === "testnet") {
-    const key = storageKey("settledPayoutBalance", mode);
-    const val = localStorage.getItem(key);
-    if (val === null) return 0;
-    const parsed = parseInt(val, 10);
-    return isNaN(parsed) ? 0 : Math.max(0, parsed);
-  }
-  
-  const val = localStorage.getItem("meshTab_settledPayoutBalance");
   if (val === null) {
-    // In sample mode, the mock data starts with John having already settled $500 with you.
-    // So the default payout balance must match the ledger.
-    safeSetItem(storageKey("settledPayoutBalance", "sample"), "50000");
-    return 50000;
+    if (mode === "sample") {
+      // In sample mode, the mock data starts with John having already settled $500 with you.
+      // So the default payout balance starts at $500.00.
+      safeSetItem(key, "50000");
+      return 50000;
+    }
+    return 0;
   }
+  
   const parsed = parseInt(val, 10);
-  return isNaN(parsed) ? 0 : Math.max(0, parsed);
+  return isNaN(parsed) ? (mode === "sample" ? 50000 : 0) : Math.max(0, parsed);
 }
 
 export function addSettledPayout(amountCents: number) {

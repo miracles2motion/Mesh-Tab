@@ -67,9 +67,11 @@ export function useAvailableBalance(currentUserName: string) {
     update();
     window.addEventListener("meshTab-expenses-update", update);
     window.addEventListener("meshTab-tabs-update", update);
+    window.addEventListener("meshTab-members-update", update);
     return () => {
       window.removeEventListener("meshTab-expenses-update", update);
       window.removeEventListener("meshTab-tabs-update", update);
+      window.removeEventListener("meshTab-members-update", update);
     };
   }, [currentUserName]);
 

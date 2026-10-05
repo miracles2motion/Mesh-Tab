@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import Image from "next/image";
 import { MeshBuddy } from "../../components/ui/mesh-buddy";
 import { FreshDemoModal } from "../../components/demo/fresh-demo-modal";
-import { AuthGuard } from "../../components/providers/auth-guard";
+
 function DemoContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -227,10 +227,8 @@ function DemoContent() {
 
 export default function DemoSelectionPage() {
   return (
-    <AuthGuard>
-      <Suspense fallback={<div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a]" />}>
-        <DemoContent />
-      </Suspense>
-    </AuthGuard>
+    <Suspense fallback={<div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a]" />}>
+      <DemoContent />
+    </Suspense>
   );
 }

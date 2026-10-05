@@ -24,7 +24,6 @@ import confetti from "canvas-confetti";
 import Image from "next/image";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
-import { AuthGuard } from "../../components/providers/auth-guard";
 
 function OnboardingContent() {
   const router = useRouter();
@@ -404,10 +403,8 @@ function OnboardingContent() {
 
 export default function OnboardingPage() {
   return (
-    <AuthGuard>
-      <Suspense fallback={<div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a]" />}>
-        <OnboardingContent />
-      </Suspense>
-    </AuthGuard>
+    <Suspense fallback={<div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a]" />}>
+      <OnboardingContent />
+    </Suspense>
   );
 }

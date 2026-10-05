@@ -147,12 +147,6 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
     } else {
       await new Promise((r) => setTimeout(r, 1800));
     }
-
-    if (paymentMethod === "ausd" && hasEnoughVirtual && workspaceMode !== "testnet") {
-      deduct(debtAmount);
-      deductSettledPayout(debtAmount);
-    }
-
     settleTab(tabId, activeUser, debtAmount);
     setIsProcessing(false);
     setIsSuccess(true);

@@ -115,7 +115,6 @@ function DashboardContent() {
     
     // Clear the debt in the local store
     const debtAmount = Math.abs(currentUserData.balance || 0);
-    deduct(debtAmount);
     settleTab(rawTabId, currentUser, debtAmount);
     
     setPaymentTxState("success");

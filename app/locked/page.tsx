@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Lock, Fingerprint, LogIn, ChevronRight } from "lucide-react";
 import { usePrivy, useLoginWithPasskey } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
@@ -73,6 +74,23 @@ export default function LockedPage() {
             Set up a Passkey next time for instant biometric unlock (Face ID, Fingerprint, etc)!
           </div>
         )}
+
+        <div className="mt-8 flex items-center justify-center gap-4 text-xs text-slate-400 dark:text-white/40">
+          <button 
+            onClick={() => {
+              sounds.playClick();
+              setWorkspaceMode("sample");
+              router.push("/home");
+            }}
+            className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors font-medium"
+          >
+            Switch to Demo Mode
+          </button>
+          <span>•</span>
+          <Link href="/" className="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors font-medium">
+            Return to Homepage
+          </Link>
+        </div>
       </div>
     </div>
   );
