@@ -11,6 +11,7 @@ import { useUserProfile, useStoredTabs, useVirtualBalance, useWorkspaceMode, get
 import { useAvailableBalance, computeCrossTabPosition } from "../../lib/balance";
 import { useNotifications } from "../../lib/notifications";
 import { CashOutDrawer } from "../../components/tab/cash-out-drawer";
+import { AddFundsDrawer } from "../../components/tab/add-funds-drawer";
 import { PitchModal } from "../../components/home/pitch-modal";
 import { MeshBuddy } from "../../components/ui/mesh-buddy";
 import { toast } from "sonner";
@@ -47,6 +48,7 @@ export default function GlobalHub() {
   const hasPasskey = user?.linkedAccounts?.some(account => account.type === 'passkey') || false;
 
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showAddFundsModal, setShowAddFundsModal] = useState(false);
   const [showCashOutModal, setShowCashOutModal] = useState(false);
   const [showPitchModal, setShowPitchModal] = useState(false);
   const [showFaucetModal, setShowFaucetModal] = useState(false);
@@ -285,27 +287,21 @@ export default function GlobalHub() {
           </p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
-          {!mounted ? (
-            <div className="h-8 w-24 bg-slate-200 dark:bg-white/10 rounded-full animate-pulse" />
-          ) : (
+          {mounted && isTestnetMode && (
             <button
               onClick={() => {
                 sounds.playClick();
                 setShowFaucetModal(true);
               }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-full border font-bold text-xs shadow-sm transition-all hover:scale-105 active:scale-95 cursor-pointer ${
-                isTestnetMode 
-                  ? "bg-purple-50 dark:bg-purple-500/10 border-purple-200 dark:border-purple-500/20 text-purple-700 dark:text-purple-300" 
-                  : "bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-300"
-              }`}
-              title={isTestnetMode ? "Top Up Testnet Balance" : "Top Up Sandbox Balance"}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full border font-bold text-xs shadow-sm transition-all hover:scale-105 active:scale-95 cursor-pointer bg-purple-50 dark:bg-purple-500/10 border-purple-200 dark:border-purple-500/20 text-purple-700 dark:text-purple-300"
+              title="Top Up Testnet Balance"
             >
               <Coins className="w-3.5 h-3.5" />
               <span className="tabular-nums">
-                {isTestnetMode && isFetchingBalance && testnetBalance === 0 ? (
+                {isFetchingBalance && testnetBalance === 0 ? (
                   <span className="w-8 h-3 bg-purple-200 dark:bg-purple-500/20 rounded animate-pulse inline-block" />
                 ) : (
-                  <AnimatedCounter value={isTestnetMode ? testnetBalance : virtualBalance / 100} prefix="$" decimals={2} />
+                  <AnimatedCounter value={testnetBalance} prefix="$" decimals={2} />
                 )}
               </span>
             </button>
@@ -351,6 +347,17 @@ export default function GlobalHub() {
 
               {mounted && (
                 <div className="mt-4 flex items-center gap-3 flex-wrap">
+                  {!isTestnetMode && (
+                    <button
+                      onClick={() => {
+                        sounds.playClick();
+                        setShowAddFundsModal(true);
+                      }}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold shadow-md shadow-indigo-500/25 transition-all cursor-pointer hover:scale-105"
+                    >
+                      <Plus className="w-4 h-4" /> Add Funds
+                    </button>
+                  )}
                   <button 
                     onClick={() => {
                       if (availableCents > 0) {
@@ -643,6 +650,12 @@ export default function GlobalHub() {
           </div>
         </div>
       )}
+      {/* Add Funds Drawer */}
+      <AddFundsDrawer 
+        isOpen={showAddFundsModal} 
+        onClose={() => setShowAddFundsModal(false)} 
+      />
+
       {/* Cash Out Drawer */}
       <CashOutDrawer 
         isOpen={showCashOutModal} 

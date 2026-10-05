@@ -1101,6 +1101,18 @@ export function withdrawSettledPayout(amountCents?: number): number {
   return toWithdraw;
 }
 
+export function deductSettledPayout(amountCents: number): boolean {
+  if (typeof window === "undefined") return false;
+  const mode = getWorkspaceMode();
+  const key = storageKey("settledPayoutBalance", mode);
+  const current = getSettledPayoutBalance();
+  if (current < amountCents) return false;
+  const next = current - amountCents;
+  safeSetItem(key, String(next));
+  window.dispatchEvent(new Event("meshTab-payout-update"));
+  return true;
+}
+
 export function useSettledPayoutBalance() {
   const [balance, setBalance] = useState<number>(getSettledPayoutBalance);
 
@@ -1126,7 +1138,8 @@ export function useSettledPayoutBalance() {
     totalOutstandingDebt,
     withdrawableAmount,
     addPayout: addSettledPayout,
-    withdrawPayout: withdrawSettledPayout
+    withdrawPayout: withdrawSettledPayout,
+    deductPayout: deductSettledPayout
   };
 }
 

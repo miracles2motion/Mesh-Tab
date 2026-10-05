@@ -8,7 +8,7 @@ import { formatCurrency } from "../../lib/utils";
 import Image from "next/image";
 import { AgoraLogo, PrivyLogo } from "../ui/partner-logo";
 
-import { DEFAULT_USER_NAME, useSettledPayoutBalance, useWorkspaceMode } from "../../lib/user";
+import { DEFAULT_USER_NAME, useSettledPayoutBalance, useWorkspaceMode, deductVirtualBalance } from "../../lib/user";
 import { useAvailableBalance } from "../../lib/balance";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
@@ -58,6 +58,7 @@ export function CashOutDrawer({
     }
 
     withdrawPayout(withdrawableAmount);
+    deductVirtualBalance(withdrawableAmount);
     sounds.playSuccessChime();
     fireSettlementConfetti();
     toast.success("Cash Out Initiated!", {

@@ -8,7 +8,7 @@ import { formatCurrency } from "../../lib/utils";
 import { ReceiptView } from "../ReceiptView";
 import { MonadLogo, AgoraLogo, PythLogo } from "../ui/partner-logo";
 
-import { useUserProfile, settleTab, useVirtualBalance, useStoredTabMembers, useWorkspaceMode } from "../../lib/user";
+import { useUserProfile, settleTab, useVirtualBalance, deductSettledPayout, useStoredTabMembers, useWorkspaceMode } from "../../lib/user";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { fireSettlementConfetti, fireFaucetConfetti } from "../../lib/confetti";
@@ -133,6 +133,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
 
     if (paymentMethod === "ausd" && hasEnoughVirtual && workspaceMode !== "testnet") {
       deduct(debtAmount);
+      deductSettledPayout(debtAmount);
     }
 
     settleTab(tabId, activeUser, debtAmount);
@@ -216,13 +217,8 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
                     <div>
                       <div className="flex items-center gap-2">
                         <h4 className="font-semibold text-sm text-slate-900 dark:text-white">
-                          {workspaceMode === "testnet" ? "Mesh Balance" : "Sandbox Virtual Balance"}
+                          {workspaceMode === "testnet" ? "Mesh Balance" : "Account Balance"}
                         </h4>
-                        {workspaceMode !== "testnet" && (
-                          <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded-full font-bold">
-                            Sandbox
-                          </span>
-                        )}
                       </div>
                       <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5 font-mono">
                         {formatCurrency(activeBalance)} Available
@@ -240,7 +236,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
                   </div>
                 </button>
 
-                {/* Option B: Apple Pay / Debit Card */}
+                {/* Option B: Debit / Credit Card */}
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("apple-pay")}
@@ -256,7 +252,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
                     </div>
                     <div>
                       <h4 className="font-semibold text-sm text-slate-900 dark:text-white">
-                        Apple Pay / Card
+                        Debit / Credit Card
                       </h4>
                       <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5">
                         Instant card checkout with 0 FX fees
@@ -332,8 +328,10 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
                 isLoading={isProcessing}
               >
                 {paymentMethod === "ausd"
-                  ? `Confirm ${formatCurrency(debtAmount)} with Virtual AUSD`
-                  : `Pay ${pythConfig?.symbol || "$"}${formattedConverted} ${payCurrency} with Apple Pay`}
+                  ? (hasEnoughVirtual 
+                      ? (workspaceMode === "testnet" ? `Confirm ${formatCurrency(debtAmount)} with Mesh Balance` : `Confirm ${formatCurrency(debtAmount)} with Account Balance`)
+                      : `Insufficient Balance (${formatCurrency(activeBalance)})`)
+                  : `Pay ${pythConfig?.symbol || "$"}${formattedConverted} ${payCurrency} with Card`}
               </Button>
             </div>
           </div>

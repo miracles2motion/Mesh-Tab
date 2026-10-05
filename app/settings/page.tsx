@@ -61,7 +61,7 @@ function SettingsContent() {
   const profile = useUserProfile();
   const { showAddress: showAddressOnDashboard, toggleAddress } = useDeveloperMode();
   const { settings: buddySettings, updateSettings: updateBuddySettings } = useBuddySettings();
-  const { balance: virtualBalance, topUp: topUpFaucet } = useVirtualBalance();
+  const { balance: virtualBalance } = useVirtualBalance();
   const { mode: workspaceMode, setMode: setWorkspaceMode } = useWorkspaceMode();
   const { lockTimer, setLockTimer } = useSecurity();
 
@@ -241,13 +241,6 @@ function SettingsContent() {
     );
   };
 
-  const handleClaimFaucet = () => {
-    topUpFaucet(50000);
-    sounds.playCoinClink();
-    fireFaucetConfetti();
-    toast.success("+$500.00 Test AUSD Claimed!", { description: "Added to your Monad sandbox balance." });
-  };
-
   const handleManagePasskey = () => {
     linkPasskey();
   };
@@ -309,7 +302,7 @@ function SettingsContent() {
                   : "text-slate-600 dark:text-white/60 hover:bg-slate-50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
-              <Bot className="w-4 h-4 shrink-0" /> {workspaceMode === "testnet" ? "Tab Co-Pilot" : "Tab Co-Pilot & Faucet"}
+              <Bot className="w-4 h-4 shrink-0" /> Tab Co-Pilot
             </button>
             <button 
               onClick={() => handleTabChange("advanced")}
@@ -628,49 +621,7 @@ function SettingsContent() {
                 </div>
               </div>
 
-              {/* Sandbox Virtual Faucet Card */}
-              {workspaceMode !== "testnet" && (
-                <div className="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 shadow-sm">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                        <Coins className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h2 className="text-lg font-bold text-slate-900 dark:text-white">Sandbox Virtual Faucet</h2>
-                        <p className="text-xs text-slate-500 dark:text-white/50">Instant play-money AUSD for simulating debt settlements</p>
-                      </div>
-                    </div>
 
-                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                      🟢 Monad Sandbox
-                    </span>
-                  </div>
-
-                  <div className="p-6 bg-slate-50 dark:bg-black/30 rounded-2xl border border-slate-200 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-6">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium text-slate-500 dark:text-white/50 mb-1 uppercase tracking-wider">
-                        Available Sandbox Balance
-                      </div>
-                      <div className="text-3xl font-extrabold text-slate-900 dark:text-white font-mono">
-                        <AnimatedCounter value={virtualBalance / 100} prefix="$" decimals={2} />
-                        <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 ml-2">Test AUSD</span>
-                      </div>
-                      <p className="text-xs text-slate-500 dark:text-white/40 mt-1 max-w-sm">
-                        Deducted when paying tab debts in demo mode. Top up whenever you want to test more multilateral settlements.
-                      </p>
-                    </div>
-
-                    <Button 
-                      onClick={handleClaimFaucet}
-                      variant="primary"
-                      className="shrink-0 whitespace-nowrap gap-2 bg-emerald-600 hover:bg-emerald-500 text-white w-full sm:w-auto h-12 px-6 shadow-md shadow-emerald-600/20 text-sm font-bold"
-                    >
-                      <Plus className="w-4 h-4" /> Claim $500.00 AUSD
-                    </Button>
-                  </div>
-                </div>
-              )}
 
               {/* Workspace Sandbox Mode */}
               {workspaceMode !== "testnet" && (
