@@ -41,22 +41,20 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // In demo mode, we consider them authenticated for the timer logic
-    const isDemo = mode !== "testnet";
-    const isEffectivelyAuthenticated = isDemo ? true : authenticated;
+    // 1. Strict Isolation: Auto-lock NEVER runs in demo mode (sample or blank)
+    if (mode !== "testnet") return;
 
-    // Only track if they are effectively authenticated and not already on the locked page
-    if (!isEffectivelyAuthenticated || lockTimer < 0 || pathname === '/locked') return;
+    // 2. Strict Auth: Only runs for real authenticated testnet sessions
+    if (!authenticated) return;
+    if (lockTimer < 0) return;
+
+    // 3. Strict Route Guard: Never lock out on public marketing or auth pages
+    const PUBLIC_ROUTES = ["/", "/login", "/demo", "/onboarding", "/locked"];
+    if (PUBLIC_ROUTES.includes(pathname)) return;
 
     let timeoutId: NodeJS.Timeout;
 
     const performLock = () => {
-      if (isDemo) {
-        // No privy logout in demo
-        router.replace("/locked");
-        return;
-      }
-
       // Save passkey status before logging out so the /locked page knows what to say
       const hasPasskey = user?.linkedAccounts?.some(acc => acc.type === 'passkey') || false;
       localStorage.setItem("mesh_last_passkey_status", hasPasskey.toString());

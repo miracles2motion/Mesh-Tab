@@ -780,10 +780,15 @@ function SettingsContent() {
                   {/* Auto-Lock Timer Card */}
                   <div className="p-5 bg-slate-50 dark:bg-black/30 rounded-2xl border border-slate-200 dark:border-white/5 space-y-4">
                     <div>
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-1">
-                        <Lock className="w-4 h-4 text-indigo-500" /> Auto-Lock App
-                      </h3>
-                      <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5 max-w-md">Manage your auto-lock timer. When active, your session is automatically destroyed for security. You will need to authenticate again to regain access.</p>
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                          <Lock className="w-4 h-4 text-indigo-500" /> Auto-Lock App
+                        </h3>
+                        <span className="text-[10px] bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded-full font-semibold">
+                          Testnet Security
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5 max-w-md">Manage your biometric auto-lock timer for authenticated Testnet sessions. When active, your session locks on inactivity and requires Passkey re-authentication. (Disabled in Demo Mode).</p>
                     </div>
                     
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-2">

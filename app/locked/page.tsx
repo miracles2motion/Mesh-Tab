@@ -5,7 +5,7 @@ import { Lock, Fingerprint, LogIn, ChevronRight } from "lucide-react";
 import { usePrivy, useLoginWithPasskey } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from "../../components/theme-toggle";
-import { setWorkspaceMode } from "../../lib/user";
+import { setWorkspaceMode, getWorkspaceMode } from "../../lib/user";
 import { sounds } from "../../lib/sounds";
 
 export default function LockedPage() {
@@ -15,6 +15,12 @@ export default function LockedPage() {
   const [hadPasskey, setHadPasskey] = useState(true);
 
   useEffect(() => {
+    // If in demo mode, shouldn't be on /locked — redirect back to demo home
+    if (getWorkspaceMode() !== "testnet") {
+      router.replace("/home");
+      return;
+    }
+
     // If they successfully logged back in, send them straight back to the dashboard
     if (ready && authenticated) {
       setWorkspaceMode("testnet");
