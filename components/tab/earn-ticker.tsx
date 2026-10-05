@@ -12,6 +12,7 @@ import { useWorkspaceMode, useSettledPayoutBalance } from "@/lib/user";
 import { useRealAusdBalance } from "@/lib/onchain";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
+import { PrivyLogo } from "@/components/ui/partner-logo";
 import { formatCurrency } from "@/lib/utils";
 import { sounds } from "@/lib/sounds";
 import { toast } from "sonner";
@@ -133,7 +134,7 @@ export function EarnTicker({ tabId = "lisbon-24", className = "" }: EarnTickerPr
           {isTestnet ? (
             /* Testnet: Official Privy Earn Mainnet Roadmap Card (Zero Fake Balances) */
             <div className="space-y-5 p-5 text-slate-900 dark:text-white">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-white/10">
+              <div className="flex items-center justify-between pb-2 pr-10 border-b border-slate-100 dark:border-white/10">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold">
                     <Sparkles className="w-4 h-4" />
@@ -183,15 +184,21 @@ export function EarnTicker({ tabId = "lisbon-24", className = "" }: EarnTickerPr
 
               <Button
                 onClick={() => setIsModalOpen(false)}
-                className="w-full py-4 text-xs font-bold bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 dark:text-black text-white shadow-md"
+                className="w-full py-4 text-xs font-bold bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 dark:text-black text-white shadow-md cursor-pointer"
               >
                 Got it
               </Button>
+
+              {/* Powered by Privy Footer */}
+              <div className="pt-2 flex items-center justify-center gap-2 text-slate-400 dark:text-white/40 text-xs font-medium">
+                <span className="text-[11px] tracking-wide">Powered by</span>
+                <PrivyLogo className="h-3.5 w-auto" />
+              </div>
             </div>
           ) : (
             /* Demo Mode: Interactive Preview & Harvest Modal */
             <div className="space-y-5 p-5 text-slate-900 dark:text-white">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-white/10">
+              <div className="flex items-center justify-between pb-2 pr-10 border-b border-slate-100 dark:border-white/10">
                 <h3 className="text-lg font-bold">Privy Earn Vault Preview</h3>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300">
                   Demo Preview
@@ -228,10 +235,16 @@ export function EarnTicker({ tabId = "lisbon-24", className = "" }: EarnTickerPr
 
               <Button
                 onClick={handleHarvest}
-                className="w-full py-5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg"
+                className="w-full py-5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg cursor-pointer"
               >
                 <Sparkles className="w-4 h-4 mr-1.5" /> Harvest ${live.displayYieldUsd} to Cash Balance
               </Button>
+
+              {/* Powered by Privy Footer */}
+              <div className="pt-2 flex items-center justify-center gap-2 text-slate-400 dark:text-white/40 text-xs font-medium">
+                <span className="text-[11px] tracking-wide">Powered by</span>
+                <PrivyLogo className="h-3.5 w-auto" />
+              </div>
             </div>
           )}
         </Modal>
