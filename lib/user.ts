@@ -390,7 +390,7 @@ export function mergePulledTabs(serverTabs: any[], walletAddress: string) {
       memberCount: st.members ? st.members.length : (existing?.memberCount || 1),
       createdAt: st.createdAt || existing?.createdAt || Date.now(),
       lastActivityAt: Math.max(existing?.lastActivityAt || 0, st.serverSyncedAt || 0),
-      lastActivityKind: existing?.lastActivityKind || "synced"
+      lastActivityKind: existing?.lastActivityKind || "joined"
     };
 
     if (!existing) {
