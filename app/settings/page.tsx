@@ -183,7 +183,8 @@ function SettingsContent() {
   };
 
   const handleSaveChanges = async () => {
-    const result = await saveStoredUser(displayName, avatarColorIndex, user?.wallet?.address);
+    const activeWallet = client?.account?.address || user?.wallet?.address;
+    const result = await saveStoredUser(displayName, avatarColorIndex, activeWallet);
     if (result.error) {
       toast.error("Error", { description: result.error });
       return;
@@ -195,7 +196,8 @@ function SettingsContent() {
   const handleChangeAvatar = async () => {
     const nextIdx = (avatarColorIndex + 1) % AVATAR_COLORS.length;
     setAvatarColorIndex(nextIdx);
-    const result = await saveStoredUser(displayName, nextIdx, user?.wallet?.address);
+    const activeWallet = client?.account?.address || user?.wallet?.address;
+    const result = await saveStoredUser(displayName, nextIdx, activeWallet);
     if (result.error) {
       // Revert if rate limited
       setAvatarColorIndex(avatarColorIndex);

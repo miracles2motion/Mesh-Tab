@@ -18,6 +18,10 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
     if (!ready || !authenticated || !walletAddress || mode !== "testnet") return;
 
+    if (typeof window !== "undefined" && walletAddress) {
+      localStorage.setItem("meshTab_walletAddress", walletAddress);
+    }
+
     const runSync = async () => {
       if (isSyncingRef.current) return;
       isSyncingRef.current = true;

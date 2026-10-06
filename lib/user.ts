@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { addNotification, resetNotificationsToMode } from "./notifications";
 import { isEffectivelyOnline } from "./network";
 import { usePrivy } from "@privy-io/react-auth";
-import { storageKey, safeSetItem } from "./storage-keys";
+import { storageKey, safeSetItem, getDeletedTabIds } from "./storage-keys";
+import { getOutbox } from "./outbox";
 
 export interface UserProfile {
   name: string;
@@ -42,6 +43,9 @@ export function getStoredUser(): UserProfile {
 export async function saveStoredUser(name: string, colorIndex?: number, walletAddress?: string): Promise<{ error?: string }> {
   if (typeof window === "undefined") return {};
   const trimmed = name.trim();
+  const oldName = localStorage.getItem("meshTab_displayName") || "";
+  const nameChanged = Boolean(trimmed && oldName && trimmed.toLowerCase() !== oldName.toLowerCase());
+
   if (trimmed) {
     localStorage.setItem("meshTab_displayName", trimmed);
   }
@@ -51,6 +55,92 @@ export async function saveStoredUser(name: string, colorIndex?: number, walletAd
   if (walletAddress) {
     localStorage.setItem("meshTab_walletAddress", walletAddress);
   }
+
+  // Local cascade migration across modes when user changes display name
+  if (nameChanged) {
+    try {
+      const modes: WorkspaceMode[] = ["sample", "blank", "testnet"];
+      modes.forEach(mode => {
+        const tabsKey = storageKey("tabs", mode);
+        const rawTabs = localStorage.getItem(tabsKey);
+        if (!rawTabs) return;
+        try {
+          const tabs: TabSummary[] = JSON.parse(rawTabs);
+          let tabsChanged = false;
+          tabs.forEach(tab => {
+            if (tab.creator && tab.creator.toLowerCase() === oldName.toLowerCase()) {
+              tab.creator = trimmed;
+              tabsChanged = true;
+            }
+
+            // Migrate member roster for this tab
+            const membersKey = storageKey("members", mode, tab.id);
+            const rawMembers = localStorage.getItem(membersKey);
+            if (rawMembers) {
+              try {
+                const members: TabMember[] = JSON.parse(rawMembers);
+                let memsChanged = false;
+                members.forEach(m => {
+                  const isMatch = (m.name && m.name.toLowerCase() === oldName.toLowerCase()) ||
+                    Boolean(walletAddress && m.walletAddress && m.walletAddress.toLowerCase() === walletAddress.toLowerCase());
+                  if (isMatch) {
+                    m.name = trimmed;
+                    if (walletAddress && !m.walletAddress) m.walletAddress = walletAddress;
+                    memsChanged = true;
+                  }
+                });
+                if (memsChanged) {
+                  safeSetItem(membersKey, JSON.stringify(members));
+                }
+              } catch {}
+            }
+
+            // Migrate expenses for this tab
+            const expensesKey = storageKey("expenses", mode, tab.id);
+            const rawExpenses = localStorage.getItem(expensesKey);
+            if (rawExpenses) {
+              try {
+                const expenses: StoredExpense[] = JSON.parse(rawExpenses);
+                let expsChanged = false;
+                expenses.forEach(exp => {
+                  if (exp.payer && exp.payer.toLowerCase() === oldName.toLowerCase()) {
+                    exp.payer = trimmed;
+                    expsChanged = true;
+                  }
+                  if (Array.isArray(exp.participants)) {
+                    const hasOld = exp.participants.some(p => p.toLowerCase() === oldName.toLowerCase());
+                    if (hasOld) {
+                      exp.participants = exp.participants.map(p => p.toLowerCase() === oldName.toLowerCase() ? trimmed : p);
+                      expsChanged = true;
+                    }
+                  }
+                  if (exp.splits && exp.splits[oldName] !== undefined) {
+                    exp.splits[trimmed] = exp.splits[oldName];
+                    delete exp.splits[oldName];
+                    expsChanged = true;
+                  }
+                });
+                if (expsChanged) {
+                  safeSetItem(expensesKey, JSON.stringify(expenses));
+                }
+              } catch {}
+            }
+          });
+
+          if (tabsChanged) {
+            safeSetItem(tabsKey, JSON.stringify(tabs));
+          }
+        } catch {}
+      });
+
+      window.dispatchEvent(new Event("meshTab-tabs-update"));
+      window.dispatchEvent(new Event("meshTab-members-update"));
+      window.dispatchEvent(new Event("meshTab-expenses-update"));
+    } catch (e) {
+      console.error("Local cascade migration failed", e);
+    }
+  }
+
   window.dispatchEvent(new Event("meshTab-profile-update"));
 
   if (walletAddress) {
@@ -58,7 +148,12 @@ export async function saveStoredUser(name: string, colorIndex?: number, walletAd
       const res = await fetch("/api/user/profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wallet: walletAddress, name: trimmed, avatarColorIndex: colorIndex })
+        body: JSON.stringify({ 
+          wallet: walletAddress, 
+          name: trimmed, 
+          oldName: nameChanged ? oldName : undefined, 
+          avatarColorIndex: colorIndex 
+        })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -77,7 +172,7 @@ let lastFetchedWallet: string | null = null;
 export function useUserProfile() {
   const [profile, setProfile] = useState<UserProfile>(getStoredUser);
   const { user, authenticated } = usePrivy();
-  const walletAddress = user?.wallet?.address;
+  const walletAddress = user?.wallet?.address || (typeof window !== "undefined" ? localStorage.getItem("meshTab_walletAddress") : null);
 
   // Sync from localStorage changes
   useEffect(() => {
@@ -363,26 +458,49 @@ export function mergePulledTabs(serverTabs: any[], walletAddress: string) {
   const key = getTabsStorageKey(mode);
   const current = getStoredTabs();
   
-  // Merge strategy: 
-  // 1. Keep all current local tabs (preserves pending offline tabs)
-  // 2. Update existing tabs with server data
-  // 3. Add any new server tabs not present locally
+  // Merge strategy (Matrix Rule #37: Pull Must Not Delete Pending):
+  // 1. Filter out locally tombstoned (deleted) tabs
+  // 2. Identify pending offline creations from outbox - these MUST NOT be deleted
+  // 3. For existing local tabs not on server and not pending creation: prune them (deleted on server)
+  // 4. Overwrite / merge server tabs
   
+  const deletedTombstones = new Set(getDeletedTabIds());
+  const pendingOutbox = getOutbox();
+  const pendingCreatedTabIds = new Set(
+    pendingOutbox.filter(op => op.type === "createTab").map(op => op.tabId)
+  );
+  const serverTabIds = new Set(serverTabs.map(st => st.id));
+
   const mergedMap = new Map<string, TabSummary>();
   
-  // Seed with local first
-  current.forEach(t => mergedMap.set(t.id, t));
+  // Seed local tabs: keep pending offline creations, and keep tabs that also exist on server (to be updated)
+  current.forEach(t => {
+    if (deletedTombstones.has(t.id)) return;
+    if (serverTabIds.has(t.id) || pendingCreatedTabIds.has(t.id)) {
+      mergedMap.set(t.id, t);
+    }
+  });
   
   // Overwrite/add server tabs
   serverTabs.forEach(st => {
+    if (deletedTombstones.has(st.id)) return;
     const existing = mergedMap.get(st.id);
     
     // Find user's specific balance from the server members list
-    // Note: server sends addresses in the 'address' field, which is actually the member's name or address depending on the route
-    // In app/api/tab/new, it's actually name-based. Let's just default to 0 if not found, as app/tab/[id]/page.tsx recalculates it anyway.
     const myBalance = 0; 
     
-    const isCreator = existing?.role === "Creator" || st.creatorWallet === walletAddress;
+    const profile = getStoredUser();
+    const currentName = profile.name || "";
+    const localWallet = typeof window !== "undefined" ? (localStorage.getItem("meshTab_walletAddress") || "") : "";
+
+    const isCreator = Boolean(
+      st.role === "Creator" ||
+      st.isCreator === true ||
+      existing?.role === "Creator" || 
+      (st.creatorWallet && walletAddress && st.creatorWallet.toLowerCase() === walletAddress.toLowerCase()) ||
+      (st.creatorWallet && localWallet && st.creatorWallet.toLowerCase() === localWallet.toLowerCase()) ||
+      (st.creator && currentName && st.creator.trim().toLowerCase() === currentName.trim().toLowerCase())
+    );
 
     const formattedTab: TabSummary = {
       id: st.id,
@@ -410,13 +528,29 @@ export function mergePulledTabs(serverTabs: any[], walletAddress: string) {
     
     // Also cache the members list locally so the tab details page works offline
     if (st.members && Array.isArray(st.members)) {
-      const formattedMembers = st.members.map((m: any) => ({
-        address: m.address, // Wait, backend uses address as the key
-        name: m.address, // For now, since profile lookup isn't pipelined, use address as name
-        balance: m.balance,
-        role: existing?.creator === m.address ? "creator" : "member",
-        avatarColorIndex: Math.floor(Math.random() * 5)
-      }));
+      const creatorIdentifier = st.creator || existing?.creator;
+      const formattedMembers = st.members.map((m: any) => {
+        const isMemberCreator = Boolean(
+          (creatorIdentifier && (m.name?.toLowerCase() === creatorIdentifier.toLowerCase() || m.address?.toLowerCase() === creatorIdentifier.toLowerCase())) ||
+          (st.creatorWallet && (m.address?.toLowerCase() === st.creatorWallet.toLowerCase() || m.walletAddress?.toLowerCase() === st.creatorWallet.toLowerCase()))
+        );
+        const isCurrentCaller = Boolean(
+          (walletAddress && m.walletAddress && m.walletAddress.toLowerCase() === walletAddress.toLowerCase()) ||
+          (walletAddress && m.address && m.address.toLowerCase() === walletAddress.toLowerCase()) ||
+          (localWallet && m.walletAddress && m.walletAddress.toLowerCase() === localWallet.toLowerCase()) ||
+          (localWallet && m.address && m.address.toLowerCase() === localWallet.toLowerCase()) ||
+          (isMemberCreator && isCreator)
+        );
+        const resolvedName = (isCurrentCaller && currentName) ? currentName : (m.name || m.address);
+        return {
+          address: m.address,
+          name: resolvedName,
+          walletAddress: isCurrentCaller ? (walletAddress || localWallet || m.walletAddress) : m.walletAddress,
+          balance: m.balance,
+          role: isMemberCreator ? "admin" : "member",
+          avatarColorIndex: Math.floor(Math.random() * 5)
+        };
+      });
       const membersKey = storageKey("members", mode, st.id);
       localStorage.setItem(membersKey, JSON.stringify(formattedMembers));
     }
@@ -802,11 +936,7 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense, skipBal
           });
         }
 
-        const membersKey = mode === "sample"
-          ? `meshTab_members_${tabId}`
-          : mode === "testnet"
-            ? `meshTab_testnet_members_${tabId}`
-            : `meshTab_clean_members_${tabId}`;
+        const membersKey = storageKey("members", mode, tabId);
         localStorage.setItem(membersKey, JSON.stringify(updatedMembers));
         window.dispatchEvent(new Event("meshTab-members-update"));
 

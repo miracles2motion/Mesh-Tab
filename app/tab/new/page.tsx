@@ -50,6 +50,12 @@ export default function CreateTab() {
     try {
       const mode = getWorkspaceMode();
       if (mode === "testnet") {
+        const resolvedWallet = (smartWalletAddress && /^0x[a-fA-F0-9]{40}$/.test(smartWalletAddress)) 
+          ? smartWalletAddress 
+          : (wallets?.[0]?.address && /^0x[a-fA-F0-9]{40}$/.test(wallets[0].address)) 
+            ? wallets[0].address 
+            : (typeof window !== "undefined" ? localStorage.getItem("meshTab_walletAddress") : undefined);
+
         import("@/lib/outbox").then(({ queueOutboxOp }) => {
           queueOutboxOp({
             type: "createTab",
@@ -61,7 +67,7 @@ export default function CreateTab() {
               creatorName: currentUserName,
               currency,
               timestamp: Date.now(),
-              creatorWallet: smartWalletAddress && /^0x[a-fA-F0-9]{40}$/.test(smartWalletAddress) ? smartWalletAddress : undefined
+              creatorWallet: resolvedWallet && /^0x[a-fA-F0-9]{40}$/.test(resolvedWallet) ? resolvedWallet : undefined
             }
           });
         });

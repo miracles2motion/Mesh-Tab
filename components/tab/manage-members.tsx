@@ -17,7 +17,7 @@ interface MemberItem {
 
 import { useUserProfile, saveStoredTabMembers, useWorkspaceMode, seedDemoExpenses } from "../../lib/user";
 import { isEffectivelyOnline } from "../../lib/network";
-import { storageKey, safeSetItem } from "../../lib/storage-keys";
+import { storageKey, safeSetItem, addDeletedTabTombstone } from "../../lib/storage-keys";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 
@@ -242,9 +242,17 @@ export function ManageMembers({
     toast.info("Deleting tab from network...");
 
     try {
-      // API call to wipe from Redis if online and in testnet mode
-      if (workspaceMode === "testnet" && isEffectivelyOnline()) {
-        await fetch(`/api/tab/${tabId}?mode=${workspaceMode}`, { method: "DELETE" }).catch(() => {});
+      // Queue deletion op and set tombstone if in testnet mode
+      if (workspaceMode === "testnet") {
+        addDeletedTabTombstone(tabId);
+        const wallet = localStorage.getItem("meshTab_walletAddress") || "";
+        const { queueOutboxOp } = await import("../../lib/outbox");
+        queueOutboxOp({
+          type: "deleteTab",
+          tabId,
+          ownerWallet: wallet,
+          payload: {}
+        });
       }
 
       // Wipe local storage

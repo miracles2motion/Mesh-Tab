@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     // [OVERSEER MANDATE - Baseline 30]: Request Batching (Multi)
     // [OVERSEER MANDATE - Baseline 34]: Storage Pruning (TTL)
     const multi = redis.multi();
-    const tabData = JSON.stringify({ id: tabId, name: tabName, currency, createdAt: timestamp, serverSyncedAt, creator: creatorName, creatorWallet });
+    const tabData = JSON.stringify({ id: tabId, name: tabName, currency, createdAt: timestamp, serverSyncedAt, creator: creatorName, creatorWallet, creatorId: creatorUserId });
     multi.set(tabKey, tabData, { ex: 2592000 }); // 30 days
     
     // [OVERSEER MANDATE - Baseline 33]: Native Data Types (raw float string for balances)

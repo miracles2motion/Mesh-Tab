@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { Redis } from '@upstash/redis';
+import { getUserIdFromToken } from '@/lib/auth';
 
 const redis = Redis.fromEnv();
 
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { wallet, name, avatarColorIndex } = body;
+    const { wallet, name, avatarColorIndex, oldName } = body;
 
     if (!wallet || !name) {
       return NextResponse.json({ error: 'Wallet and name required' }, { status: 400 });
@@ -58,6 +59,51 @@ export async function POST(request: Request) {
     };
 
     await redis.set(key, JSON.stringify(newProfile));
+
+    // Cascade member balance and identity migration in testnet tabs
+    if (oldName && oldName.trim() && oldName.trim().toLowerCase() !== name.trim().toLowerCase()) {
+      try {
+        const authHeader = request.headers.get("Authorization");
+        const userId = authHeader ? await getUserIdFromToken(authHeader) : null;
+
+        const userTabKeys = [
+          `meshtab:testnet:user:${wallet.toLowerCase()}:tabs`,
+          userId ? `meshtab:testnet:user:${userId}:tabs` : null
+        ].filter(Boolean) as string[];
+
+        const allTabIdSets = await Promise.all(userTabKeys.map(k => redis.smembers(k)));
+        const tabIds = Array.from(new Set(allTabIdSets.flat().filter(Boolean))) as string[];
+
+        for (const tabId of tabIds) {
+          const tabKey = `meshtab:testnet:tab:${tabId}`;
+          const membersKey = `${tabKey}:members`;
+          const walletsKey = `${tabKey}:member_wallets`;
+
+          const oldBalance = await redis.hget(membersKey, oldName.trim());
+          if (oldBalance !== null && oldBalance !== undefined) {
+            const multi = redis.multi();
+            multi.hset(membersKey, { [name.trim()]: String(oldBalance) });
+            multi.hdel(membersKey, oldName.trim());
+            multi.hset(walletsKey, { [name.trim()]: wallet });
+            multi.hdel(walletsKey, oldName.trim());
+
+            const rawTab = await redis.get(tabKey);
+            if (rawTab) {
+              try {
+                const tabData = typeof rawTab === "string" ? JSON.parse(rawTab) : rawTab;
+                if (tabData.creator && tabData.creator.toLowerCase() === oldName.trim().toLowerCase()) {
+                  tabData.creator = name.trim();
+                  multi.set(tabKey, JSON.stringify(tabData));
+                }
+              } catch {}
+            }
+            await multi.exec();
+          }
+        }
+      } catch (cascadeErr) {
+        console.error("Failed to cascade member rename in Redis:", cascadeErr);
+      }
+    }
 
     return NextResponse.json({ success: true, profile: newProfile });
   } catch (error) {

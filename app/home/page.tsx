@@ -8,6 +8,7 @@ import { TransactionOverlay, TransactionState } from "../../components/ui/transa
 import { formatCurrency, formatDistanceToNow } from "../../lib/utils";
 import { ThemeToggle } from "../../components/theme-toggle";
 import { useUserProfile, useStoredTabs, useVirtualBalance, useWorkspaceMode, getStoredTabMembers, useDeveloperMode } from "../../lib/user";
+import { storageKey } from "../../lib/storage-keys";
 import { useAvailableBalance, computeCrossTabPosition } from "../../lib/balance";
 import { useNotifications } from "../../lib/notifications";
 import { CashOutDrawer } from "../../components/tab/cash-out-drawer";
@@ -90,7 +91,8 @@ export default function GlobalHub() {
   const archivedTabIds: string[] = (() => {
     if (typeof window === "undefined") return [];
     try {
-      const raw = localStorage.getItem("meshTab_archived");
+      const key = storageKey("archived", workspaceMode);
+      const raw = localStorage.getItem(key) || (workspaceMode === "sample" ? localStorage.getItem("meshTab_archived") : null);
       return raw ? JSON.parse(raw) : [];
     } catch { return []; }
   })();
@@ -106,9 +108,16 @@ export default function GlobalHub() {
     ? []
     : activeTabsList.map(tab => {
         const members = getStoredTabMembers(tab.id, currentUserName);
-        const userMember = members.find(m => m.name.toLowerCase() === currentUserName.toLowerCase());
+        const userWallet = (typeof window !== "undefined" ? (localStorage.getItem("meshTab_walletAddress") || "") : "");
+        const userMember = members.find((m: any) => 
+          (userWallet && m.walletAddress && m.walletAddress.toLowerCase() === userWallet.toLowerCase()) ||
+          m.name.toLowerCase() === currentUserName.toLowerCase()
+        );
+        const isUserCreator = tab.role === "Creator" || 
+          Boolean(tab.creator && currentUserName && tab.creator.trim().toLowerCase() === currentUserName.trim().toLowerCase());
         return {
           ...tab,
+          role: isUserCreator ? "Creator" : tab.role,
           balance: userMember !== undefined ? userMember.balance : tab.balance,
           memberCount: members.length > 0 ? members.length : tab.memberCount
         };

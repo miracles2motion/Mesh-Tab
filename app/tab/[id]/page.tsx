@@ -70,11 +70,14 @@ function DashboardContent() {
     lastActivityAt: Date.now()
   };
 
+  const userWallet = (typeof window !== "undefined" ? (localStorage.getItem("meshTab_walletAddress") || "") : "");
   // Find user's actual balance from active members or tab summary
-  const userMemberRecord = activeMembers.find(m => m.name.toLowerCase() === currentUser.toLowerCase());
+  const userMemberRecord = activeMembers.find(m => 
+    (userWallet && m.walletAddress && m.walletAddress.toLowerCase() === userWallet.toLowerCase()) ||
+    m.name.toLowerCase() === currentUser.toLowerCase()
+  );
   const actualBalance = userMemberRecord ? userMemberRecord.balance : currentTab.balance;
-  const userMember = activeMembers.find(m => m.name.toLowerCase() === currentUser.toLowerCase());
-  const userBalance = userMember ? userMember.balance : currentTab.balance;
+  const userBalance = actualBalance;
   const userType = userBalance === 0 ? ("settled" as const) : userBalance < 0 ? ("debtor" as const) : ("creditor" as const);
 
   const currentUserData = {

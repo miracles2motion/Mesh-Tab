@@ -11,6 +11,8 @@ export type OutboxOp = {
   lastError?: string;
 };
 
+import { removeDeletedTabTombstone } from "./storage-keys";
+
 const OUTBOX_KEY = "meshTab_testnet_outbox";
 
 export function getOutbox(): OutboxOp[] {
@@ -73,7 +75,12 @@ export function queueOutboxOp(op: Omit<OutboxOp, "opId" | "createdAt" | "attempt
 }
 
 export function getPendingOps(ownerWallet: string): OutboxOp[] {
-  return getOutbox().filter(o => o.ownerWallet === ownerWallet && o.status !== "failed");
+  const normTarget = ownerWallet ? ownerWallet.toLowerCase() : "";
+  return getOutbox().filter(o => {
+    if (o.status === "failed") return false;
+    if (!o.ownerWallet) return true;
+    return o.ownerWallet.toLowerCase() === normTarget;
+  });
 }
 
 export function markOpInflight(opId: string) {
@@ -87,6 +94,10 @@ export function markOpInflight(opId: string) {
 
 export function resolveOp(opId: string) {
   const outbox = getOutbox();
+  const op = outbox.find(o => o.opId === opId);
+  if (op && op.type === "deleteTab") {
+    removeDeletedTabTombstone(op.tabId);
+  }
   const filtered = outbox.filter(o => o.opId !== opId);
   saveOutbox(filtered);
   if (typeof window !== "undefined") {

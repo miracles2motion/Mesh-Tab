@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { getStoredTabs, getStoredTabMembers, getWorkspaceMode, useSettledPayoutBalance, getStoredExpenses, StoredExpense } from "./user";
 import { useRealAusdBalance } from "./onchain";
+import { storageKey } from "./storage-keys";
 
 export function computeCrossTabPosition(userName: string): { totalOwe: number, totalOwedToYou: number } {
   if (typeof window === "undefined" || !userName) return { totalOwe: 0, totalOwedToYou: 0 };
@@ -8,18 +9,22 @@ export function computeCrossTabPosition(userName: string): { totalOwe: number, t
   const mode = getWorkspaceMode();
   let archived: string[] = [];
   try {
-    const raw = localStorage.getItem("meshTab_archived");
+    const raw = localStorage.getItem(storageKey("archived", mode)) || (mode === "sample" ? localStorage.getItem("meshTab_archived") : null);
     if (raw) archived = JSON.parse(raw);
   } catch {}
 
   const activeTabs = getStoredTabs().filter(t => !archived.includes(t.id));
+  const activeWallet = typeof window !== "undefined" ? (localStorage.getItem("meshTab_walletAddress") || "") : "";
   
   let totalOwe = 0;
   let totalOwedToYou = 0;
   
   for (const tab of activeTabs) {
     const members = getStoredTabMembers(tab.id, userName);
-    const userMember = members.find(m => m.name.toLowerCase() === userName.toLowerCase());
+    const userMember = members.find(m => 
+      (activeWallet && m.walletAddress && m.walletAddress.toLowerCase() === activeWallet.toLowerCase()) ||
+      m.name.toLowerCase() === userName.toLowerCase()
+    );
     
     // Fallback to tab.balance if user not found, but it should be userMember.balance
     let bal = userMember !== undefined ? userMember.balance : tab.balance;

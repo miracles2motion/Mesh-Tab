@@ -71,3 +71,34 @@ export function safeSetItem(key: string, value: string): void {
     }
   }
 }
+
+export function getDeletedTabIds(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem("meshTab_testnet_deletedTabs");
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function addDeletedTabTombstone(tabId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    const set = new Set(getDeletedTabIds());
+    set.add(tabId);
+    localStorage.setItem("meshTab_testnet_deletedTabs", JSON.stringify(Array.from(set)));
+  } catch (e) {
+    console.error("Failed to add tombstone", e);
+  }
+}
+
+export function removeDeletedTabTombstone(tabId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    const list = getDeletedTabIds().filter(id => id !== tabId);
+    localStorage.setItem("meshTab_testnet_deletedTabs", JSON.stringify(list));
+  } catch (e) {
+    console.error("Failed to remove tombstone", e);
+  }
+}

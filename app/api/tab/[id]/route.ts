@@ -22,15 +22,25 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       return NextResponse.json({ success: false, error: "FORBIDDEN" }, { status: 403 });
     }
 
+    // Read all authorized users before wiping the set so we can remove tab from their sets
+    const authorizedUsers = (await redis.smembers(`${tabKey}:authorized_users`)) || [];
+
     const multi = redis.multi();
+    // Remove tabId from all authorized users' tab sets
+    if (Array.isArray(authorizedUsers)) {
+      for (const u of authorizedUsers) {
+        if (u) {
+          multi.srem(`meshtab:${mode}:user:${u}:tabs`, id);
+        }
+      }
+    }
+    multi.srem(`meshtab:${mode}:user:${walletAddress}:tabs`, id);
+
     multi.del(tabKey);
     multi.del(`${tabKey}:members`);
     multi.del(`${tabKey}:member_wallets`);
     multi.del(`${tabKey}:expenses`);
     multi.del(`${tabKey}:authorized_users`);
-
-    // We don't necessarily remove it from every user's set easily unless we iterate,
-    // which is O(N). For MVP, this is enough to clear the tab data.
 
     await multi.exec();
 

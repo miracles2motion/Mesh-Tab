@@ -49,7 +49,11 @@ export async function GET(req: NextRequest) {
     
     for (let i = 0; i < tabIds.length; i++) {
       const rawTab = rawTabs[i];
-      if (!rawTab) continue;
+      if (!rawTab) {
+        // Self-heal: tab was deleted, remove stale ID from user's set
+        redis.srem(`meshtab:${mode}:user:${walletAddress}:tabs`, tabIds[i]).catch(() => {});
+        continue;
+      }
       
       try {
         const tabData = typeof rawTab === "string" ? JSON.parse(rawTab) : rawTab;
@@ -67,10 +71,17 @@ export async function GET(req: NextRequest) {
         // Calculate total balance of the tab (sum of positive balances)
         const totalBalance = members.reduce((sum, m) => sum + (m.balance > 0 ? m.balance : 0), 0);
         
+        const isCreator = Boolean(
+          (tabData.creatorId && tabData.creatorId === walletAddress) ||
+          (tabData.creatorWallet && tabData.creatorWallet.toLowerCase() === walletAddress.toLowerCase())
+        );
+
         tabs.push({
           ...tabData,
           members,
-          totalBalance
+          totalBalance,
+          isCreator,
+          role: isCreator ? "Creator" : "Member"
         });
       } catch (err) {
         console.error("Failed to parse tab JSON", err);

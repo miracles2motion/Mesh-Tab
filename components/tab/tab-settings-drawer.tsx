@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { SUPPORTED_CURRENCIES } from "../../lib/pyth";
 import { getWorkspaceMode } from "../../lib/user";
-import { storageKey } from "../../lib/storage-keys";
+import { storageKey, addDeletedTabTombstone } from "../../lib/storage-keys";
 interface TabSettingsDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -36,22 +36,21 @@ export function TabSettingsDrawer({ isOpen, onClose, tabId, tabName, tabCurrency
     
     // Update tab name in stored tabs
     try {
-      const modes = ["meshTab_sample_tabs", "meshTab_clean_tabs"];
-      modes.forEach(key => {
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          const tabs = JSON.parse(raw);
-          const updated = tabs.map((t: { id: string; name: string; currency?: string }) => {
-            if (t.id === tabId) {
-              return { ...t, name: name.trim() || tabName, currency };
-            }
-            return t;
-          });
-          localStorage.setItem(key, JSON.stringify(updated));
-        }
-      });
+      const mode = getWorkspaceMode();
+      const key = storageKey("tabs", mode);
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const tabs = JSON.parse(raw);
+        const updated = tabs.map((t: { id: string; name: string; currency?: string }) => {
+          if (t.id === tabId) {
+            return { ...t, name: name.trim() || tabName, currency };
+          }
+          return t;
+        });
+        localStorage.setItem(key, JSON.stringify(updated));
+      }
       window.dispatchEvent(new Event("meshTab-tabs-update"));
-    } catch (e) { /* ignore storage errors in demo */ }
+    } catch (e) { /* ignore storage errors */ }
 
     setTimeout(() => {
       setSaving(false);
@@ -135,6 +134,7 @@ export function TabSettingsDrawer({ isOpen, onClose, tabId, tabName, tabCurrency
       
       const mode = getWorkspaceMode();
       if (mode === "testnet") {
+        addDeletedTabTombstone(tabId);
         const wallet = localStorage.getItem("meshTab_walletAddress") || "";
         import("../../lib/outbox").then(({ queueOutboxOp }) => {
           queueOutboxOp({
