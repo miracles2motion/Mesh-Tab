@@ -40,3 +40,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# contracts & hardhat
+contracts/.env*
+!contracts/.env.example
+contracts/node_modules/
+contracts/artifacts/
+contracts/cache/
