@@ -240,14 +240,6 @@ npm run build
 
 ---
 
-## 📚 Master Documentation & Architecture References
-
-For exhaustive engineering and architecture references, consult our companion artifacts:
-- **Master System Overview:** [`meshtab-artifacts/meshtab overview.txt`](../meshtab-artifacts/meshtab%20overview.txt) — Comprehensive 870-line reference covering all 22 system dimensions, Redis schemas, Lua scripts, and Zod contracts.
-- **Full Security & Quality Audit:** [`meshtab-artifacts/full-audit-report.md`](../meshtab-artifacts/full-audit-report.md) — 100/100 certified health audit verifying all 42 OVERSEER isolation matrix rules.
-
----
-
 ## 📄 License
 
 MIT License. Built for the Monad Metropolis 2026 Hackathon.
