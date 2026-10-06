@@ -311,8 +311,17 @@ export function ManageMembers({
             <QRCodeSVG value={inviteLink} size={130} level="H" includeMargin={false} />
           </div>
           
-          <div className="w-full pt-2">
-             <div className="text-xs font-semibold text-slate-600 dark:text-white/70 mb-2 text-left ml-1">Or share invite URL</div>
+          <div className="w-full pt-2 space-y-3">
+             {workspaceMode === "testnet" && tabId.length > 8 && (
+               <div className="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 rounded-xl p-3 flex flex-col items-center">
+                 <div className="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider mb-1">Testnet Join Code</div>
+                 <div className="text-xl font-mono font-bold tracking-widest text-indigo-900 dark:text-indigo-100 select-all">
+                   {tabId.slice(-8).toUpperCase()}
+                 </div>
+               </div>
+             )}
+             
+             <div className="text-xs font-semibold text-slate-600 dark:text-white/70 mb-1 text-left ml-1">Or share invite URL</div>
              <div className="flex items-center gap-2">
                <div className="flex-1 bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-slate-700 dark:text-white/70 text-xs truncate select-all font-mono">
                  {inviteLink}
