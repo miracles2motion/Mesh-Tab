@@ -1,55 +1,40 @@
 "use client";
 
 import { createPublicClient, http, formatUnits, erc20Abi, encodeFunctionData } from "viem";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
 import { monadTestnet } from "./chains";
 import { isEffectivelyOnline } from "./network";
+import { useQuery } from "@tanstack/react-query";
 
 export function useRealAusdBalance(workspaceMode: string) {
   const { client } = useSmartWallets();
-  const [balance, setBalance] = useState<number>(0);
-  const [cents, setCents] = useState<number>(0);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [at, setAt] = useState<number>(Date.now());
-  const [isStale, setIsStale] = useState<boolean>(false);
+  const walletAddress = client?.account?.address;
 
-  const fetchBalance = useCallback(async () => {
-    if (workspaceMode !== "testnet") {
-      setIsLoading(false);
-      return;
-    }
-    
-    const walletAddress = client?.account?.address;
-    if (!walletAddress) {
-      return;
-    }
-
-    // Try to load cached snapshot first
-    try {
-      const cached = localStorage.getItem("meshTab_testnet_walletSnapshot");
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (parsed.wallet === walletAddress) {
-          setCents(parsed.cents);
-          setBalance(parsed.cents / 100);
-          setAt(parsed.at);
-          // If older than 30 seconds and offline, mark stale
-          if (!isEffectivelyOnline() && Date.now() - parsed.at > 30000) {
-            setIsStale(true);
-          } else {
-            setIsStale(false);
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["realAusdBalance", workspaceMode, walletAddress],
+    queryFn: async () => {
+      if (workspaceMode !== "testnet" || !walletAddress) {
+        return { balance: 0, cents: 0, at: Date.now(), isStale: false };
+      }
+      
+      if (!isEffectivelyOnline()) {
+        const cached = localStorage.getItem("meshTab_testnet_walletSnapshot");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed.wallet === walletAddress) {
+            const isStale = Date.now() - parsed.at > 30000;
+            return {
+              balance: parsed.cents / 100,
+              cents: parsed.cents,
+              at: parsed.at,
+              isStale
+            };
           }
         }
+        return { balance: 0, cents: 0, at: Date.now(), isStale: true };
       }
-    } catch (e) {}
 
-    if (!isEffectivelyOnline()) {
-      setIsLoading(false);
-      return;
-    }
-
-    try {
       const publicClient = createPublicClient({
         transport: http(process.env.NEXT_PUBLIC_MONAD_RPC_URL || "https://testnet-rpc.monad.xyz")
       });
@@ -58,58 +43,51 @@ export function useRealAusdBalance(workspaceMode: string) {
         address: (process.env.NEXT_PUBLIC_MOCK_AUSD_ADDRESS as `0x${string}`) || "0xF9bA02Cd0aFc210e0867852eEb0E994B07d9957F",
         abi: erc20Abi,
         functionName: "balanceOf",
-        args: [client.account.address as `0x${string}`],
+        args: [walletAddress as `0x${string}`],
       });
 
       const formatted = parseFloat(formatUnits(rawBalance as bigint, 6));
       const newCents = Math.round(formatted * 100);
-      setBalance(formatted);
-      setCents(newCents);
-      setAt(Date.now());
-      setIsStale(false);
       
+      const result = {
+        balance: formatted,
+        cents: newCents,
+        at: Date.now(),
+        isStale: false
+      };
+
       localStorage.setItem("meshTab_testnet_walletSnapshot", JSON.stringify({
         cents: newCents,
         at: Date.now(),
         wallet: walletAddress
       }));
-    } catch (err) {
-      console.error("Error fetching real AUSD balance:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [client, workspaceMode]);
 
-  useEffect(() => {
-    fetchBalance();
-    
-    if (workspaceMode === "testnet") {
-      const interval = setInterval(fetchBalance, 10000);
-      const handleOnline = () => fetchBalance();
-      window.addEventListener("online", handleOnline);
-      window.addEventListener("meshTab-network-change", handleOnline);
-      
-      return () => {
-        clearInterval(interval);
-        window.removeEventListener("online", handleOnline);
-        window.removeEventListener("meshTab-network-change", handleOnline);
-      };
-    }
-  }, [fetchBalance, workspaceMode]);
+      return result;
+    },
+    refetchInterval: 10000,
+    staleTime: 5000,
+    enabled: workspaceMode === "testnet" && !!walletAddress,
+  });
 
-  return { balance, cents, isLoading, at, isStale, refetch: fetchBalance };
+  return {
+    balance: data?.balance || 0,
+    cents: data?.cents || 0,
+    isLoading,
+    at: data?.at || Date.now(),
+    isStale: data?.isStale || false,
+    refetch
+  };
 }
 
 export function useClaimWelcomeBonus(workspaceMode: string) {
   const { client } = useSmartWallets();
   const [isClaiming, setIsClaiming] = useState(false);
-  const [hasClaimed, setHasClaimed] = useState<boolean>(false);
+  const walletAddress = client?.account?.address;
 
-  const checkHasClaimed = useCallback(async () => {
-    if (workspaceMode !== "testnet" || !client?.account?.address) {
-      return;
-    }
-    try {
+  const { data: hasClaimed = false, refetch: checkHasClaimed } = useQuery({
+    queryKey: ["hasClaimedWelcomeBonus", workspaceMode, walletAddress],
+    queryFn: async () => {
+      if (workspaceMode !== "testnet" || !walletAddress) return false;
       const publicClient = createPublicClient({
         transport: http(process.env.NEXT_PUBLIC_MONAD_RPC_URL || "https://testnet-rpc.monad.xyz")
       });
@@ -123,17 +101,13 @@ export function useClaimWelcomeBonus(workspaceMode: string) {
           type: "function"
         }],
         functionName: "hasReceivedBonus",
-        args: [client.account.address as `0x${string}`],
+        args: [walletAddress as `0x${string}`],
       });
-      setHasClaimed(Boolean(claimed));
-    } catch (e) {
-      // fallback
-    }
-  }, [client, workspaceMode]);
-
-  useEffect(() => {
-    checkHasClaimed();
-  }, [checkHasClaimed]);
+      return Boolean(claimed);
+    },
+    staleTime: Infinity,
+    enabled: workspaceMode === "testnet" && !!walletAddress,
+  });
 
   const claimBonus = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
     if (!client) {
@@ -170,7 +144,7 @@ export function useClaimWelcomeBonus(workspaceMode: string) {
       });
       await publicClient.waitForTransactionReceipt({ hash: txHash });
 
-      setHasClaimed(true);
+      await checkHasClaimed();
       return { success: true };
     } catch (err: any) {
       const userMessage = err?.message?.includes("Unsupported chain")
@@ -182,7 +156,7 @@ export function useClaimWelcomeBonus(workspaceMode: string) {
     } finally {
       setIsClaiming(false);
     }
-  }, [client, workspaceMode]);
+  }, [client, workspaceMode, checkHasClaimed]);
 
   return { claimBonus, isClaiming, hasClaimed, checkHasClaimed };
 }
