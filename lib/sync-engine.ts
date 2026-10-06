@@ -42,13 +42,14 @@ async function executeFlush(ops: OutboxOp[], getAccessToken: () => Promise<strin
 
     try {
       const { endpoint, method } = getOpRoute(op);
-      const res = await fetch(endpoint, {
+      const url = `${endpoint}?mode=${mode}`;
+      const res = await fetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ ...op.payload, mode })
+        body: method !== "GET" && method !== "HEAD" ? JSON.stringify({ ...op.payload, mode }) : undefined
       });
 
       if (res.ok) {

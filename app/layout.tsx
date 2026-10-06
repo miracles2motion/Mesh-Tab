@@ -48,7 +48,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${outfit.variable} ${geistMono.variable} h-full scroll-smooth`} suppressHydrationWarning>
-      <body className="min-h-full flex flex-col antialiased selection:bg-indigo-500/30 bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300">
+      <head>
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -75,6 +75,8 @@ export default function RootLayout({
             `,
           }}
         />
+      </head>
+      <body suppressHydrationWarning className="min-h-full flex flex-col antialiased selection:bg-indigo-500/30 bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300">
         <Web3Provider>
           <ConnectivityProvider>
             <SyncProvider>

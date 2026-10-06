@@ -26,7 +26,7 @@ export function Web3Provider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <PrivyProvider
+      <PrivyProvider
       appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID!}
       config={{
         appearance: {
@@ -42,6 +42,11 @@ export function Web3Provider({ children }: { children: ReactNode }) {
         embeddedWallets: {
           ethereum: {
             createOnLogin: 'users-without-wallets',
+          }
+        },
+        externalWallets: {
+          solana: {
+            connectors: []
           }
         }
       }}
