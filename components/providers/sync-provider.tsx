@@ -2,18 +2,21 @@
 
 import { useEffect, useRef } from "react";
 import { usePrivy } from "@privy-io/react-auth";
+import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
 import { flushOutbox } from "@/lib/sync-engine";
 import { useWorkspaceMode } from "@/lib/user";
 
 export function SyncProvider({ children }: { children: React.ReactNode }) {
   const { ready, authenticated, user, getAccessToken } = usePrivy();
+  const { client } = useSmartWallets();
   const { mode } = useWorkspaceMode();
   const isSyncingRef = useRef(false);
 
   useEffect(() => {
-    if (!ready || !authenticated || !user?.wallet?.address || mode !== "testnet") return;
+    // Prioritize the Smart Wallet address if available
+    const walletAddress = client?.account?.address || user?.wallet?.address;
 
-    const walletAddress = user.wallet.address;
+    if (!ready || !authenticated || !walletAddress || mode !== "testnet") return;
 
     const runSync = async () => {
       if (isSyncingRef.current) return;
@@ -39,7 +42,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener("meshtab:outbox:updated", handleOutboxUpdate);
       clearInterval(intervalId);
     };
-  }, [ready, authenticated, user?.wallet?.address, mode, getAccessToken]);
+  }, [ready, authenticated, user?.wallet?.address, client?.account?.address, mode, getAccessToken]);
 
   return <>{children}</>;
 }
