@@ -54,9 +54,9 @@ export default function RootLayout({
             __html: `
               try {
                 function applyTheme() {
-                  const saved = localStorage.getItem('theme') || 'system';
+                  const saved = localStorage.getItem('theme');
                   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                  const isDark = saved === 'dark' || (saved === 'system' && prefersDark);
+                  const isDark = saved ? (saved === 'dark' || (saved === 'system' && prefersDark)) : prefersDark;
                   if (isDark) {
                     document.documentElement.classList.add('dark');
                   } else {
@@ -65,7 +65,8 @@ export default function RootLayout({
                 }
                 applyTheme();
                 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
-                  if ((localStorage.getItem('theme') || 'system') === 'system') {
+                  const saved = localStorage.getItem('theme');
+                  if (!saved || saved === 'system') {
                     applyTheme();
                     window.dispatchEvent(new Event('theme-change'));
                   }

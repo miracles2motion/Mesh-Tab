@@ -11,7 +11,7 @@ import { monadTestnet } from "../../lib/chains";
 const queryClient = new QueryClient();
 
 export function Web3Provider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
     // Initial check

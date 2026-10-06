@@ -218,41 +218,58 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
     }, 900);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setReceiptImageName(file.name);
     setIsAiProcessing(true);
-    setAiNotice(`Scanning ${file.name} with OCR...`);
+    setAiNotice(`Scanning ${file.name} with AI Vision...`);
     
-    const lowerName = file.name.toLowerCase();
-    let detectedDesc = "Seafood Dinner & Wine";
-    let detectedAmount = "84.50";
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
 
-    if (lowerName.includes("coffee") || lowerName.includes("cafe") || lowerName.includes("starbucks")) {
-      detectedDesc = "Specialty Espresso & Pastries";
-      detectedAmount = "14.20";
-    } else if (lowerName.includes("taxi") || lowerName.includes("uber") || lowerName.includes("cab") || lowerName.includes("ride")) {
-      detectedDesc = "Airport Transfer / Taxi";
-      detectedAmount = "32.00";
-    } else if (lowerName.includes("grocery") || lowerName.includes("market") || lowerName.includes("store")) {
-      detectedDesc = "Supermarket Provisions";
-      detectedAmount = "46.75";
-    }
-    
-    setTimeout(() => {
+      const res = await fetch('/api/receipt-scan', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Failed to parse receipt");
+      
+      const data = await res.json();
+      const detectedDesc = data.desc || "Receipt Item";
+      const detectedAmount = data.amount || "0.00";
+
       setDesc(detectedDesc);
       setAmount(detectedAmount);
       setPaidBy(activeUser);
       setSplitType("equal");
       setIsAiProcessing(false);
       setShowDraft(true);
-      sounds.playSuccessChime();
-      toast.success("Receipt Scanned via OCR", {
-        description: `Extracted $${detectedAmount} from ${file.name}. Ready to review.`
+
+      if (detectedAmount === "0.00" || !data.amount) {
+        toast.warning("Incomplete Scan", {
+          description: `Could not find a clear total amount on ${file.name}. Please enter manually.`
+        });
+        setAiNotice(`AI Scan Incomplete: ${file.name} • Please enter amount`);
+      } else {
+        sounds.playSuccessChime();
+        toast.success("Receipt Scanned via AI", {
+          description: `Extracted $${detectedAmount} from ${file.name}. Ready to review.`
+        });
+        setAiNotice(`AI Verified: ${file.name} • $${detectedAmount} total extracted`);
+      }
+    } catch (error) {
+      // Fallback
+      setDesc("Scanned Receipt");
+      setAmount("0.00");
+      setIsAiProcessing(false);
+      setShowDraft(true);
+      toast.error("AI Scan Failed", {
+        description: "Could not read the receipt. Please enter the amount manually."
       });
-      setAiNotice(`Receipt Verified: ${file.name} • $${detectedAmount} total extracted`);
-    }, 1200);
+      setAiNotice("Scan failed. Please adjust manually.");
+    }
   };
 
   const handleTriggerUpload = () => {
