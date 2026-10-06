@@ -615,13 +615,15 @@ export default function GlobalHub() {
             <span>New Tab</span>
           </Link>
 
-          <button 
-            onClick={() => setShowJoinModal(true)}
-            className="flex-1 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-800 dark:text-white py-3 px-4 rounded-full font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-transform cursor-pointer"
-          >
-            <QrCode className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span>Join Code</span>
-          </button>
+          {workspaceMode !== "sample" && (
+            <button 
+              onClick={() => setShowJoinModal(true)}
+              className="flex-1 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-800 dark:text-white py-3 px-4 rounded-full font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-transform cursor-pointer"
+            >
+              <QrCode className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span>Join Code</span>
+            </button>
+          )}
         </div>
       </div>
 
