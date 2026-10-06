@@ -64,7 +64,6 @@ export default function GlobalHub() {
   const [copied, setCopied] = useState(false);
 
   const { showAddress } = useDeveloperMode();
-  const { client } = useSmartWallets();
   const fullAddress = client?.account?.address;
   
   const activeAddress = isTestnetMode ? fullAddress : "0x7F5A4b2...3b9A";
