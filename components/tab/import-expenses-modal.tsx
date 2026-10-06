@@ -9,7 +9,7 @@ import { ExpenseCategory, getStoredTabMembers, saveStoredTabMembers, saveStoredE
 import { sounds } from "../../lib/sounds";
 import { fireSettlementConfetti } from "../../lib/confetti";
 import { toast } from "sonner";
-import { EnvioLogo, MonadLogo } from "../ui/partner-logo";
+import { MonadLogo } from "../ui/partner-logo";
 
 interface ImportExpensesModalProps {
   isOpen: boolean;
@@ -404,12 +404,7 @@ Airport Van Logistics, 120.00, Sarah`;
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
             <span>Zero-Sum Netting Preserved</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span>Indexed via</span>
-            <div className="opacity-90 hover:opacity-100 text-slate-700 dark:text-white">
-              <EnvioLogo className="h-3.5 w-auto" />
-            </div>
-          </div>
+
         </div>
       </div>
     </Modal>

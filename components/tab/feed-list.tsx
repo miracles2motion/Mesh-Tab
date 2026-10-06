@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Receipt, ShieldCheck, Activity, ChevronRight, CheckCircle2, Search, X, CloudUpload } from "lucide-react";
 import { formatCurrency, formatDistanceToNow } from "../../lib/utils";
 import Image from "next/image";
-import { EnvioLogo, MonadLogo } from "../ui/partner-logo";
+import { MonadLogo } from "../ui/partner-logo";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ExpenseCategory } from "../../lib/user";
@@ -107,13 +107,6 @@ export function FeedList({ expenses, currentUserName }: FeedListProps) {
           <div className="flex items-center gap-1.5 text-xs text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1 rounded-full border border-indigo-200 dark:border-indigo-500/20 font-medium">
             <ShieldCheck className="w-3.5 h-3.5" />
             Zero-Fee Sync
-          </div>
-          {/* Partner Branding */}
-          <div className="flex items-center gap-2 text-slate-500 dark:text-white/50 text-xs font-medium">
-            <span>Synced via</span>
-            <div className="opacity-90 hover:opacity-100 transition-all text-slate-800 dark:text-white">
-              <EnvioLogo className="h-4 w-auto" />
-            </div>
           </div>
         </div>
       </div>
@@ -331,13 +324,7 @@ export function FeedList({ expenses, currentUserName }: FeedListProps) {
           </AnimatePresence>
 
           {/* Bottom attribution strip */}
-          <div className="pt-2 flex items-center justify-between text-[11px] text-slate-400 dark:text-white/40 px-2">
-            <div className="flex items-center gap-1.5">
-              <span>Indexed in real-time via</span>
-              <div className="opacity-80 hover:opacity-100 transition-all text-slate-700 dark:text-white/80">
-                <EnvioLogo className="h-3.5 w-auto" />
-              </div>
-            </div>
+          <div className="pt-2 flex items-center justify-end text-[11px] text-slate-400 dark:text-white/40 px-2">
             <div className="flex items-center gap-1.5">
               <span>Ledger on</span>
               <div className="opacity-80 hover:opacity-100 transition-all text-slate-700 dark:text-white/80">

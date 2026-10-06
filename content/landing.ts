@@ -17,7 +17,6 @@ export const LANDING_CONTENT = {
     partners: [
       { name: "Monad", src: "/logos/monad.svg" },
       { name: "Privy", src: "/logos/privy-logo-dark.png" },
-      { name: "Envio", src: "/logos/envio.svg" },
       { name: "Agora", src: "/logos/agora.svg" },
       { name: "Pimlico", src: "/logos/pimlico.svg" }
     ],

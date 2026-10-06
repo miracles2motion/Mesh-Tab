@@ -6,7 +6,7 @@ import { formatCurrency } from "../../lib/utils";
 import { useUserProfile, getWorkspaceMode, getStoredTabMembers, getStoredExpenses, StoredExpense, deleteStoredExpense, updateStoredExpenseDescription } from "../../lib/user";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
-import { MonadLogo, EnvioLogo, PythLogo } from "../ui/partner-logo";
+import { MonadLogo, PythLogo } from "../ui/partner-logo";
 import { EXPENSE_CATEGORIES } from "./add-expense-form";
 import { LiveTime } from "../ui/live-time";
 
@@ -318,13 +318,7 @@ export function ExpenseDetails({ onClose, expenseId, tabId }: ExpenseDetailsProp
         )}
 
         {/* Partner credit */}
-        <div className="flex items-center justify-between text-[11px] text-slate-400 dark:text-white/40 pt-1">
-          <div className="flex items-center gap-1.5">
-            <span>Synced via</span>
-            <div className="opacity-80 hover:opacity-100 transition-all text-slate-700 dark:text-white/80">
-              <EnvioLogo className="h-3.5 w-auto" />
-            </div>
-          </div>
+        <div className="flex items-center justify-end text-[11px] text-slate-400 dark:text-white/40 pt-1">
           <div className="flex items-center gap-1.5">
             <span>Ledger on</span>
             <div className="opacity-80 hover:opacity-100 transition-all text-slate-700 dark:text-white/80">

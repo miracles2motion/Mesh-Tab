@@ -62,42 +62,6 @@ export function AgoraLogo({ className = "h-5 w-auto", ...props }: LogoProps) {
   );
 }
 
-export function EnvioLogo({ className = "h-5 w-auto", ...props }: LogoProps) {
-  return (
-    <svg 
-      viewBox="0 0 200 48" 
-      fill="none" 
-      xmlns="http://www.w3.org/2000/svg" 
-      className={className} 
-      role="img" 
-      aria-label="Envio"
-      {...props}
-    >
-      {/* Signature Envio Mint Emerald Geometric Mark */}
-      <g>
-        <polygon points="24,4 42,14 42,34 24,44 6,34 6,14" stroke="#10B981" strokeWidth="4" fill="none" />
-        <path d="M24 14L34 20V30L24 36L14 30V20Z" fill="#10B981" />
-        <circle cx="24" cy="24" r="3" fill="#ffffff" />
-      </g>
-      {/* True Vector Wordmark */}
-      <g fill="currentColor">
-        {/* E */}
-        <path d="M 60 8 H 80 V 13.5 H 65.5 V 21.5 H 78 V 26.5 H 65.5 V 34.5 H 80 V 40 H 60 Z" />
-        {/* N */}
-        <path d="M 88 8 H 93.5 V 40 H 88 Z" />
-        <path d="M 105 8 H 110.5 V 40 H 105 Z" />
-        <polygon points="88,8 94.5,8 110.5,40 104,40" />
-        {/* V */}
-        <path d="M 118 8 H 124.5 L 130 32 L 135.5 8 H 142 L 133 40 H 127 Z" />
-        {/* I */}
-        <path d="M 149 8 H 154.5 V 40 H 149 Z" />
-        {/* O */}
-        <path fillRule="evenodd" clipRule="evenodd" d="M 177 8 C 167 8 162 14 162 24 C 162 34 167 40 177 40 C 187 40 192 34 192 24 C 192 14 187 8 177 8 Z M 177 13.5 C 183 13.5 186.5 17 186.5 24 C 186.5 31 183 34.5 177 34.5 C 171 34.5 167.5 31 167.5 24 C 167.5 17 171 13.5 177 13.5 Z" />
-      </g>
-    </svg>
-  );
-}
-
 
 
 
@@ -185,8 +149,7 @@ export function PartnerLogo({
     case "agora":
       return <AgoraLogo className={className} />;
 
-    case "envio":
-      return <EnvioLogo className={className} />;
+
 
     case "privy":
       return <PrivyLogo className={className} />;
