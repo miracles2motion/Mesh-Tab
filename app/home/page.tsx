@@ -26,8 +26,8 @@ import { LiveTime } from "@/components/ui/live-time";
 import { useWallets, usePrivy } from "@privy-io/react-auth";
 import { AuthGuard } from "../../components/providers/auth-guard";
 import { useRealAusdBalance } from "../../lib/onchain";
+import { FaucetModal } from "../../components/tab/faucet-modal";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
-import { addNotification } from "../../lib/notifications";
 
 
 export default function GlobalHub() {
@@ -142,11 +142,7 @@ export default function GlobalHub() {
     // Testnet Mode: 8-character cryptographic suffix
     if (workspaceMode === "testnet") {
       if (joinCode.length !== 8) {
-        addNotification({
-          type: "system_alert",
-          title: "Invalid Code",
-          desc: "Testnet join codes must be exactly 8 characters long."
-        });
+        toast.error("Invalid Code", { description: "Testnet join codes must be exactly 8 characters long." });
         return;
       }
       
@@ -186,11 +182,7 @@ export default function GlobalHub() {
           router.push(`/tab/${data.tabId}`);
         } else {
           setTxState("idle");
-          addNotification({
-            type: "system_alert",
-            title: "Join Failed",
-            desc: data.error === "NOT_FOUND" ? "No tab found matching this code." : data.message || "Failed to join tab."
-          });
+          toast.error("Join Failed", { description: data.error === "NOT_FOUND" ? "No tab found matching this code." : data.message || "Failed to join tab." });
         }
       } catch (err) {
         setTxState("idle");
