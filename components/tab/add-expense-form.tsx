@@ -221,6 +221,16 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Strict Vercel Payload Limit Guard (Max 4MB)
+    const MAX_FILE_SIZE = 4 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error("File Too Large", {
+        description: `Your image is ${(file.size / (1024 * 1024)).toFixed(1)}MB. Vercel limits uploads to 4MB. Please choose a smaller photo.`
+      });
+      return;
+    }
+
     setReceiptImageName(file.name);
     setIsAiProcessing(true);
     setAiNotice(`Scanning ${file.name} with AI Vision...`);

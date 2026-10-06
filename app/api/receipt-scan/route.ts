@@ -15,8 +15,11 @@ export async function POST(request: Request) {
 
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+    const fallbackModels = ['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-2.5-flash', 'gemini-flash-latest'];
+    let lastError: any = null;
+    let text = "{}";
+
+    const requestPayload = {
       contents: [
         {
           role: 'user',
@@ -41,9 +44,28 @@ export async function POST(request: Request) {
       config: {
         responseMimeType: "application/json"
       }
-    });
+    };
 
-    const text = response.text || "{}";
+    // Try models in order until one succeeds
+    for (const modelName of fallbackModels) {
+      try {
+        const response = await ai.models.generateContent({
+          model: modelName,
+          ...requestPayload
+        });
+        text = response.text || "{}";
+        lastError = null; // Cleared error since it succeeded
+        break; // Success! Exit the loop
+      } catch (err: any) {
+        console.warn(`Model ${modelName} failed with ${err?.status || 'error'}, trying next...`);
+        lastError = err;
+      }
+    }
+
+    if (lastError) {
+      throw lastError; // If all failed, throw the last error to be caught by the outer catch block
+    }
+
     const result = JSON.parse(text);
     
     // Safety cleaner: strip out any stray $ signs or letters just in case the AI hallucinates them
