@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
       if (!rawTab) continue;
       
       try {
-        const tabData = JSON.parse(rawTab);
+        const tabData = typeof rawTab === "string" ? JSON.parse(rawTab) : rawTab;
         
         // Members hash is { "0x123": "10.00", "0x456": "-5.50" }
         // [OVERSEER MANDATE - Baseline 33]: Native Data Types parsing
@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
         // Parse float balances
         const members = Object.keys(membersMap).map(address => ({
           address,
-          balance: parseFloat(membersMap[address] || "0")
+          balance: parseFloat(String(membersMap[address] ?? "0"))
         }));
         
         // Calculate total balance of the tab (sum of positive balances)
