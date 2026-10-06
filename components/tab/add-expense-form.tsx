@@ -50,7 +50,7 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
     normalizedMembers.push(activeUser);
   }
 
-  const [entryMode, setEntryMode] = useState<"manual" | "ai">("manual");
+  // entryMode state removed to unify the form
   const [isAiProcessing, setIsAiProcessing] = useState(false);
   const [aiNotice, setAiNotice] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -575,29 +575,12 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
         <div className="mb-6">
           <div className="flex items-center justify-between mb-1">
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Add Expense</h2>
-            <div className="flex items-center p-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl">
-              <button
-                type="button"
-                onClick={() => setEntryMode("manual")}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${entryMode === "manual" ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-sm" : "text-slate-500 dark:text-white/50"}`}
-              >
-                Manual
-              </button>
-              <button
-                type="button"
-                onClick={() => setEntryMode("ai")}
-                className={`px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors ${entryMode === "ai" ? "bg-indigo-600 text-white shadow-sm" : "text-slate-500 dark:text-white/50"}`}
-              >
-                <Camera className="w-3 h-3 text-white" /> Smart Scan
-              </button>
-            </div>
           </div>
           <p className="text-slate-500 dark:text-white/60 text-sm">Log a new expense to the shared group ledger.</p>
         </div>
 
         <div className="flex-1 overflow-y-auto pr-2 pb-4 grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-6">
           <div className="space-y-6">
-          {entryMode === "ai" && (
             <div className="space-y-4 mb-2">
               <input 
                 type="file" 
@@ -616,7 +599,7 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
                       setIsCardDrawerOpen(true);
                     } else {
                       setPaymentMethod("card");
-                      setEntryMode("manual");
+                      // Unified form handles card payment seamlessly
                       toast.info("Personal Visa Card Selected", {
                         description: `Available balance: ${formatCurrency(availableCents)}. Fill in amount and details to split.`
                       });
@@ -655,8 +638,8 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5 truncate">
-                      Upload Receipt
-                      <span className="text-[9px] bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-bold px-1.5 py-0.5 rounded-full">OCR</span>
+                      Auto-Fill with Receipt
+                      <span className="text-[9px] bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-bold px-1.5 py-0.5 rounded-full">AI</span>
                     </div>
                     <p className="text-[11px] text-slate-500 dark:text-white/50 mt-0.5 truncate">
                       {receiptImageName ? receiptImageName : "Tap to choose photo"}
@@ -762,7 +745,7 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
                   <div className="pt-1 flex gap-2">
                     <button
                       type="button"
-                      onClick={() => setEntryMode("manual")}
+                      onClick={() => setShowDraft(false)}
                       className="flex-1 py-2 px-3 rounded-xl bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/15 text-slate-800 dark:text-white font-bold text-xs border border-slate-200 dark:border-white/10 transition-colors"
                     >
                       Fine-Tune in Form
@@ -778,7 +761,6 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
                 </div>
               )}
             </div>
-          )}
           <div className="space-y-2">
             <div className="flex items-center justify-between ml-1">
               <label className="text-sm font-semibold text-slate-700 dark:text-white/80">
