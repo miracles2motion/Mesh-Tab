@@ -52,6 +52,7 @@ export default function JoinTabPage() {
     const mode = getWorkspaceMode();
     if (isEffectivelyOnline() && mode === "testnet") {
        try {
+          const extractedJoinCode = tabId.includes("-") ? tabId.split("-").pop() : tabId.slice(-8);
           const res = await fetch("/api/tab/join", {
              method: "POST",
              headers: {
@@ -60,6 +61,7 @@ export default function JoinTabPage() {
              },
              body: JSON.stringify({ 
                 tabId, 
+                joinCode: extractedJoinCode,
                 name: trimmedName, 
                 mode,
                 walletAddress: smartWalletAddress && /^0x[a-fA-F0-9]{40}$/.test(smartWalletAddress) ? smartWalletAddress : undefined

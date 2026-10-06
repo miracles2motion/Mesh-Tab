@@ -32,7 +32,7 @@ function OnboardingContent() {
   const inviteTab = searchParams.get("tab");
   const isFresh = searchParams.get("fresh") === "true";
   const intent = searchParams.get("intent");
-  const { user, linkPasskey } = usePrivy();
+  const { user, linkPasskey, getAccessToken } = usePrivy();
   const { client } = useSmartWallets();
   const smartWalletAddress = client?.account?.address || user?.wallet?.address;
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -57,7 +57,11 @@ function OnboardingContent() {
     sounds.playClick();
 
     const finalName = name.trim();
-    const result = await saveStoredUser(finalName, selectedColorIdx, smartWalletAddress);
+    let authToken = "";
+    try {
+      authToken = (await getAccessToken()) || "";
+    } catch {}
+    const result = await saveStoredUser(finalName, selectedColorIdx, smartWalletAddress, authToken || undefined);
     if (result.error) {
       toast.error("Error", { description: result.error });
       setIsSubmitting(false);

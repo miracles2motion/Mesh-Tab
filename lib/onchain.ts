@@ -36,6 +36,7 @@ export function useRealAusdBalance(workspaceMode: string) {
       }
 
       const publicClient = createPublicClient({
+        chain: monadTestnet,
         transport: http(process.env.NEXT_PUBLIC_MONAD_RPC_URL || "https://testnet-rpc.monad.xyz")
       });
 
@@ -64,7 +65,8 @@ export function useRealAusdBalance(workspaceMode: string) {
 
       return result;
     },
-    refetchInterval: 10000,
+    refetchInterval: 15000,
+    refetchIntervalInBackground: false,
     staleTime: 5000,
     enabled: workspaceMode === "testnet" && !!walletAddress,
   });
@@ -89,6 +91,7 @@ export function useClaimWelcomeBonus(workspaceMode: string) {
     queryFn: async () => {
       if (workspaceMode !== "testnet" || !walletAddress) return false;
       const publicClient = createPublicClient({
+        chain: monadTestnet,
         transport: http(process.env.NEXT_PUBLIC_MONAD_RPC_URL || "https://testnet-rpc.monad.xyz")
       });
       const claimed = await publicClient.readContract({
@@ -140,6 +143,7 @@ export function useClaimWelcomeBonus(workspaceMode: string) {
       });
       
       const publicClient = createPublicClient({
+        chain: monadTestnet,
         transport: http(process.env.NEXT_PUBLIC_MONAD_RPC_URL || "https://testnet-rpc.monad.xyz")
       });
       await publicClient.waitForTransactionReceipt({ hash: txHash });

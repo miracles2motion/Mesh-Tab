@@ -64,6 +64,12 @@ export async function POST(req: NextRequest) {
     multi.expire(`${tabKey}:authorized_users`, 2592000);
     multi.sadd(`meshtab:${mode}:user:${creatorUserId}:tabs`, tabId);
     
+    // Index joinCode for O(1) instant lookup without KEYS scans
+    const joinCode = tabId.includes("-") ? tabId.split("-").pop()?.toLowerCase() : null;
+    if (joinCode && joinCode.length >= 6) {
+      multi.set(`meshtab:${mode}:joincode:${joinCode}`, tabId, { ex: 2592000 });
+    }
+    
     await multi.exec();
 
     return NextResponse.json({ success: true });

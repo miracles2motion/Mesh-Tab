@@ -8,6 +8,7 @@ import { PythLogo, PimlicoLogo } from "../ui/partner-logo";
 import { Check, ChevronDown, Sparkles, Camera, Mic, Zap, Loader2, Upload, FileText, SplitSquareHorizontal, AlertCircle, Globe, CloudUpload, CreditCard, ChevronRight, Coins, Plus, Snowflake } from "lucide-react";
 
 import { useUserProfile, saveStoredExpense, useWorkspaceMode, ExpenseCategory, deductCashBalance } from "../../lib/user";
+import { storageKey } from "../../lib/storage-keys";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { SUPPORTED_CURRENCIES, usePythRate } from "../../lib/pyth";
@@ -84,20 +85,17 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
       return;
     }
     try {
-      const modes = ["meshTab_sample_tabs", "meshTab_clean_tabs"];
-      for (const key of modes) {
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          const tabs = JSON.parse(raw);
-          const found = tabs.find((t: { id: string; currency?: string }) => t.id === tabId);
-          if (found?.currency) {
-            setCurrency(found.currency);
-            break;
-          }
+      const key = storageKey("tabs", workspaceMode);
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const tabs = JSON.parse(raw);
+        const found = tabs.find((t: { id: string; currency?: string }) => t.id === tabId);
+        if (found?.currency) {
+          setCurrency(found.currency);
         }
       }
     } catch { /* ignore in demo */ }
-  }, [tabId, defaultCurrency]);
+  }, [tabId, defaultCurrency, workspaceMode]);
 
 
   const { rate: activeRate, isLive: isRateLive, isLoading: isRateLoading, config: activeCurrencyInfo } = usePythRate(currency);

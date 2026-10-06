@@ -68,11 +68,26 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     // Merge and deduplicate by expenseId (new hash takes precedence over legacy)
     const expensesMap = new Map<string, any>();
+    const deletedIds: string[] = [];
+
     for (const exp of parsedLegacy) {
-      if (exp && exp.expenseId) expensesMap.set(exp.expenseId, exp);
+      if (exp && exp.expenseId) {
+        if (exp.deletedAt) {
+          deletedIds.push(exp.expenseId);
+        } else {
+          expensesMap.set(exp.expenseId, exp);
+        }
+      }
     }
     for (const exp of parsedNew) {
-      if (exp && exp.expenseId) expensesMap.set(exp.expenseId, exp);
+      if (exp && exp.expenseId) {
+        if (exp.deletedAt) {
+          deletedIds.push(exp.expenseId);
+          expensesMap.delete(exp.expenseId);
+        } else {
+          expensesMap.set(exp.expenseId, exp);
+        }
+      }
     }
     
     const expenses = Array.from(expensesMap.values());
@@ -89,6 +104,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ 
       success: true, 
       expenses, 
+      deletedIds,
       members,
       page, 
       hasMore: (parsedLegacy.length === limit) || (parsedNew.length === limit)

@@ -40,7 +40,7 @@ export function getStoredUser(): UserProfile {
   };
 }
 
-export async function saveStoredUser(name: string, colorIndex?: number, walletAddress?: string): Promise<{ error?: string }> {
+export async function saveStoredUser(name: string, colorIndex?: number, walletAddress?: string, authToken?: string): Promise<{ error?: string }> {
   if (typeof window === "undefined") return {};
   const trimmed = name.trim();
   const oldName = localStorage.getItem("meshTab_displayName") || "";
@@ -145,9 +145,13 @@ export async function saveStoredUser(name: string, colorIndex?: number, walletAd
 
   if (walletAddress) {
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (authToken) {
+        headers["Authorization"] = `Bearer ${authToken}`;
+      }
       const res = await fetch("/api/user/profile", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ 
           wallet: walletAddress, 
           name: trimmed, 
@@ -486,13 +490,27 @@ export function mergePulledTabs(serverTabs: any[], walletAddress: string) {
     if (deletedTombstones.has(st.id)) return;
     const existing = mergedMap.get(st.id);
     
-    // Find user's specific balance from the server members list
-    const myBalance = 0; 
-    
     const profile = getStoredUser();
     const currentName = profile.name || "";
     const localWallet = typeof window !== "undefined" ? (localStorage.getItem("meshTab_walletAddress") || "") : "";
 
+    // Find user's specific balance from the server members list
+    let matchedMemberBalance: number | null = null;
+    if (st.members && Array.isArray(st.members)) {
+      const match = st.members.find((m: any) => {
+        const memName = (m.name || m.address || "").toLowerCase();
+        return (
+          (currentName && memName === currentName.toLowerCase()) ||
+          (walletAddress && memName === walletAddress.toLowerCase()) ||
+          (localWallet && memName === localWallet.toLowerCase()) ||
+          memName === "you"
+        );
+      });
+      if (match && typeof match.balance === "number") {
+        matchedMemberBalance = match.balance;
+      }
+    }
+    
     const isCreator = Boolean(
       st.role === "Creator" ||
       st.isCreator === true ||
@@ -502,10 +520,14 @@ export function mergePulledTabs(serverTabs: any[], walletAddress: string) {
       (st.creator && currentName && st.creator.trim().toLowerCase() === currentName.trim().toLowerCase())
     );
 
+    const resolvedBalance = matchedMemberBalance !== null 
+      ? matchedMemberBalance 
+      : (existing?.balance ?? 0);
+
     const formattedTab: TabSummary = {
       id: st.id,
       name: st.name || existing?.name || "Unknown Group",
-      balance: existing?.balance || myBalance,
+      balance: resolvedBalance,
       role: isCreator ? "Creator" : "Member",
       creator: st.creator || existing?.creator,
       memberCount: st.members ? st.members.length : (existing?.memberCount || 1),
@@ -521,6 +543,7 @@ export function mergePulledTabs(serverTabs: any[], walletAddress: string) {
       mergedMap.set(st.id, {
         ...existing,
         ...formattedTab,
+        balance: resolvedBalance,
         // Keep local activity timestamps if they are newer
         lastActivityAt: Math.max(existing.lastActivityAt || 0, formattedTab.lastActivityAt || 0)
       });
@@ -1126,11 +1149,44 @@ export function updateStoredExpenseDescription(tabId: string, expenseId: string,
 
   current[targetIndex] = {
     ...current[targetIndex],
-    desc: newDesc.trim()
+    desc: newDesc.trim(),
+    syncStatus: mode === "testnet" ? "pending" : current[targetIndex].syncStatus
   };
 
   safeSetItem(storageKeyStr, JSON.stringify(current));
   window.dispatchEvent(new Event("meshTab-expenses-update"));
+
+  if (mode === "testnet") {
+    const target = current[targetIndex];
+    const wallet = localStorage.getItem("meshTab_walletAddress") || "";
+    const payers = [{ name: target.payer, amount: target.amount }];
+    const members = getStoredTabMembers(tabId);
+    const participating = target.participants || members.map(m => m.name);
+    const splitCount = Math.max(1, participating.length);
+    const share = Math.floor(target.amount / splitCount);
+    const borrowers = participating.map(name => ({
+      name,
+      amount: target.splits?.[name] !== undefined ? target.splits[name] : share
+    }));
+
+    import("./outbox").then(({ queueOutboxOp }) => {
+      queueOutboxOp({
+        type: "editExpense",
+        tabId,
+        entityId: expenseId,
+        ownerWallet: wallet,
+        payload: {
+          description: newDesc.trim(),
+          finalAmountUsd: target.amount,
+          payers,
+          borrowers,
+          oldPayers: payers,
+          oldBorrowers: borrowers,
+          editedBy: getStoredUser().name || "You"
+        }
+      });
+    });
+  }
 
   const tabsKey = getTabsStorageKey();
   const tabs = getStoredTabs();
@@ -1188,6 +1244,8 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
   window.dispatchEvent(new Event("meshTab-tabs-update"));
 
   // 2. Update member balances for this tab
+  const mode = getWorkspaceMode();
+  const creditorsPaid: { name: string; amount: number }[] = [];
   try {
     const members = getStoredTabMembers(tabId, currentUserName);
     let remainingToDeduct = amount;
@@ -1204,12 +1262,12 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
         const deduct = Math.min(m.balance, remainingToDeduct);
         const newBal = m.balance - deduct;
         remainingToDeduct -= deduct;
+        creditorsPaid.push({ name: m.name, amount: deduct });
         
         // If the creditor getting paid is the main user (David/You), credit their payout balance
         const activeUser = getStoredUser().name || DEFAULT_USER_NAME;
         if (m.name.toLowerCase() === activeUser.toLowerCase() || m.name.toLowerCase() === "you") {
           const currentPayout = getSettledPayoutBalance();
-          const mode = getWorkspaceMode();
           const payoutKey = storageKey("settledPayoutBalance", mode);
           safeSetItem(payoutKey, String(currentPayout + deduct));
           window.dispatchEvent(new Event("meshTab-payout-update"));
@@ -1224,24 +1282,43 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
       return m;
     });
 
-    const mode = getWorkspaceMode();
     const membersKey = storageKey("members", mode, tabId);
     safeSetItem(membersKey, JSON.stringify(updatedMembers));
     window.dispatchEvent(new Event("meshTab-members-update"));
   } catch (e) {}
 
   // 3. Add settlement entry to tab expenses (skip balance update as we just did it manually)
+  const settleId = `settle-${Date.now()}`;
   saveStoredExpense(tabId, {
-    id: `settle-${Date.now()}`,
+    id: settleId,
     payer: currentUserName,
     amount: amount,
     desc: "Settled balance in AUSD (Monad)",
     createdAt: Date.now()
   }, true);
 
+  if (mode === "testnet") {
+    const wallet = localStorage.getItem("meshTab_walletAddress") || "";
+    import("./outbox").then(({ queueOutboxOp }) => {
+      queueOutboxOp({
+        type: "settleDebt",
+        tabId,
+        entityId: settleId,
+        ownerWallet: wallet,
+        payload: {
+          settleId,
+          payer: currentUserName,
+          amount,
+          creditors: creditorsPaid,
+          description: "Settled balance in AUSD (Monad)",
+          timestamp: Date.now()
+        }
+      });
+    });
+  }
+
   // 4. In demo mode (sample / blank), when the user settles their own debt,
   // deduct the amount from their cashable payout balance and virtual balance
-  const mode = getWorkspaceMode();
   if (mode !== "testnet") {
     deductSettledPayout(amount);
     deductVirtualBalance(amount);

@@ -28,20 +28,29 @@ export function ConnectivityProvider({ children }: { children: ReactNode }) {
     let count = 0;
     if (typeof window === "undefined") return;
 
+    const pendingEntityIds = new Set<string>();
+    let outboxOpsCount = 0;
+
     // Outbox count
     try {
       const raw = localStorage.getItem("meshTab_testnet_outbox");
       if (raw) {
         const outbox = JSON.parse(raw);
         if (Array.isArray(outbox)) {
-          count += outbox.filter((o) => o.status !== "failed").length;
+          const activeOps = outbox.filter((o) => o.status !== "failed");
+          outboxOpsCount = activeOps.length;
+          activeOps.forEach((o) => {
+            if (o.entityId) pendingEntityIds.add(o.entityId);
+          });
         }
       }
     } catch (e) {
       console.error("Failed to parse outbox", e);
     }
+
+    count = outboxOpsCount;
     
-    // Legacy pending count
+    // Check for any unqueued pending expenses that aren't already counted in the outbox
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && key.includes("_expenses_")) {
@@ -50,7 +59,10 @@ export function ConnectivityProvider({ children }: { children: ReactNode }) {
           if (raw) {
             const expenses: StoredExpense[] = JSON.parse(raw);
             if (Array.isArray(expenses)) {
-              count += expenses.filter((e) => e.syncStatus === "pending").length;
+              const unrepresented = expenses.filter(
+                (e) => e.syncStatus === "pending" && !pendingEntityIds.has(e.id)
+              );
+              count += unrepresented.length;
             }
           }
         } catch (e) {}

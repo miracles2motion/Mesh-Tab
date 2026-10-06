@@ -225,15 +225,15 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
                 </div>
                 <div className="flex justify-between items-center text-slate-600 dark:text-white/70">
                   <span>Settlement Asset:</span>
-                  <span className="font-semibold text-slate-900 dark:text-white">Agora AUSD (ERC-20)</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">Agora AUSD (Digital USD)</span>
                 </div>
                 <div className="flex justify-between items-center text-slate-600 dark:text-white/70">
                   <span>Network:</span>
-                  <span className="font-semibold text-purple-600 dark:text-purple-400">Monad Testnet (10143)</span>
+                  <span className="font-semibold text-purple-600 dark:text-purple-400">Monad High-Speed Network</span>
                 </div>
                 <div className="flex justify-between items-center text-slate-600 dark:text-white/70">
-                  <span>Gas Policy:</span>
-                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">Pimlico Paymaster (Sponsored)</span>
+                  <span>Network Fee:</span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">100% Free (Sponsored)</span>
                 </div>
               </div>
 

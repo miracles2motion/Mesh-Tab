@@ -55,13 +55,10 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
     let timeoutId: NodeJS.Timeout;
 
     const performLock = () => {
-      // Save passkey status before logging out so the /locked page knows what to say
+      // Save passkey status before locking so the /locked page knows what to say
       const hasPasskey = user?.linkedAccounts?.some(acc => acc.type === 'passkey') || false;
       localStorage.setItem("mesh_last_passkey_status", hasPasskey.toString());
-      
-      if (typeof window !== "undefined" && navigator.onLine) {
-        logout();
-      }
+      localStorage.setItem("mesh_session_locked", "true");
       router.replace("/locked");
     };
 

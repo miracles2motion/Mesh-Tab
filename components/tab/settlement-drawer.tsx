@@ -17,6 +17,7 @@ import { SUPPORTED_CURRENCIES, usePythRate } from "../../lib/pyth";
 import { erc20Abi, encodeFunctionData, createPublicClient, http, isAddress } from "viem";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
 import { useRealAusdBalance } from "../../lib/onchain";
+import { monadTestnet } from "../../lib/chains";
 
 const MeshTabLedgerABI = [
   {
@@ -99,8 +100,8 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
 
         // [OVERSEER MANDATE - Baseline 3 & 10]: Strict EVM verification on testnet (Zero Mock Fallback)
         if (!rawCreditorAddress || !isAddress(rawCreditorAddress)) {
-          toast.error("Creditor wallet not found", {
-            description: `${primaryCreditor || "The creditor"} has not linked their Monad wallet to this tab yet. Please ask them to open and sync the tab.`
+          toast.error("Account not linked", {
+            description: `${primaryCreditor || "The recipient"} has not connected their account to this tab yet. Please ask them to open and sync the tab.`
           });
           setIsProcessing(false);
           return;
@@ -120,6 +121,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
         });
 
         const publicClient = createPublicClient({
+            chain: monadTestnet,
             transport: http(process.env.NEXT_PUBLIC_MONAD_RPC_URL || "https://testnet-rpc.monad.xyz")
         });
         await publicClient.waitForTransactionReceipt({ hash: approveHash });

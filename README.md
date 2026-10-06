@@ -6,22 +6,49 @@
 [![Live Demo](https://img.shields.io/badge/Demo-mesh--tab.vercel.app-6366F1?style=for-the-badge&logo=vercel)](https://mesh-tab.vercel.app/)
 [![Next.js](https://img.shields.io/badge/Next.js_16-Black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![Monad Testnet](https://img.shields.io/badge/Monad-Testnet_(10143)-836EF9?style=for-the-badge&logo=ethereum)](https://testnet.monadexplorer.com/)
-[![Privy](https://img.shields.io/badge/Auth-Privy_Embedded_Wallets-FF6B6B?style=for-the-badge)](https://privy.io/)
 [![Settlement](https://img.shields.io/badge/Settlement-Agora_AUSD-10B981?style=for-the-badge)](https://agora.finance/)
+[![Paymaster](https://img.shields.io/badge/Gas-Pimlico_Sponsored-FFB800?style=for-the-badge)](https://pimlico.io/)
+[![Privy](https://img.shields.io/badge/Auth-Privy_Embedded_Wallets-FF6B6B?style=for-the-badge)](https://privy.io/)
+[![Oracle](https://img.shields.io/badge/Oracle-Pyth_Hermes_FX-9945FF?style=for-the-badge)](https://pyth.network/)
+[![AI Vision](https://img.shields.io/badge/AI_Vision-Google_Gemini_Flash-4285F4?style=for-the-badge&logo=google)](https://ai.google.dev/)
 [![Database](https://img.shields.io/badge/Sync-Upstash_Redis-00E599?style=for-the-badge&logo=redis)](https://upstash.com/)
 
 ---
 
 ## 💡 The Problem & The Solution
 
-**The Problem:** Traditional group expense apps (like Splitwise) create tangled, crisscrossing I.O.U. webs. When a trip ends, friends are forced to execute dozens of redundant cross-transfers, calculate complex currency fees, or chase each other across banking apps.
+**The Problem:** Traditional group expense apps (like Splitwise) create tangled, crisscrossing I.O.U. webs. When a trip ends, friends are forced to execute dozens of redundant cross-transfers, calculate complex currency fees, or chase each other across banking apps. Worse, existing crypto expense tools burden non-crypto users with gas tokens, seed phrases, network popups, and raw hex addresses.
 
 **The Solution:** MeshTab combines high-throughput blockchain infrastructure with consumer fintech simplicity:
 - **Multilateral Netting Engine ("The Tangle"):** An off-chain greedy bipartite matching algorithm that detects and collapses circular debt loops ($A \to B \to C \to A$), reducing total payment volume and cross-transfers by up to **75%**.
 - **Biometric Passkeys & Embedded Smart Accounts:** Instant FaceID/TouchID enrollment powered by **Privy**, generating ERC-4337 smart accounts with zero seed phrases, browser extensions, or popups.
-- **Gasless Agora AUSD Settlement:** 1-click debt settlement in **Agora AUSD** (6-decimal digital dollars) executed through **Pimlico Paymasters** for 100% sponsored gas on Monad.
-- **Voice-to-Expense Dictation & Smart Staging:** Speak expenses naturally using browser-native **Web Speech API** or test interactive receipt presets. The parser extracts amounts and vendors into an editable staging card for human verification before saving.
-- **Offline-First Resilience & Dual Modes:** A device-isolated **Demo Mode** (`sample` and `blank`) allows instant presentation without testnet faucets or internet connectivity, while **Testnet Mode** integrates real Monad contracts and **Upstash Redis** real-time persistence.
+- **Gasless Agora AUSD Settlement:** 1-click debt settlement in **Agora AUSD** (6-decimal institutional digital dollars) executed through **Pimlico Paymasters** for 100% sponsored gas on Monad.
+- **Google Gemini Flash Vision AI OCR:** Snap a photo of any restaurant receipt, grocery slip, or hotel invoice to instantly extract the total amount and merchant name in ~1 second via `@google/genai`.
+- **Pyth Network Hermes Multi-Currency FX Engine:** Real-time foreign exchange feeds convert EUR, GBP, JPY, CAD, AUD, NGN, and BRL at institutional mid-market rates with 60-second caching and resilient fallback guarantees.
+- **Voice-to-Expense Dictation & Smart Staging:** Speak expenses naturally using browser-native **Web Speech API**. The parser extracts amounts and vendors into an editable staging card for human verification before saving.
+- **Offline-First Resilience & The 3-Mode Architecture:** A persistent local outbox (`meshTab_testnet_outbox`) with operation folding and multi-tab Web Locks synchronizes sequentially (push-first-then-pull) upon reconnection. Operates across 3 isolated modes: `sample` (Lisbon '24 demo trip), `blank` (clean sandbox), and `testnet` (Monad Metropolis live on-chain mode).
+- **Zero-Dependency Procedural Audio:** 10 rich micro-interaction sound effects synthesized in real time via the native **Web Audio API** (`AudioContext`), eliminating external audio assets and 404 latency.
+
+---
+
+## 📊 Feature Maturity Matrix (Live vs. Prototype)
+
+To maintain complete transparency with judges, engineering leadership, and users, MeshTab clearly delineates fully implemented on-chain production features from interactive UX prototypes:
+
+| Feature | Category | Current Status & Architecture |
+|---|---|---|
+| **MeshTabLedger Settlement** | 🟢 Live On-Chain | Deployed on Monad Testnet (`payNettedDebt`). Executes atomic debt settlement in Agora AUSD. |
+| **Faucet / Welcome Bonus** | 🟢 Live On-Chain | Deployed contract function `claimWelcomeBonus()` minting 5,000 AUSD for instant test flights. |
+| **Pimlico Gas Sponsorship** | 🟢 Live Production | 100% gasless transactions via ERC-4337 Paymaster integration with Privy Smart Wallets. |
+| **Pyth Hermes FX Engine** | 🟢 Live Production | Low-latency foreign exchange oracle proxy (`/api/pyth`) with 60s caching and graceful fallbacks. |
+| **Gemini Flash Vision OCR** | 🟢 Live Production | Multimodal receipt scanning endpoint (`/api/receipt-scan`) using Google GenAI SDK. |
+| **Upstash Redis + Lua Engine** | 🟢 Live Production | Atomic serverless transactions (`LUA_ADD_EXPENSE`, `LUA_DELETE_EXPENSE`, `LUA_SETTLE_DEBT`). |
+| **Offline Outbox & 2-Way Sync**| 🟢 Live Production | Local FIFO outbox with operation folding, Web Locks concurrency, and push-first-then-pull reconciliation. |
+| **Web Audio Synthesizer** | 🟢 Live Production | 10 custom synthesized sound effects generated procedurally via browser `AudioContext`. |
+| **Virtual Visa Card** | 🟡 Interactive Prototype | Generates card numbers, CVV, expiry, freeze toggles, and spend limits; BaaS card issuance (Stripe Issuing/Lithic) on roadmap. |
+| **Agora APY Yield Vault** | 🟡 Simulated Engine | Real-time mathematical compounding ticker (`Math.pow` @ 4.80% APY); mainnet ERC-4626 smart contract on roadmap. |
+| **Fiat Off-Ramp Drawer** | 🟡 Interactive Prototype | Consumer off-ramp UI featuring Chog security guardrail to prevent confusion between testnet tokens and real fiat bank accounts. |
+| **Bluetooth Mesh Transport** | 🟡 Roadmap Spec | UI specification modal illustrating future handset-to-handset BLE transport without cellular coverage. |
 
 ---
 
@@ -29,25 +56,27 @@
 
 Both smart contracts are deployed and verified on **Monad Testnet (Chain ID: 10143)**:
 
-| Contract | Address | Monad Explorer |
-|---|---|---|
-| **MeshTabLedger** | `0x43405B9D8E30ff76910009E79131200c862fCA7d` | [View on MonadExplorer](https://testnet.monadexplorer.com/address/0x43405B9D8E30ff76910009E79131200c862fCA7d) |
-| **MockAUSD (Agora Digital Dollar)** | `0xF9bA02Cd0aFc210e0867852eEb0E994B07d9957F` | [View on MonadExplorer](https://testnet.monadexplorer.com/address/0xF9bA02Cd0aFc210e0867852eEb0E994B07d9957F) |
-
-*The `MeshTabLedger` contract exposes `payNettedDebt(string tabId, address creditor, uint256 amount)` to trustlessly settle group liabilities on-chain.*
+| Contract | Address | Monad Explorer | Functionality |
+|---|---|---|---|
+| **MeshTabLedger** | `0x43405B9D8E30ff76910009E79131200c862fCA7d` | [View on MonadExplorer](https://testnet.monadexplorer.com/address/0x43405B9D8E30ff76910009E79131200c862fCA7d) | Trustless group debt settlement via `payNettedDebt()` |
+| **Agora AUSD (Mock)** | `0xF9bA02Cd0aFc210e0867852eEb0E994B07d9957F` | [View on MonadExplorer](https://testnet.monadexplorer.com/address/0xF9bA02Cd0aFc210e0867852eEb0E994B07d9957F) | Institutional 6-decimal digital dollar + `claimWelcomeBonus()` |
 
 ---
 
-## 🚀 Core Features
+## 🚀 Core Feature Breakdown
 
-| Feature | Implementation | Benefit |
+| Feature | Implementation | Consumer Benefit |
 |---|---|---|
-| 🔄 **The Tangle (Netting Engine)** | Off-chain bipartite matching rendered on an animated SVG canvas | Collapses $N$-way group debt into the theoretical minimum direct settlements. |
+| 🔄 **The Tangle (Netting Engine)** | Off-chain bipartite matching rendered on an interactive SVG canvas | Collapses complex $N$-way group debts into the theoretical minimum direct settlements. |
+| 📸 **Gemini Vision AI OCR** | Google Gemini Flash multimodal vision pipeline via `@google/genai` | Snap a photo of a paper receipt to extract the amount and merchant name in ~1 second. |
+| 💱 **Pyth Network FX Oracle** | Pyth Hermes REST API with 60-second edge revalidation | Split travel expenses in EUR, GBP, JPY, or AUD converted at mid-market institutional rates. |
 | 🎙️ **Voice-to-Expense Dictation** | Browser Web Speech API with currency regex parsing | Dictate `"Paid 45 dollars for groceries"` to pre-fill expenses hands-free. |
-| 🛡️ **Active Balance Protection** | Real-time state validation in `ManageMembers` | Prevents group admins or members with active balances from being deleted until settled. |
 | ⛽ **Gasless Sponsorship (ERC-4337)** | Pimlico Verifying Paymasters + Privy Smart Wallets | Users never hold or spend MON for gas fees; transactions execute seamlessly. |
-| 📴 **Offline Outbox Engine** | FIFO operations queue with auto-sync on reconnect | Log tabs and expenses on flights or in subways with optimistic local state. |
-| 🌓 **Adaptive System Aesthetics** | Vanilla Tailwind CSS with instant Dark/Light switching | High-contrast ergonomics designed for real-world mobile use. |
+| 📴 **Offline Outbox Engine** | FIFO operations queue with multi-tab Web Locks and 2-way server sync | Log tabs and expenses on flights or in subways with optimistic local state. |
+| 🤖 **MeshBuddy AI Co-Pilot** | Floating AI assistant with custom knowledge base and neural TTS | Query tab analytics ("Who owes the most?") with human-like voice responses. |
+| 🎵 **Procedural Sound Engine** | Browser Web Audio API procedural synthesis (10 distinct SFX) | Rich acoustic feedback (clicks, sweeps, success chimes) with zero external asset loading. |
+| 💳 **Virtual Visa Card (Prototype)** | Local state persistence with spending limits and freeze controls | Demonstrates instant POS spendability for settled funds via digital wallet provisioning. |
+| 📈 **Agora APY Vault (Simulated)** | Continuous compounding formula (`4.80% APY`) with live ticking counter | Demonstrates how idle group travel funds earn yield during 7–14 day vacations. |
 
 ---
 
@@ -55,11 +84,13 @@ Both smart contracts are deployed and verified on **Monad Testnet (Chain ID: 101
 
 ```mermaid
 graph TD
-    subgraph Client ["Client Layer (Next.js 16 + React 19)"]
+    subgraph Client ["Client Layer (Next.js 16 + React 19 + Turbopack)"]
         UI["Consumer UI & Thumb-Zone Dock"]
-        VoiceParser["Voice-to-Expense Parser (Web Speech API)"]
-        NettingCanvas["The Tangle (Interactive SVG Netting)"]
-        Outbox["Offline Outbox & Local Storage Cache"]
+        VoiceParser["Voice Dictation (Web Speech API)"]
+        GeminiOCR["Gemini Flash AI OCR Receipt Scanner"]
+        NettingCanvas["The Tangle (Bipartite Netting Visualizer)"]
+        Synthesizer["Procedural Sound Synthesizer (Web Audio API)"]
+        Outbox["Offline Outbox (Web Locks API + FIFO Queue)"]
     end
 
     subgraph Auth ["Authentication & Identity"]
@@ -68,7 +99,7 @@ graph TD
 
     subgraph AA ["Account Abstraction (ERC-4337)"]
         Pimlico["Pimlico Verifying Paymaster (Gas Sponsorship)"]
-        SmartAccount["Monad Smart Account Client (Permissionless + Viem)"]
+        SmartAccount["Monad Smart Account Client (Viem v2)"]
     end
 
     subgraph Network ["Monad Testnet (Chain ID: 10143)"]
@@ -76,8 +107,13 @@ graph TD
         AUSDContract["Agora AUSD (0xF9bA...957F)"]
     end
 
+    subgraph OraclesAI ["Oracles & AI Infrastructure"]
+        Pyth["Pyth Network Hermes (Real-Time FX Feeds)"]
+        GoogleGenAI["Google Gemini Flash (Multimodal OCR)"]
+    end
+
     subgraph CloudState ["Cloud State & Multi-Device Sync"]
-        Upstash["Upstash Redis REST API (Tab & Member Roster)"]
+        Upstash["Upstash Serverless Redis (Lua Transaction Scripts)"]
     end
 
     Client -->|Biometric Signature| Privy
@@ -85,6 +121,8 @@ graph TD
     SmartAccount -->|Gas-Sponsored UserOp| Pimlico
     Pimlico -->|Bundled Transaction| Network
     Network -->|payNettedDebt / Transfer| LedgerContract
+    Client -->|Multi-Currency Conversion| Pyth
+    Client -->|Receipt Image Upload| GoogleGenAI
     Client -->|Push / Pull / Sync| Upstash
 ```
 
@@ -96,11 +134,12 @@ MeshTab adheres to strict consumer fintech design principles — zero blockchain
 
 | Blockchain Mechanic | User-Facing Interface | Architectural Reality |
 |---|---|---|
-| `Gas Fees / Gwei` | **Free / Sponsored** | Pimlico Paymasters absorb all Monad transaction fees. |
+| `Gas Fees / Gwei` | **Free / Sponsored** | Pimlico Paymasters absorb 100% of Monad transaction fees. |
 | `Private Keys / Seed Phrases` | **Passkey (FaceID / TouchID)** | Hardware WebAuthn enclave managed via Privy SDK. |
 | `Contract Approval & Call` | **1-Tap Settle Up** | Batch `approve` + `payNettedDebt` UserOps in background. |
 | `ERC-20 Token Transfers` | **Digital US Dollars ($)** | Agora AUSD represents 1:1 digital dollar values. |
-| `Transaction Latency` | **Instant UI Update** | Optimistic local updates backed by Monad's 10,000 TPS. |
+| `Transaction Latency` | **Instant Sub-Second Finality** | Optimistic local updates backed by Monad's 10,000 TPS. |
+| `Hex Wallet Addresses` | **Member Profile & Avatar** | 0x addresses resolved dynamically from verified tab roster. |
 
 ---
 
@@ -119,8 +158,7 @@ Copy `.env.example` to `.env.local`:
 cp .env.example .env.local
 ```
 
-Fill in the required service credentials (see table below):
-
+Configure your credentials:
 ```env
 # 1. Upstash Redis (Tab sync & membership)
 UPSTASH_REDIS_REST_URL="https://your-database.upstash.io"
@@ -133,9 +171,12 @@ NEXT_PUBLIC_MESH_TAB_LEDGER_ADDRESS="0x43405B9D8E30ff76910009E79131200c862fCA7d"
 
 # 3. Privy Authentication & Smart Wallets
 NEXT_PUBLIC_PRIVY_APP_ID="your_privy_app_id"
+
+# 4. Google Gemini Vision OCR (Receipt Scanning)
+GEMINI_API_KEY="your_gemini_api_key"
 ```
 
-> **Note:** MeshTab includes comprehensive mock fallbacks and local demo modes. You can explore the entire app, test debt netting, and run simulated settlements out-of-the-box without requiring live keys.
+> **Note:** MeshTab includes complete local demo modes (`sample` and `blank`). You can explore the entire app, test debt netting, scan receipts, and run simulated settlements out-of-the-box without requiring live keys.
 
 ### 3. Run Development Server
 ```bash
@@ -147,36 +188,66 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ```bash
 npm run build
 ```
-*Builds cleanly with Next.js 16 and React 19 with 0 TypeScript and lint errors.*
+*Builds cleanly with Next.js 16 and React 19 with 0 TypeScript and compilation errors.*
 
 ---
 
 ## 🎬 3-Minute Demo Walkthrough
 
 1. **Explore Landing (`/`):**
-   * Interact with the **Live Netting Visualizer** to see how crisscrossing debts collapse into streamlined settlements.
-   * Click **Launch App** or **Explore Demo Mode**.
+   - Interact with the **Live Netting Visualizer** to see how crisscrossing debts collapse into streamlined settlements.
+   - Click **Try Demo Mode** or **Launch App**.
 2. **Explore The Lisbon Benchmark (`/tab/lisbon-24`):**
-   * Notice the 4 group members ($1,200 total expenses).
-   * Tap **Run Netting** to open the interactive SVG graph engine. Watch 12 gross peer-to-peer debts collapse into just 3 direct payments (saving 75% in transfer friction).
+   - Review the 4 group members ($1,200 total expenses across Aisha, Kemi, Ben, and You).
+   - Tap **Run Netting** to open the interactive SVG graph engine. Watch 12 gross peer-to-peer debts collapse into just 3 direct payments (saving 75% in transfer friction).
 3. **Multimodal Expense Logging (`/tab/lisbon-24/expense/new`):**
-   * Tap the **Mic** button and say: `"I paid 80 dollars for rental car gas"`.
-   * Watch the parser extract the amount and description into an **Editable Staging Card**.
-   * Adjust splits or tap **Save Expense**.
+   - **Receipt OCR:** Tap the camera icon, upload a receipt, and watch Gemini Flash extract the amount and merchant in ~1 second.
+   - **Voice Dictation:** Tap the mic button and say: `"I paid 80 dollars for rental car gas"`.
+   - **Pyth FX:** Select EUR or JPY to see real-time Pyth Hermes conversions into USD.
 4. **1-Click Settlement (`/tab/lisbon-24`):**
-   * Tap **Settle Up** to open the settlement drawer.
-   * In Demo Mode, watch your balance recalculate and your debt clear to $0.00 instantly with confetti feedback.
-   * In Testnet Mode, approve and execute `payNettedDebt` on Monad Testnet gaslessly via Privy Smart Wallets.
-5. **Simulated Bank Cash-Out (`/settings` or Home Header):**
-   * Tap your cash balance to open the Cash-Out drawer and simulate instant payout to a bank account.
+   - Tap **Settle Up** on your negative balance card.
+   - In Demo Mode, watch your balance recalculate and your debt clear to $0.00 instantly with confetti feedback.
+   - In Testnet Mode, approve and execute `payNettedDebt` on Monad Testnet gaslessly via Pimlico Paymaster.
+5. **Faucet Welcome Bonus (`/home`):**
+   - Connect your wallet on Testnet Mode and tap **Add Funds** $\to$ **Claim 5,000 AUSD** to mint testnet Agora digital dollars directly on Monad.
+6. **Virtual Card & Yield Preview:**
+   - Tap the **Virtual Card** banner on the Home dashboard to view instant card spendability controls.
+   - Watch the **Agora APY Vault** ticker on the tab page compound group savings at 4.80% APY.
 
-## 🛣️ Mainnet Production Architecture
+---
 
-For our comprehensive A-to-Z execution plan on scaling MeshTab from hackathon testnet to commercial production (including native Agora AUSD, Privy fiat banking on/off-ramps, OpenZeppelin contract audits, and mobile store packaging), see the full specification in Mainnet Roadmap
+## 🛣️ Production & Mainnet Roadmap
+
+- **Phase 1: Metropolis Hackathon (Current) 🟢**
+  - Instant FaceID passkeys & ERC-4337 smart accounts via **Privy**.
+  - Sub-second debt settlement on **Monad Testnet** (`MeshTabLedger.sol`).
+  - 100% sponsored gas fees powered by **Pimlico Verifying Paymasters**.
+  - Institutional digital dollar liquidity via **Agora AUSD**.
+  - Mid-market foreign exchange rates via **Pyth Network Hermes Oracles**.
+  - Multimodal receipt OCR powered by **Google Gemini Flash Vision**.
+  - Resilient offline outbox queue with 2-way server synchronization.
+
+- **Phase 2: Monad Mainnet & Audited Yield (Q3 2026) 🟡**
+  - Smart contract security audit via **OpenZeppelin** / **Spearbit**.
+  - Deployment of `MeshTabLedger` to **Monad Mainnet** parallel execution environment.
+  - Native **Agora AUSD** ERC-4626 Tokenized Yield Vault integration.
+  - Automated background netting settlement via **Privy Server Wallets**.
+
+- **Phase 3: Consumer Scale & Banking Rails (Q4 2026) ⚪**
+  - Seamless fiat on-ramps and bank cash-outs leveraging **Privy Funding Rails**.
+  - Virtual Visa Debit Card point-of-sale spendability via licensed BaaS partner (**Stripe Issuing** / **Lithic**).
+  - Native iOS & Android app store release with background peer sync.
+
+---
+
+## 📚 Master Documentation & Architecture References
+
+For exhaustive engineering and architecture references, consult our companion artifacts:
+- **Master System Overview:** [`meshtab-artifacts/meshtab overview.txt`](../meshtab-artifacts/meshtab%20overview.txt) — Comprehensive 870-line reference covering all 22 system dimensions, Redis schemas, Lua scripts, and Zod contracts.
+- **Full Security & Quality Audit:** [`meshtab-artifacts/full-audit-report.md`](../meshtab-artifacts/full-audit-report.md) — 100/100 certified health audit verifying all 42 OVERSEER isolation matrix rules.
 
 ---
 
 ## 📄 License
 
 MIT License. Built for the Monad Metropolis 2026 Hackathon.
-

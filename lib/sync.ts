@@ -40,7 +40,7 @@ function haveExpensesChanged(serverExpenses: StoredExpense[], localExpenses: Sto
   for (const se of serverExpenses) {
     const le = localExpenses.find(e => e.id === se.id);
     if (!le) return true;
-    if (le.amount !== se.amount || le.desc !== se.desc || le.payer !== se.payer) {
+    if (le.amount !== se.amount || le.desc !== se.desc || le.payer !== se.payer || le.syncStatus !== se.syncStatus) {
       return true;
     }
   }
@@ -90,7 +90,7 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
           errorCount = 0;
           setSyncError(false);
           const data = await res.json();
-          const { members, expenses } = data;
+          const { members, expenses, deletedIds } = data;
           
           let stateUpdated = false;
 
@@ -133,26 +133,40 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
               } catch (e) {}
           }
 
-          // Smart Deep Merge for Expenses
-          if (expenses && Array.isArray(expenses) && expenses.length > 0) {
-            const mappedExpenses = expenses.map((e: any) => {
-               if (e.metadata) {
-                 return { ...e.metadata, syncStatus: "synced" };
-               }
-               // Fallback if metadata is missing
-               return {
-                 id: e.expenseId || Math.random().toString(36).substr(2, 9),
-                 payer: e.payers?.[0]?.name || "Unknown",
-                 amount: e.finalAmountUsd || 0,
-                 desc: e.description || "",
-                 time: new Date(e.timestamp || Date.now()).toISOString(),
-                 syncStatus: "synced"
-               };
-            });
+          // Smart Deep Merge for Expenses (protects offline pending and cleans up tombstones)
+          if (expenses !== undefined || (Array.isArray(deletedIds) && deletedIds.length > 0)) {
             const localExpenses = getStoredExpenses(tabId);
-            if (haveExpensesChanged(mappedExpenses, localExpenses)) {
+            const rawServerExpenses = Array.isArray(expenses) ? expenses : [];
+            const deletedIdSet = new Set(Array.isArray(deletedIds) ? deletedIds : []);
+
+            const mappedExpenses: StoredExpense[] = rawServerExpenses
+              .filter((e: any) => !deletedIdSet.has(e.expenseId))
+              .map((e: any) => {
+                if (e.metadata) {
+                  return { ...e.metadata, syncStatus: "synced" as const };
+                }
+                return {
+                  id: e.expenseId || Math.random().toString(36).substr(2, 9),
+                  payer: e.payers?.[0]?.name || "Unknown",
+                  amount: e.finalAmountUsd || 0,
+                  desc: e.description || "",
+                  time: new Date(e.timestamp || Date.now()).toISOString(),
+                  syncStatus: "synced" as const
+                };
+              });
+
+            // Preserve local pending expenses that have not synced yet and have not been deleted
+            const localPending = localExpenses.filter((le: StoredExpense) =>
+              le.syncStatus === "pending" &&
+              !mappedExpenses.some((me: StoredExpense) => me.id === le.id) &&
+              !deletedIdSet.has(le.id)
+            );
+
+            const mergedExpenses = [...mappedExpenses, ...localPending];
+
+            if (haveExpensesChanged(mergedExpenses, localExpenses)) {
               const storageKeyStr = storageKey("expenses", mode, tabId);
-              safeSetItem(storageKeyStr, JSON.stringify(mappedExpenses));
+              safeSetItem(storageKeyStr, JSON.stringify(mergedExpenses));
               window.dispatchEvent(new CustomEvent("meshTab-expenses-update", { detail: { fromServer: true } }));
               stateUpdated = true;
             }

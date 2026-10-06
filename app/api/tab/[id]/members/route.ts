@@ -45,6 +45,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         await redis.hset(`${tabKey}:member_wallets`, { [name]: walletAddress });
       }
     } else if (action === "remove") {
+      const existingMemberWallet = (await redis.hget(`${tabKey}:member_wallets`, name)) as string | null;
+      const targetWallet = walletAddress || existingMemberWallet;
+
       const result = await redis.eval(
         LUA_REMOVE_MEMBER,
         [membersKey],
@@ -56,6 +59,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       }
 
       await redis.hdel(`${tabKey}:member_wallets`, name);
+
+      if (targetWallet) {
+        await Promise.all([
+          redis.srem(`${tabKey}:authorized_users`, targetWallet),
+          redis.srem(`meshtab:${mode}:user:${targetWallet}:tabs`, id)
+        ]);
+      }
     }
 
     return NextResponse.json({ success: true });

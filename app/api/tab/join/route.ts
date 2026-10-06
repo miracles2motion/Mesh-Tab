@@ -4,10 +4,13 @@ import { redis } from "@/lib/redis";
 import { getUserIdFromToken } from "@/lib/auth";
 
 const joinTabSchema = z.object({
-  joinCode: z.string().max(10), // e.g. 01ec74d6
+  joinCode: z.string().max(10).optional(),
+  tabId: z.string().max(100).optional(),
   name: z.string().max(50),
   mode: z.enum(["clean", "demo", "testnet"]).default("clean"),
   walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional()
+}).refine(data => Boolean(data.joinCode || data.tabId), {
+  message: "Either joinCode or tabId must be provided"
 });
 
 export async function POST(req: NextRequest) {
@@ -27,19 +30,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "INVALID_PAYLOAD" }, { status: 400 });
     }
 
-    const { joinCode, name, mode, walletAddress } = parsed.data;
-    
-    // Find the tab using the 8-character suffix code
-    const keys = await redis.keys(`meshtab:${mode}:tab:*-${joinCode.toLowerCase()}`);
-    
-    if (keys.length === 0) {
+    const { joinCode, tabId: inputTabId, name, mode, walletAddress } = parsed.data;
+    let resolvedTabId: string | null = null;
+
+    // 1. Direct O(1) resolution if tabId is passed (e.g. from invite link)
+    if (inputTabId) {
+      const exists = await redis.exists(`meshtab:${mode}:tab:${inputTabId}`);
+      if (exists) {
+        resolvedTabId = inputTabId;
+      }
+    }
+
+    // 2. O(1) indexed lookup if joinCode is passed
+    if (!resolvedTabId && joinCode) {
+      const indexed = await redis.get(`meshtab:${mode}:joincode:${joinCode.toLowerCase()}`);
+      if (indexed && typeof indexed === "string") {
+        resolvedTabId = indexed;
+      } else {
+        // Fallback scan for backwards compatibility with legacy tabs
+        const keys = await redis.keys(`meshtab:${mode}:tab:*-${joinCode.toLowerCase()}`);
+        if (keys.length > 0) {
+          const prefixLength = `meshtab:${mode}:tab:`.length;
+          resolvedTabId = keys[0].substring(prefixLength);
+        }
+      }
+    }
+
+    if (!resolvedTabId) {
       return NextResponse.json({ success: false, error: "NOT_FOUND" }, { status: 404 });
     }
-    
-    const fullTabKey = keys[0]; // e.g. meshtab:testnet:tab:miami-trip-01ec74d6
-    // Extract just the tabId part
-    const prefixLength = `meshtab:${mode}:tab:`.length;
-    const tabId = fullTabKey.substring(prefixLength);
+
+    const tabId = resolvedTabId;
+    const fullTabKey = `meshtab:${mode}:tab:${tabId}`;
 
     // Check if already a member
     const isMember = await redis.sismember(`${fullTabKey}:authorized_users`, userId);

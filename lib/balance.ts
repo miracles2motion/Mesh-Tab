@@ -26,30 +26,8 @@ export function computeCrossTabPosition(userName: string): { totalOwe: number, t
       m.name.toLowerCase() === userName.toLowerCase()
     );
     
-    // Fallback to tab.balance if user not found, but it should be userMember.balance
-    let bal = userMember !== undefined ? userMember.balance : tab.balance;
-    
-    // Pending local changes (rule #25)
-    // We need to apply any pending expenses that haven't been synced to the server
-    const pendingExpenses = getStoredExpenses(tab.id).filter(e => e.syncStatus === "pending");
-    for (const exp of pendingExpenses) {
-      if (exp.splitType === "equal") {
-        const splitAmount = Math.round(exp.amount / (exp.participants?.length || 1));
-        if (exp.payer.toLowerCase() === userName.toLowerCase()) {
-          bal += (exp.amount - splitAmount);
-        } else if (exp.participants?.some(p => p.toLowerCase() === userName.toLowerCase())) {
-          bal -= splitAmount;
-        }
-      } else if (exp.splits) {
-        // exact split
-        const mySplit = exp.splits[userName] || 0;
-        if (exp.payer.toLowerCase() === userName.toLowerCase()) {
-          bal += (exp.amount - mySplit);
-        } else {
-          bal -= mySplit;
-        }
-      }
-    }
+    // User member balance already reflects local optimistic updates
+    const bal = userMember !== undefined ? userMember.balance : tab.balance;
 
     if (bal < 0) totalOwe += Math.abs(bal);
     if (bal > 0) totalOwedToYou += bal;

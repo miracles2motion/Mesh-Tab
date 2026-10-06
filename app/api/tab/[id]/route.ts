@@ -40,6 +40,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     multi.del(`${tabKey}:members`);
     multi.del(`${tabKey}:member_wallets`);
     multi.del(`${tabKey}:expenses`);
+    multi.del(`${tabKey}:expenses_hash`);
+    multi.del(`${tabKey}:expenses_zset`);
     multi.del(`${tabKey}:authorized_users`);
 
     await multi.exec();

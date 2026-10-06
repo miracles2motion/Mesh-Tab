@@ -195,6 +195,7 @@ export default function GlobalHub() {
         }
       } catch (err) {
         setTxState("idle");
+        toast.error("Connection Error", { description: "Failed to connect to server. Please check your network and try again." });
       }
       return;
     }

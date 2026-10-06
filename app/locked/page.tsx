@@ -22,8 +22,9 @@ export default function LockedPage() {
       return;
     }
 
-    // If they successfully logged back in, send them straight back to the dashboard
-    if (ready && authenticated) {
+    const isLocked = localStorage.getItem("mesh_session_locked") === "true";
+    // If unlocked and authenticated, send them straight back to dashboard
+    if (!isLocked && ready && authenticated) {
       setWorkspaceMode("testnet");
       router.replace("/home");
     }
@@ -54,7 +55,11 @@ export default function LockedPage() {
         <button 
           onClick={() => {
             sounds.playClick();
-            if (hadPasskey) {
+            localStorage.removeItem("mesh_session_locked");
+            if (authenticated) {
+              setWorkspaceMode("testnet");
+              router.replace("/home");
+            } else if (hadPasskey) {
               loginWithPasskey();
             } else {
               login();

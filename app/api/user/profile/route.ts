@@ -23,6 +23,13 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const authHeader = request.headers.get("Authorization");
+    const userId = await getUserIdFromToken(authHeader);
+
+    if (!userId) {
+      return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { wallet, name, avatarColorIndex, oldName } = body;
 

@@ -55,7 +55,7 @@ function SettingsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromUrl = searchParams.get("from");
-  const { user, linkPasskey, logout } = usePrivy();
+  const { user, linkPasskey, logout, getAccessToken } = usePrivy();
   const hasPasskey = user?.linkedAccounts?.some(account => account.type === 'passkey') || false;
 
   const profile = useUserProfile();
@@ -184,7 +184,11 @@ function SettingsContent() {
 
   const handleSaveChanges = async () => {
     const activeWallet = client?.account?.address || user?.wallet?.address;
-    const result = await saveStoredUser(displayName, avatarColorIndex, activeWallet);
+    let authToken = "";
+    try {
+      authToken = (await getAccessToken()) || "";
+    } catch {}
+    const result = await saveStoredUser(displayName, avatarColorIndex, activeWallet, authToken || undefined);
     if (result.error) {
       toast.error("Error", { description: result.error });
       return;
@@ -197,7 +201,11 @@ function SettingsContent() {
     const nextIdx = (avatarColorIndex + 1) % AVATAR_COLORS.length;
     setAvatarColorIndex(nextIdx);
     const activeWallet = client?.account?.address || user?.wallet?.address;
-    const result = await saveStoredUser(displayName, nextIdx, activeWallet);
+    let authToken = "";
+    try {
+      authToken = (await getAccessToken()) || "";
+    } catch {}
+    const result = await saveStoredUser(displayName, nextIdx, activeWallet, authToken || undefined);
     if (result.error) {
       // Revert if rate limited
       setAvatarColorIndex(avatarColorIndex);
@@ -896,8 +904,20 @@ function SettingsContent() {
                   <button
                     onClick={() => {
                       sounds.playClick();
+                      const keysToRemove: string[] = [];
+                      for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && (
+                          key.startsWith("meshTab_sample_") ||
+                          key.startsWith("meshTab_clean_") ||
+                          key === "meshTab_members_lisbon-24" ||
+                          key === "meshTab_expenses_lisbon-24"
+                        )) {
+                          keysToRemove.push(key);
+                        }
+                      }
+                      keysToRemove.forEach(k => localStorage.removeItem(k));
                       setWorkspaceMode("blank");
-                      localStorage.clear();
                       toast.success("Sandbox Cleared");
                       router.replace("/");
                     }}

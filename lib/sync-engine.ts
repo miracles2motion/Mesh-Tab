@@ -85,6 +85,8 @@ function getOpRoute(op: OutboxOp) {
       return { endpoint: `/api/tab/${op.tabId}/expense/${op.entityId}`, method: "PATCH" };
     case "deleteExpense":
       return { endpoint: `/api/tab/${op.tabId}/expense/${op.entityId}`, method: "DELETE" };
+    case "settleDebt":
+      return { endpoint: `/api/tab/${op.tabId}/settle`, method: "POST" };
     default:
       throw new Error(`Unknown operation type: ${op.type}`);
   }

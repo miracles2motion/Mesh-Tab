@@ -9,6 +9,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
+    if (file.size > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: 'File exceeds 10MB limit' }, { status: 413 });
+    }
+
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const base64Image = buffer.toString('base64');
@@ -74,7 +78,24 @@ export async function POST(request: Request) {
       throw lastError; // If all failed, throw the last error to be caught by the outer catch block
     }
 
-    const result = JSON.parse(text);
+    // Clean up any Markdown code fences (e.g. ```json ... ```)
+    const cleanedText = text
+      .replace(/^```json\s*/i, "")
+      .replace(/^```\s*/, "")
+      .replace(/\s*```$/, "")
+      .trim();
+
+    let result: any = {};
+    try {
+      result = JSON.parse(cleanedText);
+    } catch {
+      const amountMatch = cleanedText.match(/"amount"\s*:\s*"([^"]+)"/);
+      const descMatch = cleanedText.match(/"desc"\s*:\s*"([^"]+)"/);
+      result = {
+        amount: amountMatch ? amountMatch[1] : "",
+        desc: descMatch ? descMatch[1] : "Receipt"
+      };
+    }
     
     // Safety cleaner: strip out any stray $ signs or letters just in case the AI hallucinates them
     if (result.amount) {
