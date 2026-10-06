@@ -43,11 +43,6 @@ export function Web3Provider({ children }: { children: ReactNode }) {
           ethereum: {
             createOnLogin: 'users-without-wallets',
           }
-        },
-        externalWallets: {
-          solana: {
-            connectors: []
-          }
         }
       }}
     >
