@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
     const mode = req.nextUrl.searchParams.get("mode") || "clean";
 
     const tabIds = await redis.smembers(`meshtab:${mode}:user:${walletAddress}:tabs`);
+    console.log(`[SYNC DEBUG] User ${walletAddress} requested tabs for mode ${mode}. Found ${tabIds?.length || 0} tabs.`);
     
     if (!tabIds || tabIds.length === 0) {
       return NextResponse.json({ success: true, tabs: [] });
