@@ -28,11 +28,11 @@ export async function POST(request: Request) {
               }
             },
             {
-              text: `Extract the total amount and a brief description/merchant name from this receipt.
+              text: `Extract the exact total amount (numbers and decimals only, NO currency symbols like $) and the merchant name from this receipt.
               Return ONLY a valid JSON object in this exact format:
               {
-                "amount": "14.50",
-                "desc": "Starbucks Coffee"
+                "amount": "83.57",
+                "desc": "THE BURGER JOINT"
               }`
             }
           ]
@@ -45,6 +45,11 @@ export async function POST(request: Request) {
 
     const text = response.text || "{}";
     const result = JSON.parse(text);
+    
+    // Safety cleaner: strip out any stray $ signs or letters just in case the AI hallucinates them
+    if (result.amount) {
+      result.amount = String(result.amount).replace(/[^0-9.]/g, '');
+    }
 
     return NextResponse.json(result);
   } catch (error) {
