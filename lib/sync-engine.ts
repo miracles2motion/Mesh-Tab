@@ -73,6 +73,8 @@ function getOpRoute(op: OutboxOp) {
   switch (op.type) {
     case "createTab":
       return { endpoint: `/api/tab/new`, method: "POST" };
+    case "deleteTab":
+      return { endpoint: `/api/tab/${op.tabId}`, method: "DELETE" };
     case "addMember":
     case "removeMember":
       return { endpoint: `/api/tab/${op.tabId}/members`, method: "POST" };

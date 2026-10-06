@@ -133,6 +133,19 @@ export function TabSettingsDrawer({ isOpen, onClose, tabId, tabName, tabCurrency
       const memberKeys = [`meshTab_members_${tabId}`, `meshTab_clean_members_${tabId}`, `meshTab_testnet_members_${tabId}`];
       [...expenseKeys, ...memberKeys].forEach(k => localStorage.removeItem(k));
       
+      const mode = getWorkspaceMode();
+      if (mode === "testnet") {
+        const wallet = localStorage.getItem("meshTab_walletAddress") || "";
+        import("../../lib/outbox").then(({ queueOutboxOp }) => {
+          queueOutboxOp({
+            type: "deleteTab",
+            tabId,
+            ownerWallet: wallet,
+            payload: {}
+          });
+        });
+      }
+      
       window.dispatchEvent(new Event("meshTab-tabs-update"));
     } catch (e) { /* ignore */ }
 

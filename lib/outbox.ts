@@ -1,6 +1,6 @@
 export type OutboxOp = {
   opId: string;
-  type: "createTab" | "addMember" | "removeMember" | "addExpense" | "editExpense" | "deleteExpense";
+  type: "createTab" | "deleteTab" | "addMember" | "removeMember" | "addExpense" | "editExpense" | "deleteExpense";
   tabId: string;
   entityId?: string; // expenseId or member name
   payload: any;
