@@ -70,8 +70,8 @@ export const LANDING_CONTENT = {
     items: [
       {
         tag: "Live on Testnet",
-        title: "Receipt Scanning (Gemini Flash OCR)",
-        desc: "Take a photo of any physical receipt. Merchant, date, items, and total are parsed and split in about a second.",
+        title: "Receipt Scanning (Gemini Flash Latest)",
+        desc: "Take a photo of any physical receipt. Merchant and total amounts parse in ~1s using Gemini Flash Latest with automated multi-tier fallback resilience.",
         icon: "Camera"
       },
       {
@@ -102,7 +102,7 @@ export const LANDING_CONTENT = {
       { name: "Monad Settlement Contract", detail: "MeshTabLedger verified on testnet" },
       { name: "Biometric Passkey Accounts", detail: "Embedded smart accounts via Privy" },
       { name: "Sponsored Gas Relaying", detail: "ERC-4337 paymaster via Pimlico" },
-      { name: "Gemini 1.5 Flash OCR", detail: "Receipt image parsing in ~1s" },
+      { name: "Gemini Flash OCR (Latest)", detail: "Receipt parsing with automated multi-tier fallback" },
       { name: "Pyth Oracle FX Feeds", detail: "Live mid-market rates for 7 currencies" },
       { name: "Offline Sync Outbox", detail: "IndexedDB local-first reconciliation" }
     ],

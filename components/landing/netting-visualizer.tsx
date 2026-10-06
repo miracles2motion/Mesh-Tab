@@ -73,11 +73,7 @@ export function NettingVisualizer() {
 
       <div className="flex flex-col lg:flex-row gap-8 items-start justify-center">
         {/* Visualization Canvas */}
-        <motion.div 
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6 }}
+        <div 
           className="w-full lg:w-2/3 bg-white dark:bg-[#111113] rounded-[2rem] border border-gray-200 dark:border-white/10 shadow-2xl overflow-hidden relative flex flex-col items-center p-8"
         >
           {/* Layman Context Banner */}
@@ -265,7 +261,7 @@ export function NettingVisualizer() {
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
-        </motion.div>
+        </div>
 
         {/* Metrics Sidebar */}
         <div className="w-full lg:w-1/3 flex flex-col gap-4">

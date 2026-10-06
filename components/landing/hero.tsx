@@ -54,24 +54,39 @@ export function Hero() {
       </p>
 
       {/* Dual CTA */}
-      <div className="flex flex-col items-center gap-3 w-full sm:w-auto">
-        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-          <Link 
-            href="/demo" 
-            className="btn-primary flex items-center justify-center gap-2 text-lg px-8 py-4 shadow-xl shadow-indigo-500/25 hover:scale-[1.02] transition-transform"
-          >
-            <Sparkles className="w-5 h-5" />
-            {hero.primaryCta} <ChevronRight className="w-5 h-5" />
-          </Link>
+      <div className="flex flex-col items-center gap-4 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+          {/* Action 1: Testnet Settlement (The Main Event, Glowing Monad Purple Aura) */}
           <button 
             type="button"
             onClick={handleTestnetClick}
-            className="btn-secondary flex items-center justify-center gap-2.5 text-lg px-8 py-4 cursor-pointer hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+            className="w-full sm:w-auto relative group flex items-center justify-center gap-3 text-base md:text-lg px-8 py-4 rounded-full font-bold text-white bg-gradient-to-r from-purple-600 via-indigo-600 to-violet-600 shadow-xl shadow-purple-500/40 hover:shadow-purple-500/60 hover:scale-[1.03] active:scale-[0.98] transition-all border border-purple-400/30 cursor-pointer overflow-hidden"
           >
-            <span>{authenticated ? "Enter App" : hero.secondaryCta}</span>
+            {/* Ambient hover flare */}
+            <div className="absolute inset-0 bg-white/15 translate-y-full group-hover:translate-y-0 transition-transform duration-300 pointer-events-none" />
+            
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400"></span>
+            </span>
+
+            <span className="relative tracking-wide font-extrabold">
+              {authenticated ? "Enter App" : hero.secondaryCta}
+            </span>
+            <ChevronRight className="w-5 h-5 relative group-hover:translate-x-0.5 transition-transform" />
           </button>
+
+          {/* Action 2: Open the Lisbon Trip (Clean Sandbox Companion) */}
+          <Link 
+            href="/demo" 
+            className="w-full sm:w-auto flex items-center justify-center gap-2 text-base md:text-lg px-8 py-4 rounded-full font-bold text-slate-900 dark:text-white bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/20 border border-slate-200/80 dark:border-white/15 shadow-md hover:scale-[1.02] transition-all"
+          >
+            <Sparkles className="w-5 h-5 text-indigo-500" />
+            <span>{hero.primaryCta}</span>
+          </Link>
         </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium tracking-wide">
+
+        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium tracking-wide">
           {hero.primaryCtaMicro}
         </p>
       </div>

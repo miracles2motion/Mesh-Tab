@@ -54,7 +54,10 @@ export function FeatureGrid() {
               Total: €85.40
             </span>
             <span className="px-2.5 py-1 rounded-md bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200 font-semibold flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5" /> 4 Items Parsed in 0.9s
+              <CheckCircle2 className="w-3.5 h-3.5" /> Parsed in 0.9s
+            </span>
+            <span className="px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-semibold flex items-center gap-1">
+              <Sparkles className="w-3 h-3" /> Rolling Model Fallback Active
             </span>
           </div>
         </div>
