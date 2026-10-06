@@ -382,11 +382,14 @@ export function mergePulledTabs(serverTabs: any[], walletAddress: string) {
     // In app/api/tab/new, it's actually name-based. Let's just default to 0 if not found, as app/tab/[id]/page.tsx recalculates it anyway.
     const myBalance = 0; 
     
+    const isCreator = existing?.role === "Creator" || st.creatorWallet === walletAddress;
+
     const formattedTab: TabSummary = {
       id: st.id,
       name: st.name || existing?.name || "Unknown Group",
       balance: existing?.balance || myBalance,
-      role: existing?.role || "Member",
+      role: isCreator ? "Creator" : "Member",
+      creator: st.creator || existing?.creator,
       memberCount: st.members ? st.members.length : (existing?.memberCount || 1),
       createdAt: st.createdAt || existing?.createdAt || Date.now(),
       lastActivityAt: Math.max(existing?.lastActivityAt || 0, st.serverSyncedAt || 0),
