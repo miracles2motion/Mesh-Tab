@@ -15,7 +15,15 @@ export async function POST(request: Request) {
 
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-    const fallbackModels = ['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-2.5-flash', 'gemini-flash-latest'];
+    // Instead of hardcoding deprecated versions, we use Google's rolling aliases
+    // 'gemini-flash-latest' always points to the most current, stable, working model.
+    // We fall back to specific high-capacity models if the primary is congested.
+    const fallbackModels = [
+      'gemini-flash-latest', 
+      'gemini-3.8-flash', 
+      'gemini-3.7-flash', 
+      'gemini-flash-lite-latest'
+    ];
     let lastError: any = null;
     let text = "{}";
 
