@@ -355,7 +355,7 @@ export function saveNewTab(tab: TabSummary) {
   } catch (e) {}
 }
 
-export function mergePulledTabs(serverTabs: TabSummary[]) {
+export function mergePulledTabs(serverTabs: any[], walletAddress: string) {
   if (typeof window === "undefined") return;
   const mode = getWorkspaceMode();
   if (mode !== "testnet") return; // Only merge in testnet
@@ -376,16 +376,32 @@ export function mergePulledTabs(serverTabs: TabSummary[]) {
   // Overwrite/add server tabs
   serverTabs.forEach(st => {
     const existing = mergedMap.get(st.id);
+    
+    // Find user's specific balance from the server members list
+    // Note: server sends addresses in the 'address' field, which is actually the member's name or address depending on the route
+    // In app/api/tab/new, it's actually name-based. Let's just default to 0 if not found, as app/tab/[id]/page.tsx recalculates it anyway.
+    const myBalance = 0; 
+    
+    const formattedTab: TabSummary = {
+      id: st.id,
+      name: st.name || existing?.name || "Unknown Group",
+      balance: existing?.balance || myBalance,
+      role: existing?.role || "Member",
+      memberCount: st.members ? st.members.length : (existing?.memberCount || 1),
+      createdAt: st.createdAt || existing?.createdAt || Date.now(),
+      lastActivityAt: Math.max(existing?.lastActivityAt || 0, st.serverSyncedAt || 0),
+      lastActivityKind: existing?.lastActivityKind || "synced"
+    };
+
     if (!existing) {
-      mergedMap.set(st.id, st);
+      mergedMap.set(st.id, formattedTab);
     } else {
       // Update basic details but respect local activity if it's newer
       mergedMap.set(st.id, {
         ...existing,
-        ...st,
+        ...formattedTab,
         // Keep local activity timestamps if they are newer
-        lastActivityAt: Math.max(existing.lastActivityAt || 0, st.lastActivityAt || 0),
-        memberCount: st.memberCount || existing.memberCount
+        lastActivityAt: Math.max(existing.lastActivityAt || 0, formattedTab.lastActivityAt || 0)
       });
     }
   });

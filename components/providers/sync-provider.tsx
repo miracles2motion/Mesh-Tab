@@ -34,7 +34,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
           if (res.ok) {
             const data = await res.json();
             if (data.success && data.tabs) {
-              mergePulledTabs(data.tabs);
+              mergePulledTabs(data.tabs, walletAddress);
             }
           }
         }
