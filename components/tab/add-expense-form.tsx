@@ -234,7 +234,10 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
         body: formData,
       });
 
-      if (!res.ok) throw new Error("Failed to parse receipt");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Server Error ${res.status}`);
+      }
       
       const data = await res.json();
       const detectedDesc = data.desc || "Receipt Item";
@@ -259,14 +262,14 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
         });
         setAiNotice(`AI Verified: ${file.name} • $${detectedAmount} total extracted`);
       }
-    } catch (error) {
+    } catch (error: any) {
       // Fallback
       setDesc("Scanned Receipt");
       setAmount("0.00");
       setIsAiProcessing(false);
       setShowDraft(true);
       toast.error("AI Scan Failed", {
-        description: "Could not read the receipt. Please enter the amount manually."
+        description: error.message || "Could not read the receipt. Please enter the amount manually."
       });
       setAiNotice("Scan failed. Please adjust manually.");
     }
