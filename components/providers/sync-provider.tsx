@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
 import { flushOutbox } from "@/lib/sync-engine";
-import { useWorkspaceMode } from "@/lib/user";
+import { useWorkspaceMode, mergePulledTabs } from "@/lib/user";
 
 export function SyncProvider({ children }: { children: React.ReactNode }) {
   const { ready, authenticated, user, getAccessToken } = usePrivy();
@@ -22,7 +22,22 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       if (isSyncingRef.current) return;
       isSyncingRef.current = true;
       try {
+        // [OVERSEER MANDATE - Baseline 16]: Push first, then pull
         await flushOutbox(getAccessToken, walletAddress, mode);
+        
+        // Pull tabs from server
+        const token = await getAccessToken();
+        if (token) {
+          const res = await fetch(`/api/tab/user?mode=${mode}`, {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.tabs) {
+              mergePulledTabs(data.tabs);
+            }
+          }
+        }
       } finally {
         isSyncingRef.current = false;
       }

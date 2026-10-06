@@ -26,8 +26,8 @@ import { LiveTime } from "@/components/ui/live-time";
 import { useWallets, usePrivy } from "@privy-io/react-auth";
 import { AuthGuard } from "../../components/providers/auth-guard";
 import { useRealAusdBalance } from "../../lib/onchain";
-import { FaucetModal } from "../../components/tab/faucet-modal";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
+import { addNotification } from "../../lib/notifications";
 
 
 export default function GlobalHub() {
@@ -45,7 +45,8 @@ export default function GlobalHub() {
   const isTestnetMode = workspaceMode === "testnet";
 
   const { wallets } = useWallets();
-  const { user, linkPasskey } = usePrivy();
+  const { client } = useSmartWallets();
+  const { user, linkPasskey, getAccessToken } = usePrivy();
   const { balance: testnetBalance, isLoading: isFetchingBalance } = useRealAusdBalance(workspaceMode);
   const hasPasskey = user?.linkedAccounts?.some(account => account.type === 'passkey') || false;
 
@@ -137,6 +138,68 @@ export default function GlobalHub() {
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!joinCode) return;
+    
+    // Testnet Mode: 8-character cryptographic suffix
+    if (workspaceMode === "testnet") {
+      if (joinCode.length !== 8) {
+        addNotification({
+          type: "system_alert",
+          title: "Invalid Code",
+          desc: "Testnet join codes must be exactly 8 characters long."
+        });
+        return;
+      }
+      
+      setShowJoinModal(false);
+      setTxState("processing");
+      
+      try {
+        const token = await getAccessToken();
+        const smartWalletAddress = client?.account?.address || user?.wallet?.address;
+        
+        const res = await fetch("/api/tab/join", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": token ? `Bearer ${token}` : ""
+          },
+          body: JSON.stringify({
+            joinCode: joinCode.toLowerCase(),
+            name: profile.name || "Anonymous",
+            mode: "testnet",
+            walletAddress: smartWalletAddress
+          })
+        });
+
+        const data = await res.json();
+        
+        if (data.success) {
+          setTxState("success");
+          await new Promise(r => setTimeout(r, 1000));
+          setTxState("idle");
+          setJoinCode("");
+          
+          // Trigger the sync provider to pull the newly joined tab
+          window.dispatchEvent(new Event("meshtab:outbox:updated"));
+          
+          // Route immediately to the tab (it might show a placeholder for 1 second before the pull finishes, which is fine)
+          router.push(`/tab/${data.tabId}`);
+        } else {
+          setTxState("idle");
+          addNotification({
+            type: "system_alert",
+            title: "Join Failed",
+            desc: data.error === "NOT_FOUND" ? "No tab found matching this code." : data.message || "Failed to join tab."
+          });
+        }
+      } catch (err) {
+        setTxState("idle");
+      }
+      return;
+    }
+
+    // Demo/Clean Slate Mode: 6-character mock
     if (joinCode.length !== 6) return;
     setShowJoinModal(false);
     setTxState("authenticating");
@@ -147,7 +210,7 @@ export default function GlobalHub() {
     await new Promise(r => setTimeout(r, 1000));
     setTxState("idle");
     
-    // Persist joined tab
+    // Persist joined tab locally for mock modes
     const joinedId = `joined-${joinCode.toLowerCase()}`;
     saveTab({
       id: joinedId,

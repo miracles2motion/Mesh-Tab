@@ -351,9 +351,49 @@ export function saveNewTab(tab: TabSummary) {
       actor: "You",
       tabId: tab.id,
       tabName: tab.name,
-      link: `/tab/${tab.id}`
     });
   } catch (e) {}
+}
+
+export function mergePulledTabs(serverTabs: TabSummary[]) {
+  if (typeof window === "undefined") return;
+  const mode = getWorkspaceMode();
+  if (mode !== "testnet") return; // Only merge in testnet
+
+  const key = getTabsStorageKey(mode);
+  const current = getStoredTabs();
+  
+  // Merge strategy: 
+  // 1. Keep all current local tabs (preserves pending offline tabs)
+  // 2. Update existing tabs with server data
+  // 3. Add any new server tabs not present locally
+  
+  const mergedMap = new Map<string, TabSummary>();
+  
+  // Seed with local first
+  current.forEach(t => mergedMap.set(t.id, t));
+  
+  // Overwrite/add server tabs
+  serverTabs.forEach(st => {
+    const existing = mergedMap.get(st.id);
+    if (!existing) {
+      mergedMap.set(st.id, st);
+    } else {
+      // Update basic details but respect local activity if it's newer
+      mergedMap.set(st.id, {
+        ...existing,
+        ...st,
+        // Keep local activity timestamps if they are newer
+        lastActivityAt: Math.max(existing.lastActivityAt || 0, st.lastActivityAt || 0),
+        memberCount: st.memberCount || existing.memberCount
+      });
+    }
+  });
+
+  const mergedArray = Array.from(mergedMap.values()).sort((a, b) => (b.lastActivityAt || 0) - (a.lastActivityAt || 0));
+  
+  localStorage.setItem(key, JSON.stringify(mergedArray));
+  window.dispatchEvent(new Event("meshTab-tabs-update"));
 }
 
 export function useStoredTabs() {
