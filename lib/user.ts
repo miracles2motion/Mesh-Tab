@@ -414,7 +414,8 @@ export function mergePulledTabs(serverTabs: any[], walletAddress: string) {
         role: existing?.creator === m.address ? "creator" : "member",
         avatarColorIndex: Math.floor(Math.random() * 5)
       }));
-      localStorage.setItem(`meshTab_members_${st.id}`, JSON.stringify(formattedMembers));
+      const membersKey = storageKey("members", mode, st.id);
+      localStorage.setItem(membersKey, JSON.stringify(formattedMembers));
     }
   });
 
