@@ -404,6 +404,18 @@ export function mergePulledTabs(serverTabs: any[], walletAddress: string) {
         lastActivityAt: Math.max(existing.lastActivityAt || 0, formattedTab.lastActivityAt || 0)
       });
     }
+    
+    // Also cache the members list locally so the tab details page works offline
+    if (st.members && Array.isArray(st.members)) {
+      const formattedMembers = st.members.map((m: any) => ({
+        address: m.address, // Wait, backend uses address as the key
+        name: m.address, // For now, since profile lookup isn't pipelined, use address as name
+        balance: m.balance,
+        role: existing?.creator === m.address ? "creator" : "member",
+        avatarColorIndex: Math.floor(Math.random() * 5)
+      }));
+      localStorage.setItem(`meshTab_members_${st.id}`, JSON.stringify(formattedMembers));
+    }
   });
 
   const mergedArray = Array.from(mergedMap.values()).sort((a, b) => (b.lastActivityAt || 0) - (a.lastActivityAt || 0));
