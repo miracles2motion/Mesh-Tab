@@ -358,11 +358,31 @@ export default function GlobalHub() {
                 {isFetchingBalance && testnetBalance === 0 ? (
                   <span className="w-8 h-3 bg-purple-200 dark:bg-purple-500/20 rounded animate-pulse inline-block" />
                 ) : (
-                  <AnimatedCounter value={testnetBalance} prefix="$" decimals={2} />
+                  `${testnetBalance.toFixed(2)} MON`
                 )}
               </span>
             </button>
           )}
+        </div>
+      </header>
+
+      {mounted && filteredTabs.length === 0 && (
+        <div className="max-w-5xl mx-auto px-6 md:px-12 mb-6">
+          <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-xs font-mono text-red-700 dark:text-red-400 overflow-x-auto whitespace-pre-wrap">
+            <h4 className="font-bold mb-2">SYNC DIAGNOSTICS DUMP</h4>
+            Mode: {workspaceMode} | Privy DID: {user?.id} | Smart Wallet: {client?.account?.address}<br/>
+            Raw localStorage 'meshTab_testnet_tabs': {(() => {
+              try { return localStorage.getItem("meshTab_testnet_tabs") || "EMPTY_OR_NULL"; } 
+              catch { return "ERROR_READING"; }
+            })()}<br/>
+            mockTabs.length: {mockTabs.length} | activeTabsList.length: {activeTabsList.length}<br/>
+            Wait... are you looking for "{searchQuery}"? (active filter: {activeFilter})
+          </div>
+        </div>
+      )}
+
+      {/* Main Stats (Balances) */}
+      <div className="px-6 md:px-12 mb-10 max-w-5xl mx-auto w-full">
           <Link 
             href="/notifications?from=/home" 
             className="relative w-10 h-10 md:w-12 md:h-12 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shadow-sm text-slate-700 dark:text-white/80"
