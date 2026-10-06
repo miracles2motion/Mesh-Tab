@@ -1,19 +1,26 @@
 export const LANDING_CONTENT = {
   metadata: {
-    title: "MeshTab | Zero-Friction Group Expense Netting on Monad",
-    description: "Replace crisscrossing international bank wires with a single, gasless ledger. Settle group expenses instantly in stablecoins on Monad.",
-    keywords: ["Monad", "expense tracker", "debt netting", "stablecoin settlement", "gasless", "passkeys", "fintech"],
+    title: "MeshTab | The End of Group Debt · Netted & Settled on Monad",
+    description: "Log shared expenses by photo, voice, or text. MeshTab untangles group debts from 12 transfers to 3, then settles them in one tap on Monad. Zero gas fees.",
+    keywords: ["Monad", "expense tracker", "debt netting", "stablecoin settlement", "gasless", "passkeys", "fintech", "travel expenses"],
   },
   hero: {
-    badge: "Monad Metropolis Hackathon Sandbox",
+    badge: "Live on Monad Testnet · Sponsored Gas",
     headline: "The end of group debt.",
-    headlineHighlight: "Settled instantly.",
-    subheadline: "MeshTab replaces crisscrossing international bank wires with a single, gasless ledger. We calculate the minimum possible payments and settle them instantly in stablecoins.",
-    primaryCta: "Explore Demo Tab",
-    secondaryCta: "Explore Testnet",
+    headlineHighlight: "Nobody chases anybody.",
+    subheadline: "Log expenses by photo, voice, or text in any currency. MeshTab collapses 12 crisscrossing debts into 3 direct transfers, then settles them in one tap using your phone's fingerprint or face scan.",
+    primaryCta: "Open the Lisbon Trip",
+    primaryCtaMicro: "No account or wallet required · Takes 30 seconds",
+    secondaryCta: "Testnet Settlement",
+    metrics: [
+      { label: "Fewer Transfers", val: "75%" },
+      { label: "Gas Fees", val: "$0" },
+      { label: "Settlement Finality", val: "~400ms" },
+      { label: "Live Currencies", val: "7" }
+    ]
   },
   socialProof: {
-    text: "Powered by next-generation Web3 infrastructure",
+    text: "Engineered on Monad with Ecosystem Infrastructure",
     partners: [
       { name: "Monad", src: "/logos/monad.svg" },
       { name: "Privy", src: "/logos/privy-logo-dark.png" },
@@ -21,82 +28,138 @@ export const LANDING_CONTENT = {
       { name: "Pimlico", src: "/logos/pimlico.svg" }
     ],
   },
-  problemAgitation: {
-    title: "The Web2 Friction",
-    description: "When friends travel across borders, they accumulate shared expenses across different currencies. Settling up means dealing with foreign exchange fees, slow bank wires, and the headache of figuring out who owes whom.",
-    painPoints: [
-      { title: "Foreign Exchange Fees", desc: "Every time you pay a friend in a different country, banks take a 3-5% cut." },
-      { title: "Manual Spreadsheets", desc: "You have to manually track receipts, figure out who paid for what, and do the math yourself." },
-      { title: "Crisscrossing Payments", desc: "If you owe Sarah $50, and Sarah owes Ben $50, you both have to make separate transfers." }
+  nettingVisualizer: {
+    stakes: "Four friends. Nine days in Lisbon. 23 expenses across three currencies. Here is what settling up actually looks like.",
+    title: "Watch the math untangle.",
+    description: "12 crisscrossing debt obligations collapse into 3 direct transfers. $900 of circular debt resolved; only $300 of net liquidity needs to move.",
+    cta: "Untangle it",
+    resetCta: "Reset to Chaos",
+    demoLink: "Open this exact Lisbon trip in the demo →",
+  },
+  settlementMoment: {
+    badge: "The Settlement Engine",
+    title: "Splitwise calculates who owes whom. MeshTab actually completes the payment.",
+    description: "Other apps leave you stranded to copy IBANs, chase Venmo requests, or pay 4% foreign exchange markups across disparate banking apps. MeshTab executes the final settlement schedule in a single atomic transaction on Monad.",
+    metrics: [
+      { title: "Execution Speed", val: "400ms", desc: "Instant finality on Monad" },
+      { title: "User Gas Cost", val: "$0.00", desc: "Sponsored via Pimlico ERC-4337" },
+      { title: "Authentication", val: "Passkey", desc: "Native Face ID / Touch ID" }
     ]
   },
-  solutionReveal: {
-    title: "The MeshTab Solution",
-    description: "All shared expenses are recorded on a single ledger. Instead of every person paying each other back through crisscrossing transfers, our graph algorithm cancels out mutual debt obligations and consolidates residual amounts into the minimum number of direct payments."
+  problemAgitation: {
+    title: "Splitting a trip is easy. Paying it back isn't.",
+    description: "Four friends travel to Lisbon. Over nine days they accumulate 23 shared expenses across Euros, British Pounds, and US Dollars. Here is how the traditional payment system breaks down.",
+    painPoints: [
+      { title: "The Circle of Debt", desc: "If Aisha owes Kemi $50, and Kemi owes Ben $50, friends make multiple bank transfers instead of letting mutual obligations cancel out." },
+      { title: "The 3% Bank Cut", desc: "Every time friends pay each other across international borders, banks and cards take a 3 to 5% foreign exchange spread." },
+      { title: "The Spreadsheet Trap", desc: "Someone spends hours in a spreadsheet trying to reconcile receipts, then spends three weeks chasing friends in WhatsApp." }
+    ]
   },
   howItWorks: {
-    title: "How It Works",
+    title: "How MeshTab works",
     steps: [
-      { step: "01", title: "Create a Smart Tab", desc: "Name your trip and invite your friends via a simple link." },
-      { step: "02", title: "Claim with a Passkey", desc: "Friends tap their name and use FaceID to instantly bind a gasless smart account." },
-      { step: "03", title: "Tangle Netting", desc: "Log expenses in any currency. When the trip is over, MeshTab calculates the most efficient settlement map." },
-      { step: "04", title: "Stablecoin Settlement", desc: "Pay your exact residual debt in AUSD, funded instantly via Card or Bank Transfer." }
+      { step: "01", title: "Start a trip tab", desc: "Name your trip and share a single invite link with your group." },
+      { step: "02", title: "Join with one tap", desc: "Friends tap their name and authenticate with Face ID or fingerprint. Zero wallet setup." },
+      { step: "03", title: "Log as you go", desc: "Snap receipts with Gemini OCR, speak an expense aloud, or type it in any currency. Works offline." },
+      { step: "04", title: "Settle in one tap", desc: "MeshTab calculates the optimal settlement schedule and clears residual balances on Monad." }
     ]
   },
-  features: [
-    {
-      title: "Multilateral Netting",
-      description: "Our offchain graph algorithm cancels out mutual debt, consolidating residual amounts into the absolute minimum number of direct payments.",
-      icon: "Network",
-    },
-    {
-      title: "Touch ID & Face ID",
-      description: "Secure your account in 1 tap with your device's built-in biometrics. No passwords, seed phrases, or extra apps required.",
-      icon: "Fingerprint",
-    },
-    {
-      title: "Digital Dollar Settlement",
-      description: "Bypass international bank wire fees entirely. Debts are settled instantly using 1:1 Digital Dollars, funded effortlessly via Card or Bank Transfer.",
-      icon: "Wallet",
-    },
-    {
-      title: "Zero Transfer Fees",
-      description: "You never pay transfer fees to log an expense or split a tab. All routine ledger operations are 100% free and sponsored.",
-      icon: "Zap",
-    }
-  ],
-  nettingVisualizer: {
-    title: "Watch the math work.",
-    description: "12 crisscrossing international bank wires collapse into just 3 direct payments. $900 of gross volume cleared without moving a single cent of capital.",
-    cta: "Calculate Settlement Map",
+  liveSuperpowers: {
+    title: "Live in this demo",
+    description: "Production-grade features built directly for the Monad Metropolis Hackathon.",
+    items: [
+      {
+        tag: "Live on Testnet",
+        title: "Receipt Scanning (Gemini Flash OCR)",
+        desc: "Take a photo of any physical receipt. Merchant, date, items, and total are parsed and split in about a second.",
+        icon: "Camera"
+      },
+      {
+        tag: "Live on Testnet",
+        title: "Voice Expense Logging",
+        desc: "Say '85 dollars for dinner' out loud. Speech is transcribed and converted into a verified draft expense.",
+        icon: "Mic"
+      },
+      {
+        tag: "Live on Testnet",
+        title: "Real-Time Pyth Network FX",
+        desc: "Live mid-market currency feeds across 7 global currencies. Log in EUR, settle in USD with zero bank markups.",
+        icon: "Coins"
+      },
+      {
+        tag: "Live on Testnet",
+        title: "Offline-First PWA Sync",
+        desc: "Log expenses on an airplane or without cellular coverage. Changes queue locally in IndexedDB and reconcile automatically on reconnect.",
+        icon: "WifiOff"
+      }
+    ]
+  },
+  maturityMatrix: {
+    title: "What is live today vs. what comes next",
+    description: "Radical transparency: the core settlement engine is live; consumer banking rails are planned.",
+    live: [
+      { name: "Bipartite Netting Engine", detail: "Graph debt cancellation off-chain" },
+      { name: "Monad Settlement Contract", detail: "MeshTabLedger verified on testnet" },
+      { name: "Biometric Passkey Accounts", detail: "Embedded smart accounts via Privy" },
+      { name: "Sponsored Gas Relaying", detail: "ERC-4337 paymaster via Pimlico" },
+      { name: "Gemini 1.5 Flash OCR", detail: "Receipt image parsing in ~1s" },
+      { name: "Pyth Oracle FX Feeds", detail: "Live mid-market rates for 7 currencies" },
+      { name: "Offline Sync Outbox", detail: "IndexedDB local-first reconciliation" }
+    ],
+    inDevelopment: [
+      { name: "Fiat Card / Bank On-Ramp", detail: "Deposit local currency directly into AUSD" },
+      { name: "Virtual Visa Card", detail: "Spend trip balances at physical merchants" },
+      { name: "Automated Yield Vault", detail: "Earn yield on idle group trip reserves" }
+    ]
   },
   comparison: {
-    title: "Why MeshTab?",
-    headers: ["Feature", "MeshTab", "Splitwise + Bank Transfer"],
+    title: "Splitwise vs. MeshTab",
+    headers: ["Workflow Step", "MeshTab", "Splitwise + Bank Apps"],
     rows: [
-      { feature: "Settlement Speed", us: "Instant", them: "3-5 Business Days" },
-      { feature: "Fee Events / Cost", us: "Reduced to 1–2 (Netted)", them: "Up to 12 Transfers (Crisscrossing)" },
-      { feature: "Crisscrossing Payments", us: "Eliminated (Netting)", them: "Required" },
-      { feature: "Sign-in Speed", us: "Touch ID / Face ID", them: "Password / Manual" }
+      { feature: "Expense Logging", them: "Manual entry only", us: "Photo OCR + Voice + Offline" },
+      { feature: "Debt Simplification", them: "Calculates IOU list (math only)", us: "Bipartite Graph Netting (12 → 3)" },
+      { feature: "Payment Execution", them: "None (leaves you to Venmo/Wires)", us: "One-tap on-chain execution (400ms)" },
+      { feature: "Account Setup", them: "Email & password required", us: "Face ID / Touch ID (Passkey)" },
+      { feature: "Cross-Border FX", them: "3–5% bank markup on each wire", us: "0% markup (Pyth Oracle rates)" }
     ]
   },
   faq: [
     {
-      question: "Do my friends need crypto apps or special accounts to join?",
-      answer: "No. Friends join in seconds using Face ID or Touch ID on their phone. No passwords, no wallet extensions, and no complex account setups required."
+      question: "Do my friends need a crypto wallet?",
+      answer: "No. Friends join in seconds using their face or fingerprint. Smart accounts are generated seamlessly in the background."
     },
     {
-      question: "Are there any fees for adding expenses or splitting tabs?",
-      answer: "None. Logging expenses and calculating debt netting are permanently free. All ledger updates are sponsored by the platform with zero transaction fees."
+      question: "Are there any transaction fees?",
+      answer: "None in this demo. All transaction gas on Monad Testnet is sponsored by the platform."
     },
     {
-      question: "How do I fund and cash out my balance?",
-      answer: "When it's time to settle, you can fund your balance instantly using your Virtual Visa Card, debit card, or bank transfer. You can cash out to your bank account or Visa card in seconds."
+      question: "What happens if someone doesn't pay?",
+      answer: "MeshTab's settlement is atomic: everyone reviews the netted schedule, and transfers execute directly on-chain so balances clear cleanly without debt reassignment ambiguity."
+    },
+    {
+      question: "Why not just use Splitwise?",
+      answer: "Splitwise gives you an IOU list and abandons you to chase friends across banking apps. MeshTab completes the payment right inside the tab in one tap."
+    },
+    {
+      question: "Is this real money?",
+      answer: "No. This is a hackathon demo on Monad Testnet using testnet AUSD tokens available free from the in-app faucet."
+    },
+    {
+      question: "Can I fund or withdraw with a debit card?",
+      answer: "Not in this demo. Fiat card funding and bank cash-out are in active development for our mainnet roadmap."
+    },
+    {
+      question: "What is stored on-chain vs. off-chain?",
+      answer: "Expense receipts and graph netting are calculated off-chain for speed; final settlement payments execute on-chain via the MeshTabLedger contract on Monad Testnet."
+    },
+    {
+      question: "Has the contract been audited?",
+      answer: "Not yet. A formal security audit will precede any mainnet launch."
     }
   ],
   finalCta: {
-    title: "Ready to settle the tab?",
-    description: "Join thousands of groups saving time and money on international trips.",
-    cta: "Explore Demo Tab",
+    title: "Settle the tab.",
+    description: "Open the Lisbon trip demo. No sign-in, no wallet. Experience settlement in 30 seconds.",
+    cta: "Open the Lisbon Trip",
   }
 } as const;

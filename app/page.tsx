@@ -3,14 +3,15 @@ import { StructuredData } from "../components/landing/structured-data";
 import { Hero } from "../components/landing/hero";
 import { SocialProof } from "../components/landing/social-proof";
 import { ProblemAgitation } from "../components/landing/problem-agitation";
-import { SolutionReveal } from "../components/landing/solution-reveal";
 import { HowItWorks } from "../components/landing/how-it-works";
 import { NettingVisualizer } from "../components/landing/netting-visualizer";
+import { SettlementShowcase } from "../components/landing/settlement-showcase";
 import { FeatureGrid } from "../components/landing/feature-grid";
+import { MaturityMatrix } from "../components/landing/maturity-matrix";
 import { ComparisonTable } from "../components/landing/comparison-table";
 import { FAQAccordion } from "../components/landing/faq-accordion";
 import { ThemeToggle } from "../components/theme-toggle";
-import { Network, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Metadata } from "next";
 import Image from "next/image";
@@ -41,7 +42,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-4">
             <ThemeToggle />
             <Link href="/demo" className="btn-primary py-2 text-sm px-5 flex items-center gap-1.5 shadow-md shadow-indigo-500/20">
-              <Sparkles className="w-3.5 h-3.5" /> Explore Demo
+              <Sparkles className="w-3.5 h-3.5" /> Open Demo
             </Link>
           </div>
         </div>
@@ -50,19 +51,20 @@ export default function LandingPage() {
       <main>
         <Hero />
         <SocialProof />
+        <NettingVisualizer />
+        <SettlementShowcase />
         <ProblemAgitation />
-        <SolutionReveal />
         <HowItWorks />
         <FeatureGrid />
-        <NettingVisualizer />
+        <MaturityMatrix />
         <ComparisonTable />
         <FAQAccordion />
 
         {/* Final CTA Section */}
-        <section className="py-32 bg-indigo-600 dark:bg-indigo-900 text-white text-center px-6">
+        <section className="py-28 bg-indigo-600 dark:bg-indigo-900 text-white text-center px-6">
           <div className="max-w-3xl mx-auto">
-            <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">{finalCta.title}</h2>
-            <p className="text-indigo-100 text-lg mb-10">{finalCta.description}</p>
+            <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">{finalCta.title}</h2>
+            <p className="text-indigo-100 text-base md:text-lg mb-8 max-w-xl mx-auto">{finalCta.description}</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link href="/demo" className="bg-white text-indigo-600 px-8 py-4 rounded-full font-bold text-lg hover:scale-105 transition-transform shadow-xl inline-block">
                 {finalCta.cta}
@@ -73,18 +75,16 @@ export default function LandingPage() {
         </section>
       </main>
 
-      {/* Footer */}
+      {/* Footer (Clean & Privacy-Preserving) */}
       <footer className="py-12 border-t border-gray-100 dark:border-white/10 bg-white dark:bg-black">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
           <Link href="/" className="flex items-center">
             <Image src="/mesh-logo-light.svg" alt="MeshTab Logo" width={120} height={34} className="dark:hidden" />
             <Image src="/mesh-logo-dark.svg" alt="MeshTab Logo" width={120} height={34} className="hidden dark:block" />
           </Link>
-          <p className="text-sm text-gray-500">Built for the Monad Metropolis 2026 Hackathon.</p>
-          <div className="flex gap-6 text-sm text-gray-500">
-            <a href="https://twitter.com/monad_xyz" target="_blank" rel="noopener noreferrer" className="hover:text-black dark:hover:text-white transition-colors">Twitter (X)</a>
-            <a href="https://github.com/monad-developers" target="_blank" rel="noopener noreferrer" className="hover:text-black dark:hover:text-white transition-colors">GitHub</a>
-          </div>
+          <p className="text-sm text-gray-500">
+            Built for the Monad Metropolis 2026 Hackathon.
+          </p>
         </div>
       </footer>
     </div>
