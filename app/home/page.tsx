@@ -137,7 +137,10 @@ export default function GlobalHub() {
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (joinCode.length !== 6) return;
+    if (joinCode.length < 5) return;
+    
+    const code = joinCode.toUpperCase().trim();
+    
     setShowJoinModal(false);
     setTxState("authenticating");
     await new Promise(r => setTimeout(r, 1500));
@@ -147,11 +150,26 @@ export default function GlobalHub() {
     await new Promise(r => setTimeout(r, 1000));
     setTxState("idle");
     
+    // Check for special Demo codes
+    if (code === "LISBON") {
+      setWorkspaceMode("sample");
+      setJoinCode("");
+      router.push("/tab/lisbon-24");
+      return;
+    }
+    
+    if (code === "MIAMI" || code === "MIAMIB") {
+      setWorkspaceMode("sample");
+      setJoinCode("");
+      router.push("/tab/miami-boat");
+      return;
+    }
+    
     // Persist joined tab
-    const joinedId = `joined-${joinCode.toLowerCase()}`;
+    const joinedId = `joined-${code.toLowerCase()}`;
     saveTab({
       id: joinedId,
-      name: `Group #${joinCode}`,
+      name: `Group #${code}`,
       role: "Member",
       balance: 0,
       memberCount: 3,
@@ -647,13 +665,13 @@ export default function GlobalHub() {
                   maxLength={6}
                   value={joinCode}
                   onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                  placeholder="e.g. A3F9K2" 
+                  placeholder="e.g. LISBON" 
                   className="w-full bg-[#f5f5f7] dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-center tracking-widest text-2xl font-mono uppercase text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
                 />
               </div>
               <button 
                 type="submit"
-                disabled={joinCode.length !== 6}
+                disabled={joinCode.length < 5}
                 className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:hover:bg-indigo-600 text-white font-bold py-4 rounded-xl transition-all shadow-md"
               >
                 Join Group
