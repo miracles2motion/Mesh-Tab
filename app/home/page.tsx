@@ -389,21 +389,6 @@ export default function GlobalHub() {
         </div>
       </header>
 
-      {mounted && filteredTabs.length === 0 && (
-        <div className="max-w-5xl mx-auto px-6 md:px-12 mb-6">
-          <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-xs font-mono text-red-700 dark:text-red-400 overflow-x-auto whitespace-pre-wrap">
-            <h4 className="font-bold mb-2">SYNC DIAGNOSTICS DUMP</h4>
-            Mode: {workspaceMode} | Privy DID: {user?.id} | Smart Wallet: {client?.account?.address}<br/>
-            Raw localStorage 'meshTab_testnet_tabs': {(() => {
-              try { return localStorage.getItem("meshTab_testnet_tabs") || "EMPTY_OR_NULL"; } 
-              catch { return "ERROR_READING"; }
-            })()}<br/>
-            mockTabs.length: {mockTabs.length} | activeTabsList.length: {activeTabsList.length}<br/>
-            Wait... are you looking for "{searchQuery}"? (active filter: {activeFilter})
-          </div>
-        </div>
-      )}
-
       <main className="px-6 md:px-12 max-w-5xl mx-auto w-full space-y-10">
         {/* Unified Overall Balance & Payout Hub */}
         <div className="bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-indigo-500/15 dark:from-indigo-500/20 dark:to-purple-500/10 border border-indigo-200/80 dark:border-indigo-500/20 rounded-3xl p-6 md:p-8 relative overflow-hidden shadow-sm">
