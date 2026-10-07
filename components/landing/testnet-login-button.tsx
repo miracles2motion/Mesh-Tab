@@ -14,6 +14,10 @@ export function TestnetLoginButton() {
 
   const handleTestnetLogin = () => {
     sounds.playClick();
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("mesh_explicit_logout");
+      sessionStorage.removeItem("mesh_just_logged_out");
+    }
     if (authenticated) {
       const hasProfile = typeof window !== "undefined" && Boolean(localStorage.getItem("meshTab_displayName"));
       if (!hasProfile) {

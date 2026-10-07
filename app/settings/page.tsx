@@ -50,6 +50,7 @@ import { GlobalNav } from "../../components/ui/global-nav";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
 import { AuthGuard } from "../../components/providers/auth-guard";
+import { clearSessionSnapshot } from "../../lib/session-snapshot";
 
 function SettingsContent() {
   const router = useRouter();
@@ -98,6 +99,69 @@ function SettingsContent() {
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [themeMode, setThemeMode] = useState<"light" | "dark" | "system">("system");
   const [mounted, setMounted] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    sounds.playClick();
+    if (typeof window !== "undefined" && !navigator.onLine && workspaceMode === "testnet") {
+      toast.error("Cannot sign out while offline");
+      return;
+    }
+
+    setIsLoggingOut(true);
+
+    try {
+      if (workspaceMode === "testnet") {
+        try {
+          await logout();
+        } catch (e) {
+          console.warn("Privy logout error (proceeding with local cleanup):", e);
+        }
+      }
+
+      if (typeof window !== "undefined") {
+        // Set explicit logout and prevent-back flags
+        sessionStorage.setItem("mesh_just_logged_out", "true");
+        localStorage.setItem("mesh_explicit_logout", "true");
+        localStorage.removeItem("mesh_session_locked");
+        localStorage.removeItem("mesh_last_passkey_status");
+
+        // Clear sensitive frontend caches
+        localStorage.removeItem("meshTab_displayName");
+        localStorage.removeItem("meshTab_avatarColorIndex");
+        localStorage.removeItem("meshTab_buddy_chat_history");
+        localStorage.removeItem("meshTab_workspaceMode");
+
+        const keysToWipe: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && (
+            k.includes("_testnet_") ||
+            k.includes("_clean_") ||
+            k.startsWith("meshTab_sample_") ||
+            k.startsWith("meshTab_members_") ||
+            k.startsWith("meshTab_expenses_")
+          )) {
+            keysToWipe.push(k);
+          }
+        }
+        keysToWipe.forEach(k => localStorage.removeItem(k));
+
+        clearSessionSnapshot();
+      }
+
+      setWorkspaceMode("blank");
+      toast.success("Logged out successfully");
+
+      // Replace location so settings is eliminated from browser history,
+      // and redirect straight to the landing page
+      window.location.replace("/");
+    } catch (err) {
+      console.error("Logout failed:", err);
+      toast.error("Logout failed", { description: "Please try again." });
+      setIsLoggingOut(false);
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -316,13 +380,25 @@ function SettingsContent() {
             </button>
             <button 
               onClick={() => handleTabChange("advanced")}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-sm font-semibold text-left ${
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-sm font-semibold text-left cursor-pointer ${
                 activeTab === "advanced" 
                   ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20" 
                   : "text-slate-600 dark:text-white/60 hover:bg-slate-50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
               <Key className="w-4 h-4 shrink-0" /> Advanced Security
+            </button>
+
+            {/* Log Out button directly among settings tab items */}
+            <div className="pt-1.5 border-t border-slate-100 dark:border-white/5 my-1" />
+
+            <button 
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-sm font-semibold text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 active:scale-[0.98] group cursor-pointer disabled:opacity-50"
+            >
+              <LogOut className="w-4 h-4 shrink-0 transition-transform group-hover:-translate-x-0.5" />
+              <span>{isLoggingOut ? "Logging out..." : (workspaceMode === "testnet" ? "Log Out" : "Exit Demo")}</span>
             </button>
           </div>
         </div>
@@ -858,40 +934,12 @@ function SettingsContent() {
                 </h2>
                 <p className="text-sm text-slate-500 dark:text-white/50 mb-5">Sign out of your MeshTab account on this device.</p>
                 <button
-                  onClick={async () => {
-                    sounds.playClick();
-                    if (typeof window !== "undefined" && !navigator.onLine) {
-                      toast.error("Cannot sign out while offline");
-                      return;
-                    }
-                    try {
-                      await logout();
-                      // Clear sensitive frontend caches
-                      localStorage.removeItem("meshTab_displayName");
-                      // Preserve sample mode sandbox but nuke all testnet/clean caches securely
-                      const keysToWipe = [];
-                      for (let i = 0; i < localStorage.length; i++) {
-                        const k = localStorage.key(i);
-                        if (k && (k.includes("_testnet_") || k.includes("_clean_"))) {
-                          keysToWipe.push(k);
-                        }
-                      }
-                      keysToWipe.forEach(k => localStorage.removeItem(k));
-                      
-                      localStorage.removeItem("meshTab_buddy_chat_history");
-                      localStorage.removeItem("meshTab_workspaceMode");
-                      localStorage.removeItem("meshTab_displayName");
-                      localStorage.removeItem("meshTab_avatarColorIndex");
-                      router.push("/login");
-                    } catch (err) {
-                      console.error("Logout failed:", err);
-                      toast.error("Logout failed", { description: "Please try again." });
-                    }
-                  }}
-                  className="w-full sm:w-auto px-6 py-3 rounded-2xl border-2 border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2"
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                  className="w-full sm:w-auto px-6 py-3 rounded-2xl border-2 border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   <LogOut className="w-4 h-4" />
-                  Log Out
+                  {isLoggingOut ? "Logging out..." : "Log Out"}
                 </button>
               </div>
               ) : (
@@ -900,30 +948,14 @@ function SettingsContent() {
                     <Trash2 className="w-5 h-5 text-red-500" />
                     Clear Demo Data
                   </h2>
-                  <p className="text-sm text-slate-500 dark:text-white/50 mb-5">Wipe all local sandbox data and return to the entry screen.</p>
+                  <p className="text-sm text-slate-500 dark:text-white/50 mb-5">Wipe all local sandbox data and return to the landing page.</p>
                   <button
-                    onClick={() => {
-                      sounds.playClick();
-                      const keysToRemove: string[] = [];
-                      for (let i = 0; i < localStorage.length; i++) {
-                        const key = localStorage.key(i);
-                        if (key && (
-                          key.startsWith("meshTab_sample_") ||
-                          key.startsWith("meshTab_clean_") ||
-                          key === "meshTab_members_lisbon-24" ||
-                          key === "meshTab_expenses_lisbon-24"
-                        )) {
-                          keysToRemove.push(key);
-                        }
-                      }
-                      keysToRemove.forEach(k => localStorage.removeItem(k));
-                      setWorkspaceMode("blank");
-                      toast.success("Sandbox Cleared");
-                      router.replace("/");
-                    }}
-                    className="w-full sm:w-auto px-6 py-3 rounded-2xl border-2 border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2"
+                    onClick={handleLogout}
+                    disabled={isLoggingOut}
+                    className="w-full sm:w-auto px-6 py-3 rounded-2xl border-2 border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 font-semibold text-sm hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
-                    Wipe Sandbox
+                    <Trash2 className="w-4 h-4" />
+                    {isLoggingOut ? "Wiping..." : "Wipe Sandbox & Exit"}
                   </button>
                 </div>
               )}

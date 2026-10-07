@@ -48,6 +48,10 @@ function LoginContent() {
   const intent = searchParams.get("intent");
 
   const handleComplete = async (user: any, isNewUser: boolean) => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("mesh_explicit_logout");
+      sessionStorage.removeItem("mesh_just_logged_out");
+    }
     let hasProfile = typeof window !== "undefined" && Boolean(localStorage.getItem("meshTab_displayName"));
     
     // Redis Sync: If they are not a new user but have no local profile (cleared site data)

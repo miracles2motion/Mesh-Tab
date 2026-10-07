@@ -16,6 +16,7 @@ import Link from "next/link";
 import { Metadata } from "next";
 import Image from "next/image";
 import { TestnetLoginButton } from "../components/landing/testnet-login-button";
+import { LogoutHistoryTrap } from "../components/landing/logout-history-trap";
 
 export const metadata: Metadata = {
   title: LANDING_CONTENT.metadata.title,
@@ -30,6 +31,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-gray-900 dark:text-white selection:bg-indigo-500/30 font-sans">
+      <LogoutHistoryTrap />
       <StructuredData />
 
       {/* Navigation */}

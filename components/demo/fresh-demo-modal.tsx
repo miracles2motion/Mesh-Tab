@@ -114,12 +114,20 @@ export function FreshDemoModal({ isOpen, onClose }: FreshDemoModalProps) {
 
   const handleLaunchCreateTab = () => {
     sounds.playClick();
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("mesh_explicit_logout");
+      sessionStorage.removeItem("mesh_just_logged_out");
+    }
     onClose();
     router.push("/tab/new");
   };
 
   const handleLaunchHub = () => {
     sounds.playClick();
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("mesh_explicit_logout");
+      sessionStorage.removeItem("mesh_just_logged_out");
+    }
     onClose();
     router.push("/home");
   };

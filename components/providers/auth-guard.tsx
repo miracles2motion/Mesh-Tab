@@ -90,6 +90,39 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     };
   }, [ready, isDemo, isPublicRoute, isOnline]);
 
+  // Hard-check explicit logout to prevent back-button access to private views
+  const [isExplicitlyLoggedOut, setIsExplicitlyLoggedOut] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || isPublicRoute) return;
+    const isLoggedOutFlag = (
+      localStorage.getItem("mesh_explicit_logout") === "true" ||
+      sessionStorage.getItem("mesh_just_logged_out") === "true"
+    );
+    if (isLoggedOutFlag) {
+      setIsExplicitlyLoggedOut(true);
+      window.location.replace("/");
+    }
+  }, [isPublicRoute]);
+
+  // Handle bfcache restores (browser Back/Forward navigation)
+  useEffect(() => {
+    if (typeof window === "undefined" || isPublicRoute) return;
+
+    const handlePageShow = (e: PageTransitionEvent) => {
+      const isLoggedOutFlag = (
+        localStorage.getItem("mesh_explicit_logout") === "true" ||
+        sessionStorage.getItem("mesh_just_logged_out") === "true"
+      );
+      if (isLoggedOutFlag || (!isDemo && ready && !authenticated)) {
+        window.location.replace("/");
+      }
+    };
+
+    window.addEventListener("pageshow", handlePageShow);
+    return () => window.removeEventListener("pageshow", handlePageShow);
+  }, [isPublicRoute, isDemo, ready, authenticated]);
+
   // Redirect on timeout (hung SDK) or expired session
   useEffect(() => {
     if (isDemo || isPublicRoute) return;
@@ -99,14 +132,24 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
     
     if (hasTimedOut && !ready) {
-      router.replace("/locked");
+      const isLocked = typeof window !== "undefined" && localStorage.getItem("mesh_session_locked") === "true";
+      if (isLocked) {
+        router.replace("/locked");
+      } else {
+        router.replace("/");
+      }
     }
   }, [hasTimedOut, ready, router, isDemo, isPublicRoute, isOnline]);
 
   useEffect(() => {
     if (isDemo || isPublicRoute || !isOnline) return;
     if (ready && !authenticated) {
-      router.replace("/locked");
+      const isLocked = typeof window !== "undefined" && localStorage.getItem("mesh_session_locked") === "true";
+      if (isLocked) {
+        router.replace("/locked");
+      } else {
+        router.replace("/");
+      }
     }
   }, [ready, authenticated, router, isDemo, isPublicRoute, isOnline]);
 
@@ -123,6 +166,18 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       });
     }
   }, [ready, authenticated, user, wallets, isDemo, isPublicRoute, isOnline]);
+
+  // If explicitly logged out, render loader while redirecting to landing page
+  if (isExplicitlyLoggedOut && !isPublicRoute) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f5f5f7] dark:bg-[#0a0a0a]">
+        <div className="flex flex-col items-center gap-4 animate-in fade-in duration-300">
+          <div className="w-10 h-10 rounded-full border-2 border-indigo-200 dark:border-indigo-500/30 border-t-indigo-600 dark:border-t-indigo-400 animate-spin" />
+          <p className="text-sm text-slate-400 dark:text-white/40 font-medium">Redirecting to landing page…</p>
+        </div>
+      </div>
+    );
+  }
 
   // Bypass entirely for demo mode or public marketing/onboarding routes
   if (isDemo || isPublicRoute) {

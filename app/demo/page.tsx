@@ -31,6 +31,10 @@ function DemoContent() {
   };
 
   const handleSelectSample = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("mesh_explicit_logout");
+      sessionStorage.removeItem("mesh_just_logged_out");
+    }
     setWorkspaceMode("sample");
     resetLisbonDemo();
     sounds.playSuccessChime();
@@ -42,6 +46,10 @@ function DemoContent() {
 
   const handleSelectBlank = () => {
     sounds.playClick();
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("mesh_explicit_logout");
+      sessionStorage.removeItem("mesh_just_logged_out");
+    }
     setShowFreshModal(true);
   };
 

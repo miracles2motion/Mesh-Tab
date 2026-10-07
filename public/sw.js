@@ -64,9 +64,9 @@ self.addEventListener("fetch", (event) => {
         const cached = await caches.match(event.request);
         if (cached) return cached;
 
-        // If navigation request fails, fallback to cached /home or /
+        // If navigation request fails, fallback to cached / or /home
         if (event.request.mode === "navigate") {
-          const homeFallback = await caches.match("/home") || await caches.match("/");
+          const homeFallback = await caches.match("/") || await caches.match("/home");
           if (homeFallback) return homeFallback;
 
           return new Response(
