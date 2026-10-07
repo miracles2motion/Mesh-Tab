@@ -500,7 +500,12 @@ function DashboardContent() {
       )}
 
       {isNettingModalOpen && (
-        <Modal onClose={() => setIsNettingModalOpen(false)} size="3xl" hideCloseButton className="bg-transparent border-0 shadow-none">
+        <Modal 
+          onClose={() => setIsNettingModalOpen(false)} 
+          size="full" 
+          hideCloseButton 
+          className="max-w-7xl max-h-[92vh] h-[92vh] w-[96vw] rounded-[32px] p-0 border border-slate-200 dark:border-white/10 overflow-hidden shadow-2xl bg-white dark:bg-[#0c0c0e]"
+        >
           <NettingCanvas 
             tabId={rawTabId} 
             members={activeMembers} 
@@ -508,6 +513,7 @@ function DashboardContent() {
             expenseCount={expenses.length}
             currentUserName={currentUser}
             creatorName={creatorName}
+            onClose={() => setIsNettingModalOpen(false)}
           />
         </Modal>
       )}
