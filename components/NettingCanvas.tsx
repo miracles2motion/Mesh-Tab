@@ -136,10 +136,10 @@ export function NettingCanvas({
     if (n <= 4) {
       // Diamond Coordinates on 1000x520 Widescreen Canvas
       const diamondCoords = [
-        { x: 500, y: 95 },  // Top (Aisha)
-        { x: 230, y: 260 }, // Left (Kemi)
-        { x: 770, y: 260 }, // Right (David / You)
-        { x: 500, y: 425 }  // Bottom (Ben)
+        { x: 500, y: 110 }, // Top (Creditor)
+        { x: 230, y: 260 }, // Left (Debtor)
+        { x: 770, y: 260 }, // Right (Debtor)
+        { x: 500, y: 410 }  // Bottom (Debtor)
       ];
 
       const sorted = [...list].sort((a, b) => (b.balance ?? 0) - (a.balance ?? 0));
@@ -624,25 +624,25 @@ export function NettingCanvas({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Floating Canvas Controls (Top Left) */}
-        <div className="absolute top-4 left-4 z-10 flex items-center gap-1.5 p-1 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-700/60 shadow-lg">
+        {/* Floating Canvas Controls (Bottom Left - avoids crowding top bar on mobile) */}
+        <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 z-10 flex items-center gap-1.5 p-1 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-700/60 shadow-lg">
           <button
             onClick={handleZoomIn}
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
             title="Zoom In"
           >
             <ZoomIn className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={handleZoomOut}
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
             title="Zoom Out"
           >
             <ZoomOut className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={handleResetView}
-            className="px-2 h-7 rounded-lg text-[10px] font-bold flex items-center gap-1 text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+            className="px-2 h-7 rounded-lg text-[10px] font-bold flex items-center gap-1 text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
             title="Reset Zoom & Pan"
           >
             <RotateCcw className="w-3 h-3" />
@@ -650,11 +650,11 @@ export function NettingCanvas({
           </button>
         </div>
 
-        {/* Floating Legend / Active Status (Top Center) */}
-        <div className="absolute top-4 inset-x-0 mx-auto w-fit z-10 px-3.5 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-800 text-[11px] font-semibold text-slate-300 flex items-center gap-3 shadow-lg pointer-events-none">
+        {/* Floating Legend / Active Status (Top Center - clean and uncluttered) */}
+        <div className="absolute top-3 sm:top-4 inset-x-0 mx-auto w-fit z-10 px-3.5 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-800 text-[11px] font-semibold text-slate-300 flex items-center gap-2.5 shadow-lg pointer-events-none">
           <span className="flex items-center gap-1.5 text-emerald-400">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Creditors ({creditorNames})</span>
+            <span>Creditors</span>
           </span>
           <span className="text-slate-600">•</span>
           <span className="flex items-center gap-1.5 text-rose-400">
@@ -792,10 +792,13 @@ export function NettingCanvas({
                   const isEdgeFocused = !selectedNodeId || edge.from.id === selectedNodeId || edge.to.id === selectedNodeId;
                   const edgeOpacity = isEdgeFocused ? 1 : 0.15;
 
-                  // Curve calculation to curve paths cleanly away from center (500, 260)
-                  const isCenterCrossing = Math.abs(edge.midX - 500) < 60 && Math.abs(edge.midY - 260) < 60;
+                  // In small graphs (<= 4 members), straight lines produce the cleanest geometry
+                  // with centered payment pills and zero collisions.
+                  // For larger graphs (5+ members), gentle curves prevent overlapping collinear edges.
+                  const isCenterCrossing = Math.abs(edge.midX - 500) < 40 && Math.abs(edge.midY - 260) < 40;
+                  const shouldCurve = nodes.length > 4 && isCenterCrossing;
                   const curveMultiplier = (idx % 2 === 0 ? 1 : -1) * (1 + Math.floor(idx / 2) * 0.4);
-                  const curveOffset = isCenterCrossing ? -50 * curveMultiplier : (nodes.length > 5 ? 40 * curveMultiplier : 0);
+                  const curveOffset = shouldCurve ? 35 * curveMultiplier : (nodes.length > 6 ? 25 * curveMultiplier : 0);
 
                   const pathD = curveOffset !== 0
                     ? `M ${edge.startX} ${edge.startY} Q ${edge.midX + curveOffset} ${edge.midY + curveOffset * 0.5} ${edge.endX} ${edge.endY}`
@@ -863,14 +866,6 @@ export function NettingCanvas({
                     </g>
                   );
                 })}
-
-                {/* Central Netting Result Badge */}
-                <g transform="translate(500, 260)">
-                  <rect x="-110" y="-15" width="220" height="30" rx="15" fill="#022c22" stroke="#10b981" strokeWidth="1.5" filter="drop-shadow(0 4px 10px rgba(0,0,0,0.5))" />
-                  <text x="0" y="4.5" textAnchor="middle" fill="#6ee7b7" fontSize="11" fontWeight="bold" fontFamily="sans-serif">
-                    ✓ {simplifiedEdges.length} Settlements ({formatCurrency(settledCapital)})
-                  </text>
-                </g>
               </g>
             )}
 
@@ -939,52 +934,66 @@ export function NettingCanvas({
                     {node.initial}
                   </text>
 
-                  {/* Role Pill Above Node */}
-                  {isTargetCreditor && !node.isSettled ? (
-                    <g transform={`translate(0, -${nodeRadius + 12})`}>
-                      <rect x="-32" y="-8" width="64" height="16" rx="8" fill="#047857" stroke="#34d399" strokeWidth="1" />
-                      <text x="0" y="3.5" textAnchor="middle" fill="#ecfdf5" fontSize="8" fontWeight="bold" fontFamily="sans-serif">
-                        CREDITOR
+                  {/* Name & Balance Labels (Creditor labels on TOP, Debtor labels on BOTTOM to prevent incoming arrows from crossing text) */}
+                  {isTargetCreditor ? (
+                    <g>
+                      <text
+                        x="0"
+                        y={-(nodeRadius + 20)}
+                        textAnchor="middle"
+                        fill={currentUserName && node.name.toLowerCase() === currentUserName.toLowerCase() ? "#a5b4fc" : "#f8fafc"}
+                        fontSize={nodes.length <= 4 ? "12" : nodes.length > 12 ? "9.5" : "11"}
+                        fontWeight="bold"
+                        fontFamily="sans-serif"
+                      >
+                        {currentUserName && node.name.toLowerCase() === currentUserName.toLowerCase() 
+                          ? `${node.name.length > 7 && nodes.length > 12 ? node.name.slice(0,6) + '…' : node.name} (You)` 
+                          : creatorName && node.name.toLowerCase() === creatorName.toLowerCase()
+                          ? `${node.name.length > 7 && nodes.length > 12 ? node.name.slice(0,6) + '…' : node.name} ★`
+                          : (node.name.length > 8 && nodes.length > 12 ? node.name.slice(0,7) + '…' : node.name)}
+                      </text>
+                      <text
+                        x="0"
+                        y={-(nodeRadius + 8)}
+                        textAnchor="middle"
+                        fill="#34d399"
+                        fontSize={nodes.length <= 4 ? "10.5" : "9.5"}
+                        fontWeight="bold"
+                        fontFamily="sans-serif"
+                      >
+                        {node.balance > 0 ? `+${formatCurrency(node.balance)}` : formatCurrency(node.balance)}
                       </text>
                     </g>
-                  ) : node.isSettled ? (
-                    <g transform={`translate(0, -${nodeRadius + 12})`}>
-                      <rect x="-28" y="-7.5" width="56" height="15" rx="7.5" fill="#065f46" stroke="#34d399" strokeWidth="1" />
-                      <text x="0" y="3" textAnchor="middle" fill="#a7f3d0" fontSize="7.5" fontWeight="bold" fontFamily="sans-serif">
-                        SETTLED
+                  ) : (
+                    <g>
+                      <text
+                        x="0"
+                        y={nodeRadius + 14}
+                        textAnchor="middle"
+                        fill={currentUserName && node.name.toLowerCase() === currentUserName.toLowerCase() ? "#a5b4fc" : "#f8fafc"}
+                        fontSize={nodes.length <= 4 ? "12" : nodes.length > 12 ? "9.5" : "11"}
+                        fontWeight="bold"
+                        fontFamily="sans-serif"
+                      >
+                        {currentUserName && node.name.toLowerCase() === currentUserName.toLowerCase() 
+                          ? `${node.name.length > 7 && nodes.length > 12 ? node.name.slice(0,6) + '…' : node.name} (You)` 
+                          : creatorName && node.name.toLowerCase() === creatorName.toLowerCase()
+                          ? `${node.name.length > 7 && nodes.length > 12 ? node.name.slice(0,6) + '…' : node.name} ★`
+                          : (node.name.length > 8 && nodes.length > 12 ? node.name.slice(0,7) + '…' : node.name)}
+                      </text>
+                      <text
+                        x="0"
+                        y={nodeRadius + 26}
+                        textAnchor="middle"
+                        fill={node.isSettled ? "#34d399" : "#fb7185"}
+                        fontSize={nodes.length <= 4 ? "10.5" : "9.5"}
+                        fontWeight="bold"
+                        fontFamily="sans-serif"
+                      >
+                        {node.isSettled ? "✓ $0.00" : formatCurrency(node.balance)}
                       </text>
                     </g>
-                  ) : null}
-
-                  {/* Name Label Below Node */}
-                  <text
-                    x="0"
-                    y={nodeRadius + 15}
-                    textAnchor="middle"
-                    fill={currentUserName && node.name.toLowerCase() === currentUserName.toLowerCase() ? "#a5b4fc" : "#f8fafc"}
-                    fontSize={nodes.length <= 4 ? "12" : nodes.length > 12 ? "9.5" : "11"}
-                    fontWeight="bold"
-                    fontFamily="sans-serif"
-                  >
-                    {currentUserName && node.name.toLowerCase() === currentUserName.toLowerCase() 
-                      ? `${node.name.length > 7 && nodes.length > 12 ? node.name.slice(0,6) + '…' : node.name} (You)` 
-                      : creatorName && node.name.toLowerCase() === creatorName.toLowerCase()
-                      ? `${node.name.length > 7 && nodes.length > 12 ? node.name.slice(0,6) + '…' : node.name} ★`
-                      : (node.name.length > 8 && nodes.length > 12 ? node.name.slice(0,7) + '…' : node.name)}
-                  </text>
-
-                  {/* Balance Subtitle Below Name */}
-                  <text
-                    x="0"
-                    y={nodeRadius + 28}
-                    textAnchor="middle"
-                    fill={node.isSettled ? "#34d399" : isTargetCreditor ? "#34d399" : node.isDebtor ? "#fb7185" : "#94a3b8"}
-                    fontSize={nodes.length <= 4 ? "10.5" : "9.5"}
-                    fontWeight="bold"
-                    fontFamily="sans-serif"
-                  >
-                    {node.isSettled ? "✓ $0.00" : node.balance > 0 ? `+${formatCurrency(node.balance)}` : formatCurrency(node.balance)}
-                  </text>
+                  )}
                 </g>
               );
             })}
@@ -1028,10 +1037,10 @@ export function NettingCanvas({
           >
             <div className="p-3 sm:p-4 max-w-full relative flex items-center">
               
-              {/* Left Scroll Chevron */}
+              {/* Left Scroll Chevron (Desktop only so mobile cards have clean touch scroll without overlapping buttons) */}
               <button
                 onClick={handleScrollLeft}
-                className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-white/15 shadow-lg flex items-center justify-center text-slate-700 dark:text-white hover:scale-110 active:scale-95 transition-all cursor-pointer"
+                className="hidden sm:flex absolute left-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-white/15 shadow-lg items-center justify-center text-slate-700 dark:text-white hover:scale-110 active:scale-95 transition-all cursor-pointer"
                 aria-label="Scroll left"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -1040,7 +1049,7 @@ export function NettingCanvas({
               {/* Scrollable Horizontal Track */}
               <div 
                 ref={scrollContainerRef}
-                className="flex items-center gap-3.5 overflow-x-auto no-scrollbar scroll-smooth px-8 py-1 w-full"
+                className="flex items-center gap-3.5 overflow-x-auto no-scrollbar scroll-smooth px-4 sm:px-12 py-1 w-full"
                 style={{ scrollSnapType: "x mandatory" }}
               >
                 
@@ -1159,10 +1168,10 @@ export function NettingCanvas({
 
               </div>
 
-              {/* Right Scroll Chevron */}
+              {/* Right Scroll Chevron (Desktop only so mobile cards have clean touch scroll without overlapping buttons) */}
               <button
                 onClick={handleScrollRight}
-                className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-white/15 shadow-lg flex items-center justify-center text-slate-700 dark:text-white hover:scale-110 active:scale-95 transition-all cursor-pointer"
+                className="hidden sm:flex absolute right-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-white/15 shadow-lg items-center justify-center text-slate-700 dark:text-white hover:scale-110 active:scale-95 transition-all cursor-pointer"
                 aria-label="Scroll right"
               >
                 <ChevronRight className="w-4 h-4" />
