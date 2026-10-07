@@ -684,27 +684,25 @@ export default function GlobalHub() {
       </main>
 
       {/* Modern Web2 Sticky Bottom Action Dock on Mobile & Desktop */}
-      {workspaceMode !== "sample" && (
-        <div className="fixed bottom-6 lg:bottom-10 inset-x-0 z-40 flex justify-center pointer-events-none px-4">
-          <div className="bg-white/95 dark:bg-[#121212]/95 backdrop-blur-2xl border border-slate-200/90 dark:border-white/15 rounded-full p-2 flex items-center justify-between gap-2 shadow-2xl w-full max-w-sm md:max-w-lg lg:max-w-xl mx-auto pointer-events-auto">
-            <Link 
-              href="/tab/new" 
-              className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-4 rounded-full font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md shadow-indigo-500/25 active:scale-95 transition-transform"
-            >
-              <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span>New Tab</span>
-            </Link>
+      <div className="fixed bottom-6 lg:bottom-10 inset-x-0 z-40 flex justify-center pointer-events-none px-4">
+        <div className="bg-white/95 dark:bg-[#121212]/95 backdrop-blur-2xl border border-slate-200/90 dark:border-white/15 rounded-full p-2 flex items-center justify-between gap-2 shadow-2xl w-full max-w-sm md:max-w-lg lg:max-w-xl mx-auto pointer-events-auto">
+          <Link 
+            href="/tab/new" 
+            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-4 rounded-full font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-md shadow-indigo-500/25 active:scale-95 transition-transform"
+          >
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span>New Tab</span>
+          </Link>
 
-            <button 
-              onClick={() => setShowJoinModal(true)}
-              className="flex-1 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-800 dark:text-white py-3 px-4 rounded-full font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-transform cursor-pointer"
-            >
-              <QrCode className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span>Join Code</span>
-            </button>
-          </div>
+          <button 
+            onClick={() => setShowJoinModal(true)}
+            className="flex-1 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-800 dark:text-white py-3 px-4 rounded-full font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-transform cursor-pointer"
+          >
+            <QrCode className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span>Join Code</span>
+          </button>
         </div>
-      )}
+      </div>
 
       {/* Join Modal */}
       {showJoinModal && (

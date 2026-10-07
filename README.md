@@ -20,7 +20,7 @@
 **The Problem:** Traditional group expense apps (like Splitwise) create tangled, crisscrossing I.O.U. webs. When a trip ends, friends are forced to execute dozens of redundant cross-transfers, calculate complex currency fees, or chase each other across banking apps. Worse, existing crypto expense tools burden non-crypto users with gas tokens, seed phrases, network popups, and raw hex addresses.
 
 **The Solution:** MeshTab combines high-throughput blockchain infrastructure with consumer fintech simplicity:
-- **Multilateral Netting Engine ("The Tangle"):** An off-chain greedy bipartite matching algorithm that detects and collapses circular debt loops ($A \to B \to C \to A$), reducing total payment volume and cross-transfers by up to **75%**.
+- **Multilateral Netting Engine:** An off-chain greedy net-position matching algorithm that computes debtor and creditor positions, collapsing multi-currency debts into minimal direct payments ($\le N-1$ transfers) before on-chain settlement.
 - **Biometric Passkeys & Embedded Smart Accounts:** Instant FaceID/TouchID enrollment powered by **Privy**, generating ERC-4337 smart accounts with zero seed phrases, browser extensions, or popups.
 - **Gasless Agora AUSD Settlement:** 1-click debt settlement in **Agora AUSD** (6-decimal institutional digital dollars) executed through **Pimlico Paymasters** for 100% sponsored gas on Monad.
 - **Google Gemini Flash Vision AI OCR:** Snap a photo of any restaurant receipt, grocery slip, or hotel invoice to instantly extract the total amount and merchant name in ~1 second via `@google/genai`.
@@ -67,7 +67,7 @@ Both smart contracts are deployed and verified on **Monad Testnet (Chain ID: 101
 
 | Feature | Implementation | Consumer Benefit |
 |---|---|---|
-| 🔄 **The Tangle (Netting Engine)** | Off-chain bipartite matching rendered on an interactive SVG canvas | Collapses complex $N$-way group debts into the theoretical minimum direct settlements. |
+| 🔄 **Netting Engine** | Off-chain greedy net-position matching rendered on an interactive SVG canvas | Collapses multi-currency group debts into minimal (≤ N-1) direct settlements. |
 | 📸 **Gemini Vision AI OCR** | Google Gemini Flash multimodal vision pipeline via `@google/genai` | Snap a photo of a paper receipt to extract the amount and merchant name in ~1 second. |
 | 💱 **Pyth Network FX Oracle** | Pyth Hermes REST API with 60-second edge revalidation | Split travel expenses in EUR, GBP, JPY, or AUD converted at mid-market institutional rates. |
 | 🎙️ **Voice-to-Expense Dictation** | Browser Web Speech API with currency regex parsing | Dictate `"Paid 45 dollars for groceries"` to pre-fill expenses hands-free. |
@@ -88,7 +88,7 @@ graph TD
         UI["Consumer UI & Thumb-Zone Dock"]
         VoiceParser["Voice Dictation (Web Speech API)"]
         GeminiOCR["Gemini Flash AI OCR Receipt Scanner"]
-        NettingCanvas["The Tangle (Bipartite Netting Visualizer)"]
+        NettingCanvas["Netting Engine (Interactive Visualizer)"]
         Synthesizer["Procedural Sound Synthesizer (Web Audio API)"]
         Outbox["Offline Outbox (Web Locks API + FIFO Queue)"]
     end
@@ -198,8 +198,8 @@ npm run build
    - Interact with the **Live Netting Visualizer** to see how crisscrossing debts collapse into streamlined settlements.
    - Click **Try Demo Mode** or **Launch App**.
 2. **Explore The Lisbon Benchmark (`/tab/lisbon-24`):**
-   - Review the 4 group members ($1,200 total expenses across Aisha, Kemi, Ben, and You).
-   - Tap **Run Netting** to open the interactive SVG graph engine. Watch 12 gross peer-to-peer debts collapse into just 3 direct payments (saving 75% in transfer friction).
+   - Review the 4 group members ($1,499.10 total expenses across Aisha, Kemi, Ben, and You in EUR, GBP, and USD).
+   - Tap **Run Netting** to open the interactive SVG graph engine. Watch 9 multi-currency transfers collapse into just 3 direct AUSD payments ($391.54 net liquidity).
 3. **Multimodal Expense Logging (`/tab/lisbon-24/expense/new`):**
    - **Receipt OCR:** Tap the camera icon, upload a receipt, and watch Gemini Flash extract the amount and merchant in ~1 second.
    - **Voice Dictation:** Tap the mic button and say: `"I paid 80 dollars for rental car gas"`.

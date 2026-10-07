@@ -35,7 +35,7 @@ export function PitchModal({ isOpen, onClose }: PitchModalProps) {
     setPingActive(true);
     sounds.playClick();
     const startTime = performance.now();
-    await new Promise(r => setTimeout(r, 280)); // simulate Monad's 280-350ms finality
+    await new Promise(r => setTimeout(r, 400)); // simulate Monad's 400ms block time
     const duration = Math.round(performance.now() - startTime);
     setPingResult(`${duration}ms`);
     setPingActive(false);
@@ -93,7 +93,7 @@ export function PitchModal({ isOpen, onClose }: PitchModalProps) {
               <span>1. Monad 10,000 TPS Parallel EVM</span>
             </div>
             <p className="text-xs text-slate-600 dark:text-white/60 leading-relaxed">
-              Sub-400ms block finality allows instantaneous real-time ledger updates across 20+ group members simultaneously without state congestion.
+              400ms block time with ~800ms consensus finality allows instantaneous real-time ledger updates across 20+ group members simultaneously without state congestion.
             </p>
           </div>
 
@@ -123,10 +123,10 @@ export function PitchModal({ isOpen, onClose }: PitchModalProps) {
           <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 space-y-1.5">
             <div className="flex items-center gap-2 text-cyan-600 dark:text-cyan-400 font-bold text-sm">
               <Share2 className="w-4 h-4" />
-              <span>4. Tangle Graph Netting Algorithm</span>
+              <span>4. Netting Engine</span>
             </div>
             <p className="text-xs text-slate-600 dark:text-white/60 leading-relaxed">
-              Reduces multilateral group debts by 75%+ using maximum bipartite matching before transactions hit on-chain settlement.
+              Collapses multi-currency group debts into ≤ N-1 direct settlements using greedy net-position matching before on-chain settlement.
             </p>
           </div>
         </div>
@@ -141,7 +141,7 @@ export function PitchModal({ isOpen, onClose }: PitchModalProps) {
           <div>
             <div className="text-xs font-bold text-slate-900 dark:text-white">Live Monad Parallel State Ping</div>
             <div className="text-[11px] text-slate-500 dark:text-white/50">
-              {pingResult ? `Latency: ${pingResult} (0.3s theoretical limit)` : "Test parallel block sync responsiveness"}
+              {pingResult ? `Latency: ${pingResult} (400ms block time)` : "Test parallel block sync responsiveness"}
             </div>
           </div>
         </div>
@@ -152,7 +152,7 @@ export function PitchModal({ isOpen, onClose }: PitchModalProps) {
           className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-50"
         >
           <Sparkles className="w-3.5 h-3.5" />
-          <span>{pingActive ? "Measuring Ping..." : "Test 0.3s Sync"}</span>
+          <span>{pingActive ? "Measuring Ping..." : "Test Parallel Sync"}</span>
         </button>
       </div>
 

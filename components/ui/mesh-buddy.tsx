@@ -183,42 +183,10 @@ export function MeshBuddy() {
     });
   };
 
-  // Route-based dynamic greetings & tips (Accurately scoped to context)
+  // Route-based tips are silenced to prevent unprompted floating bubble spam on navigation.
+  // Context-aware guidance remains available when opening MeshBuddy or asking questions.
   useEffect(() => {
-    let tip = "";
-    if (pathname === "/demo") {
-      tip = "Interactive Sandbox: Choose between the pre-loaded Lisbon '24 trip to explore netting, or start with a Clean Slate to test a fresh tab!";
-    } else if (pathname === "/home") {
-      tip = isCleanMode
-        ? "Clean Slate Active: Tap + to create your first shared group tab."
-        : "Sample Trip Mode: Explore Lisbon Weekend with pre-loaded group netting.";
-    } else if (pathname === "/tab/new") {
-      tip = "Give your new group tab a name and currency. You'll be able to invite friends via passkeys right after!";
-    } else if (pathname?.includes("/expense/new")) {
-      tip = isDemoTab
-        ? "Tip: Try Smart Scan or Voice OCR to add another expense to the Lisbon benchmark!"
-        : isCustomTab
-          ? `Tip: Adding an expense to "${tabDisplayName}". Snap a receipt or dictate with your mic!`
-          : "Tip: You can snap a receipt photo with your camera or dictate your expense with your mic!";
-    } else if (pathname?.includes("/members")) {
-      tip = isDemoTab
-        ? "Invite additional friends to the Lisbon trip with the QR code. They'll claim seats with biometric passkeys!"
-        : isCustomTab
-          ? `Invite members to "${tabDisplayName}". Anyone who scans can claim a seat via TouchID / FaceID!`
-          : "Invite group members with the shareable QR code or link. Members claim seats with biometric passkeys!";
-    } else if (isDemoTab) {
-      tip = "In the Lisbon benchmark, Aisha paid $600 for the villa. Tap Run Tangle Netting to see 12 debts collapse into 3 payments!";
-    } else if (isCustomTab) {
-      tip = `This is your custom group tab "${tabDisplayName}". Tap Add Expense to log shared costs, or invite members to join!`;
-    } else if (pathname === "/settings") {
-      tip = "You can customize my name, voice persona, or test your hardware passkey here.";
-    } else if (pathname === "/notifications") {
-      tip = "Here are your live payment and settlement updates across all your group tabs.";
-    }
-
-    if (tip) {
-      setSpeechBubble(tip);
-    }
+    // Route tips remain unprompted; speech bubbles are only triggered by explicit actions.
   }, [pathname, workspaceMode, isDemoTab, isCustomTab, tabDisplayName]);
 
   // Bubble auto-hide timer: 20 seconds duration, freezes when hovered!
@@ -320,7 +288,7 @@ export function MeshBuddy() {
       let welcomeActions: { label: string; action: () => void }[] = [];
 
       if (isDemoTab) {
-        welcomeText = `Hey ${profile.name || "there"}! I'm ${buddySettings.name}. You're viewing the Lisbon '24 demo trip ($1,200 spent across 4 members). Ready to run Tangle Netting or test settlements?`;
+        welcomeText = `Hey ${profile.name || "there"}! I'm ${buddySettings.name}. You're viewing the Lisbon '24 demo trip ($1,499.10 across 3 currencies). Ready to test netting or settlements?`;
         welcomeActions = [
           { label: "❓ How does Netting work?", action: () => handleAskQuestion("How does netting work?") },
           { label: "📸 Smart Scan Receipt", action: () => router.push("/tab/lisbon-24/expense/new") },
@@ -505,7 +473,7 @@ export function MeshBuddy() {
         `**MeshTab** is a modern group expense tracker and instant debt-clearing app designed for group trips, housemates, and shared events! 🚀\n\n` +
         `Here is what makes MeshTab so simple and fast:\n\n` +
         `1. 🌀 **Smart Debt Netting (Fewer Payments)**:\n` +
-        `In normal group apps, 10 friends make 15 separate payments back and forth. MeshTab automatically cancels out circular debts (A owes B, B owes C, C owes A) and collapses dozens of crisscrossing IOUs into the fewest direct payments possible—often clearing 75%+ of total payments with zero unnecessary money transfers!\n\n` +
+        `In multi-currency trips, friends end up with messy crisscrossing transfers. MeshTab calculates net positions and collapses multilateral debts into minimal direct payments (at most N-1 payments), clearing debts without unnecessary back-and-forth wires!\n\n` +
         `2. ⚡ **Instant, Simultaneous Updates**:\n` +
         `Everyone in the group can snap receipts, split dinners, and confirm payments at the exact same instant without lag, waiting, or delays.\n\n` +
         `3. 🔑 **Touch ID & Face ID Sign-In**:\n` +
@@ -547,10 +515,10 @@ export function MeshBuddy() {
           }\n\n` +
           `🌀 **Netting State**:\n` +
           (isDemoTab
-            ? `Smart Netting has simplified 12 international transfers down to 3 direct payments pointing to Aisha, clearing $900.00 (75% of transfers saved without moving capital)!`
+            ? `Smart Netting collapses 9 cross-border transfers down to 3 direct payments in AUSD ($391.54 net liquidity).`
             : stats.expenses.length >= 2
-              ? `Smart debt netting is active and ready to collapse circular loops whenever members settle.`
-              : `Only ${stats.expenses.length} expense logged so far. Add more shared expenses to form circular debt cycles.`);
+              ? `Smart debt netting is active and ready to calculate minimal direct settlements whenever members settle.`
+              : `Only ${stats.expenses.length} expense logged so far. Add more shared expenses to form netting connections.`);
 
         spokenPunchline = userBal < 0
           ? `Here is your live recap for ${tabDisplayName}. You have an outstanding debt to settle.`
@@ -594,7 +562,7 @@ export function MeshBuddy() {
         replyText =
           `You are currently in the **Evaluation Sandbox**.\n\n` +
           `Here you can choose between two environments:\n` +
-          `1. **Sample Trip (Lisbon '24)**: Pre-loaded with 4 friends, $1,200 in shared villa & dinner expenses, and an active netting graph demonstrating a 75% reduction in payment transfers.\n` +
+          `1. **Sample Trip (Lisbon '24)**: Pre-loaded with 4 friends, $1,499.10 across EUR, GBP, and USD, demonstrating a collapse of 9 transfers into 3 direct AUSD payments ($391.54 net liquidity).\n` +
           `2. **Clean Slate Mode**: Resets the workspace to a fresh blank slate with 0 tabs, allowing you to test tab creation, member invitations, and live receipt scans from scratch.`;
 
         actionItems = [
@@ -790,9 +758,9 @@ export function MeshBuddy() {
           { label: "🚰 Top Up Faucet (+$500)", action: handleClaimFaucet },
         ];
       } else if (isDemoTab) {
-        replyText = `Hey ${userName}! 👋 I'm ${buddySettings.name}, your financial wingman!\n\nWe're hanging out in the Lisbon '24 trip benchmark. 4 travelers, $1,200 in shared expenses, and 12 crisscrossing debts ready to collapse into 3 payments. How can I help you explore?`;
+        replyText = `Hey ${userName}! 👋 I'm ${buddySettings.name}, your financial wingman!\n\nWe're hanging out in the Lisbon '24 trip benchmark. 4 travelers, $1,499.10 across EUR, GBP, and USD, and 9 cross-border transfers collapsed into 3 direct AUSD payments. How can I help you explore?`;
         actionItems = [
-          { label: "🌀 Test Smart Netting (75% Saved)", action: () => handleAskQuestion("How does netting work?") },
+          { label: "🌀 Test Smart Netting (9 → 3 Payments)", action: () => handleAskQuestion("How does netting work?") },
           { label: "📸 Test Smart Scan Receipt", action: () => router.push("/tab/lisbon-24/expense/new") },
           { label: "🚰 Claim Sandbox Faucet", action: handleClaimFaucet },
         ];
@@ -825,8 +793,8 @@ export function MeshBuddy() {
       ];
     } else if (/joke|funny|laugh|tell me a joke/i.test(q)) {
       const jokes = [
-        "Why did the restaurant bill go to therapy? Because it had unresolved circular debt loops! 🛋️ (Lucky for you, my netting math resolved it in 300 milliseconds).",
-        "What's a group traveler's favorite magic trick? Turning 12 messy bank transfers into 3 simple taps!",
+        "Why did the restaurant bill go to therapy? Because it had unresolved circular debt loops! 🛋️ (Lucky for you, my netting math resolved it in milliseconds).",
+        "What's a group traveler's favorite magic trick? Turning 9 messy multi-currency transfers into 3 simple taps!",
         "Why was everyone smiling at the end of the vacation? Because with MeshTab, no one spent their flight home doing spreadsheet math! 🏖️",
         "How do foodies split 10 pizzas? In one tap, so everyone eats while it's still hot! 🍕"
       ];
@@ -845,7 +813,7 @@ export function MeshBuddy() {
       ];
     } else if (/what can you do|help me|commands|features|powers|guide me/i.test(q)) {
       replyText = `Here's what I can do for you and your crew:\n\n` +
-        `🌀 **Smart Debt Netting**: Turn 12 crisscrossing group debts into 3 direct payments (saving ~75% in transfer volume).\n\n` +
+        `🌀 **Smart Debt Netting**: Turn 9 multi-currency group transfers into 3 direct AUSD payments ($391.54 net liquidity).\n\n` +
         `📸 **Smart Scan OCR**: Snap receipt photos or dictate expenses with your mic.\n\n` +
         `🔑 **Face ID / Touch ID**: Confirm payments with your fingerprint or face (zero passwords needed).\n\n` +
         `🏦 **Instant Cash Out**: Withdraw settled funds directly to your debit card or bank.\n\n` +
@@ -855,7 +823,7 @@ export function MeshBuddy() {
         { label: "🚰 Top Up $500 AUSD", action: handleClaimFaucet },
       ];
     } else if (/why monad|what is monad|parallel evm|10000 tps|tps|blockchain/i.test(q)) {
-      replyText = `MeshTab runs on an ultra-fast modern transaction network! 🚀 Traditional payment apps process things one-by-one and can lag or lock up during busy weekends. Our payment engine processes thousands of transactions per second with instant 0.3-second confirmations.\n\nThat means 20 people on a group trip can log drinks, split dinners, and confirm payments at the exact same instant without waiting or transfer delays!`;
+      replyText = `MeshTab runs on an ultra-fast modern transaction network! 🚀 Traditional payment apps process things one-by-one and can lag or lock up during busy weekends. Our payment engine processes thousands of transactions per second with instant 400ms blocks and ~800ms consensus finality.\n\nThat means 20 people on a group trip can log drinks, split dinners, and confirm payments at the exact same instant without waiting or transfer delays!`;
       actionItems = [
         { label: "🏆 Open Pitch Presentation", action: () => router.push("/home") },
         { label: "🌀 Learn About Netting", action: () => handleAskQuestion("how does netting work") },
@@ -888,7 +856,7 @@ export function MeshBuddy() {
       q.includes("which mode")
     ) {
       if (isDemoTab) {
-        replyText = `You are currently viewing the Lisbon '24 Demo Trip (Sample Trip Mode). 4 international members and $1,200 in mock expenses are pre-loaded to evaluate Tangle Netting. If you want to test the main app with a fresh ledger, you can switch to Clean Slate!`;
+        replyText = `You are currently viewing the Lisbon '24 Demo Trip (Sample Trip Mode). 4 international members and $1,499.10 across 3 currencies are pre-loaded to evaluate Netting. If you want to test the main app with a fresh ledger, you can switch to Clean Slate!`;
         actionItems = [
           { label: "🧹 Switch to Clean Slate", action: handleToggleWorkspace },
           { label: "🎮 Open Demo Selector", action: () => router.push(pathname ? `/demo?from=${encodeURIComponent(pathname)}` : "/demo") }
@@ -921,12 +889,12 @@ export function MeshBuddy() {
     } else if (q.includes("netting") || q.includes("tangle")) {
       spokenPunchline = "Netting eliminates circular debts across your group so nobody pays each other back and forth.";
       if (isDemoTab) {
-        replyText = "Smart Netting simplifies group debts by finding circular payment loops (A owes B, B owes C, C owes A) and canceling them out. In this Lisbon trip, it cuts 12 crisscrossing international transfers down to 3 direct payments pointing to Aisha, clearing $900 (75% of transfer volume) without moving unnecessary money!";
+        replyText = "Smart Netting simplifies group debts by computing each member's net position and matching debtors directly to creditors. In this Lisbon trip, it collapses 9 cross-border transfers down to 3 direct payments in AUSD ($391.54 net liquidity), without moving unnecessary money!";
         actionItems = [
           { label: "Stay on Lisbon Tab", action: () => router.push("/tab/lisbon-24") }
         ];
       } else if (isCustomTab) {
-        replyText = `Smart Netting mathematically simplifies your group debts. Once members of "${tabDisplayName}" log crisscrossing expenses, tapping 'Run Tangle Netting' calculates the minimum direct payments needed to settle the entire tab with zero-sum fairness!`;
+        replyText = `Smart Netting mathematically simplifies your group debts. Once members of "${tabDisplayName}" log crisscrossing expenses, tapping 'Run Netting' calculates the direct payments needed to settle the entire tab with zero-sum fairness!`;
         actionItems = [
           { label: "Add Expense to Tab", action: () => router.push(`/tab/${currentTabId}/expense/new`) }
         ];
@@ -937,7 +905,7 @@ export function MeshBuddy() {
           { label: "📚 Netting Guide", action: () => setDrawerTab("kb") },
         ];
       } else {
-        replyText = "Smart Netting cancels circular debt loops across group members. In the Lisbon benchmark, 12 international transfers collapse into just 3 direct payments, saving 75% in total money transfers!";
+        replyText = "Smart Netting simplifies group debts across members. In the Lisbon benchmark, 9 cross-border transfers collapse into just 3 direct AUSD payments, moving $391.54 in net liquidity!";
         actionItems = [
           { label: "Explore Lisbon Demo", action: () => router.push("/tab/lisbon-24") },
           { label: "🎮 View Demo Selector", action: () => router.push(pathname ? `/demo?from=${encodeURIComponent(pathname)}` : "/demo") }
@@ -1462,7 +1430,7 @@ export function MeshBuddy() {
                             onClick={() => handleAskQuestion("how does netting work?")}
                             className="shrink-0 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white/80 text-[10px] font-semibold cursor-pointer"
                           >
-                            🌀 Netting (75% Saved)
+                            🌀 Netting (9 → 3 Payments)
                           </button>
                           <button
                             onClick={() => router.push("/tab/lisbon-24/expense/new")}

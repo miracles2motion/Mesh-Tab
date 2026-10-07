@@ -94,13 +94,13 @@ export const KB_ARTICLES: KBArticle[] = [
   {
     id: "netting-how-it-works",
     categoryId: "netting",
-    title: "How does Multilateral Tangle Netting work?",
+    title: "How does Multilateral Netting work?",
     keywords: ["netting", "tangle", "loop", "circular", "simplify", "algorithm", "graph", "debt", "matrix"],
-    summary: "Cancels circular payment loops (A owes B, B owes C, C owes A) across group members, collapsing dozens of cross-border transfers into minimal direct settlements.",
-    detailedContent: "In standard group travel, mutual debts create crisscrossing payment webs. MeshTab applies graph theory algorithms (similar to central bank FX clearing) to find circular cycles in the debt matrix. By subtracting the minimum cycle weight from each edge, the loop is completely dissolved without changing anyone's net balance. This guarantees zero-sum conservation while cutting capital transfers by 70–80%.",
+    summary: "Collapses multi-currency group debts into minimal direct settlements using greedy net-position matching.",
+    detailedContent: "In cross-border group travel, mutual debts across multiple currencies create fragmented payment webs. MeshTab converts expenses via Pyth mid-market oracle rates into universal digital dollars (AUSD) and calculates net creditor/debtor positions off-chain. This guarantees at most N-1 direct payments to settle the entire group.",
     contextAdvice: {
-      demo: "In the Lisbon benchmark, 12 crisscrossing international transfers collapse into just 3 direct payments pointing to Aisha, clearing $900 (75%) without capital movement.",
-      customTab: "On your custom tab, as soon as members log shared expenses that cross over, tapping 'Run Tangle Netting' will calculate the optimal minimal payments.",
+      demo: "In the Lisbon benchmark, 9 cross-border transfers across EUR, GBP, and USD collapse into just 3 direct AUSD payments ($391.54 net liquidity).",
+      customTab: "On your custom tab, as soon as members log shared expenses that cross over, tapping 'Run Netting' will calculate the optimal minimal payments.",
       cleanSlate: "Start by creating a tab and logging 3-4 expenses among members to see the netting matrix in action!"
     },
     actions: [
@@ -111,11 +111,11 @@ export const KB_ARTICLES: KBArticle[] = [
     id: "netting-lisbon-benchmark",
     categoryId: "netting",
     title: "The Lisbon '24 Netting Benchmark Explained",
-    keywords: ["lisbon", "benchmark", "75%", "reduction", "aisha", "villa", "12", "3 payments"],
-    summary: "The benchmark demonstrates 4 international travelers who spent $1,200 across 12 crisscrossing debts. Netting reduces this to 3 direct payments.",
-    detailedContent: "In the pre-loaded Lisbon trip:\n1. Total Expenses: $1,200 spent across 4 friends (Aisha, Kemi, Ben, and You).\n2. Gross Debt Matrix: 12 separate peer-to-peer transfers totaling $1,200.\n3. Netting Algorithm: Collapses all mutual counter-claims.\n4. Result: Only 3 direct payments totaling $300 are required (all paid to Aisha who covered the $600 villa). $900 in international payment volume is cleared instantly with zero transfer fees. *Note: Efficiency claims showing larger savings (e.g., $3,400) represent historical cumulative cycles.*",
+    keywords: ["lisbon", "benchmark", "aisha", "villa", "9 to 3", "3 payments"],
+    summary: "The benchmark demonstrates 4 international travelers with $1,499.10 in shared expenses across EUR, GBP, and USD, collapsing 9 transfers to 3 direct payments.",
+    detailedContent: "In the pre-loaded Lisbon trip:\n1. Total Expenses: $1,499.10 across 4 friends (Aisha, Kemi, Ben, and You) in EUR, GBP, and USD.\n2. Siloed Splitwise Matrix: 9 separate cross-border transfers across 3 different bank accounts and currencies.\n3. MeshTab Netting Engine: Normalizes currencies into AUSD at entry and calculates optimal net settlement paths.\n4. Result: Exactly 3 direct payments totaling $391.54 AUSD settle the entire trip (Ben pays Aisha $16.77, You pay Aisha $327.95, You pay Kemi $46.82).",
     contextAdvice: {
-      demo: "You are currently viewing this exact benchmark! Check the Netting graph and tap 'Run Tangle Netting'.",
+      demo: "You are currently viewing this exact benchmark! Check the Netting graph and tap 'Run Netting'.",
       customTab: "This benchmark is separate from your custom tab. You can view it anytime from the Demo Selector.",
       cleanSlate: "You can restore the Lisbon benchmark at any time from the Mode button or /demo."
     },
@@ -287,7 +287,7 @@ export const KB_ARTICLES: KBArticle[] = [
     categoryId: "sandbox",
     title: "What is the difference between Sample Trip and Clean Slate?",
     keywords: ["sample", "clean slate", "demo", "mock", "blank", "switch", "sandbox", "modes"],
-    summary: "Sample Trip loads the Lisbon '24 benchmark ($1,200, 4 members) to explore netting. Clean Slate hides all mock data so you can test the main app from scratch.",
+    summary: "Sample Trip loads the Lisbon '24 benchmark ($1,499.10 across 3 currencies, 4 members) to explore netting. Clean Slate hides all mock data so you can test the main app from scratch.",
     detailedContent: "You can explore MeshTab in two interactive ways:\n- **Sample Trip Mode**: Instantly shows an active group vacation with pre-populated expenses, netting graph visualizations, and settling flows ready to test.\n- **Clean Slate Mode**: Wipes sample tabs so you can experience the first-time user onboarding: create a fresh tab, invite members, snap receipts, and test real-time state updates.\nYou can toggle between these modes anytime without losing data!",
     actions: [
       { label: "Open Demo Sandbox Selector", type: "navigate", destination: "/demo" },

@@ -16,10 +16,10 @@ const CHAOS_POS = [
 ];
 
 const NETTED_POS = [
-  { top: "50%", left: "50%" }, // Center (Creditor)
-  { top: "15%", left: "50%" }, // Top
-  { top: "85%", left: "15%" }, // Bottom Left
-  { top: "85%", left: "85%" }, // Bottom Right
+  { top: "35%", left: "30%" }, // Aisha (Creditor 1)
+  { top: "35%", left: "70%" }, // Kemi (Creditor 2)
+  { top: "80%", left: "25%" }, // Ben (Debtor 1)
+  { top: "80%", left: "75%" }, // You (Debtor 2)
 ];
 
 export function NettingVisualizer() {
@@ -31,7 +31,7 @@ export function NettingVisualizer() {
   // Generate random floating expenses for the "Chaos" state
   useEffect(() => {
     if (!isNetted) {
-      const amounts = ["$12", "$45", "$120", "$8", "$210", "$34", "$65", "$90"];
+      const amounts = ["€45", "£20", "$85", "€120", "£40", "$15", "€60", "$110"];
       const newNumbers = Array.from({ length: 12 }).map((_, i) => ({
         id: i,
         val: amounts[Math.floor(Math.random() * amounts.length)],
@@ -87,7 +87,7 @@ export function NettingVisualizer() {
                 <div className="w-2.5 h-2.5 mt-1.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)] shrink-0" />
                 <p className="leading-relaxed">
                   <strong className="text-indigo-950 dark:text-indigo-100 font-semibold">Without MeshTab:</strong> 
-                  {" "}4 travelers incur 12 bilateral repayment obligations. Everyone pays everyone, resulting in a chaotic mess of international bank transfers and fees.
+                  {" "}4 travelers incur 9 multi-currency repayment transfers across EUR, GBP, and USD. Everyone pays across borders with foreign wire and conversion fees.
                 </p>
               </div>
               
@@ -95,7 +95,7 @@ export function NettingVisualizer() {
                 <div className="w-2.5 h-2.5 mt-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] shrink-0" />
                 <p className="leading-relaxed">
                   <strong className="text-indigo-950 dark:text-indigo-100 font-semibold">With MeshTab:</strong> 
-                  {" "}Click <em>"Untangle it"</em> below. Our graph algorithm cancels out circular debt loops, collapsing 12 transfers down to 3 direct payments.
+                  {" "}Click <em>"Untangle it"</em> below. Our netting algorithm converts at Pyth mid-market rates and collapses 9 multi-currency transfers into just 3 direct AUSD payments ($391.54 net liquidity).
                 </p>
               </div>
             </div>
@@ -140,22 +140,25 @@ export function NettingVisualizer() {
                     transition={{ duration: 0.3 }}
                     className="text-emerald-500 dark:text-emerald-400"
                   >
+                    {/* Ben (Debtor) -> Aisha (Creditor) */}
                     <motion.path 
-                      d="M 200 60 L 200 200" 
+                      d="M 100 320 L 120 140" 
                       fill="none" stroke="currentColor" strokeWidth="3" 
                       initial={{ pathLength: 0 }}
                       animate={{ pathLength: 1 }}
                       transition={{ duration: 0.6, ease: "easeOut", delay: 0.6 }}
                     />
+                    {/* You (Debtor) -> Aisha (Creditor) */}
                     <motion.path 
-                      d="M 60 340 L 200 200" 
+                      d="M 300 320 L 120 140" 
                       fill="none" stroke="currentColor" strokeWidth="3" 
                       initial={{ pathLength: 0 }}
                       animate={{ pathLength: 1 }}
                       transition={{ duration: 0.6, ease: "easeOut", delay: 0.8 }}
                     />
+                    {/* You (Debtor) -> Kemi (Creditor) */}
                     <motion.path 
-                      d="M 340 340 L 200 200" 
+                      d="M 300 320 L 280 140" 
                       fill="none" stroke="currentColor" strokeWidth="3" 
                       initial={{ pathLength: 0 }}
                       animate={{ pathLength: 1 }}
@@ -176,14 +179,14 @@ export function NettingVisualizer() {
                   transition={{ duration: 0.4, delay: 1.4 }}
                   className="absolute inset-0 pointer-events-none z-10"
                 >
-                  <div className="absolute top-[30%] left-[50%] -translate-x-1/2 -translate-y-1/2 bg-emerald-100 dark:bg-emerald-900/80 text-emerald-800 dark:text-emerald-100 text-xs font-bold px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-700/50 shadow-sm whitespace-nowrap backdrop-blur-md">
-                    {roles[1]} pays $180
+                  <div className="absolute top-[58%] left-[22%] -translate-x-1/2 -translate-y-1/2 bg-emerald-100 dark:bg-emerald-900/80 text-emerald-800 dark:text-emerald-100 text-xs font-bold px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-700/50 shadow-sm whitespace-nowrap backdrop-blur-md">
+                    Ben pays Aisha $16.77
                   </div>
-                  <div className="absolute top-[75%] left-[25%] -translate-x-1/2 -translate-y-1/2 bg-emerald-100 dark:bg-emerald-900/80 text-emerald-800 dark:text-emerald-100 text-xs font-bold px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-700/50 shadow-sm whitespace-nowrap backdrop-blur-md">
-                    {roles[2]} pays $80
+                  <div className="absolute top-[50%] left-[52%] -translate-x-1/2 -translate-y-1/2 bg-emerald-100 dark:bg-emerald-900/80 text-emerald-800 dark:text-emerald-100 text-xs font-bold px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-700/50 shadow-sm whitespace-nowrap backdrop-blur-md">
+                    You pay Aisha $327.95
                   </div>
-                  <div className="absolute top-[75%] left-[75%] -translate-x-1/2 -translate-y-1/2 bg-emerald-100 dark:bg-emerald-900/80 text-emerald-800 dark:text-emerald-100 text-xs font-bold px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-700/50 shadow-sm whitespace-nowrap backdrop-blur-md">
-                    {roles[3]} pays $40
+                  <div className="absolute top-[58%] left-[80%] -translate-x-1/2 -translate-y-1/2 bg-emerald-100 dark:bg-emerald-900/80 text-emerald-800 dark:text-emerald-100 text-xs font-bold px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-700/50 shadow-sm whitespace-nowrap backdrop-blur-md">
+                    You pay Kemi $46.82
                   </div>
                 </motion.div>
               )}
@@ -195,28 +198,28 @@ export function NettingVisualizer() {
               transition={{ duration: 0.8, ease: "easeInOut", delay: isNetted ? 0.2 : 0 }}
               className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full flex items-center justify-center font-bold z-20 shadow-xl border-2 transition-all duration-700 ${isNetted ? 'w-16 h-16 bg-indigo-600 border-indigo-400 text-white shadow-[0_0_30px_rgba(99,102,241,0.5)]' : 'w-12 h-12 bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-900 dark:text-gray-100'}`}
             >
-              {roles[0]}
+              Aisha
             </motion.div>
             <motion.div
               animate={currentPos[1]}
               transition={{ duration: 0.8, ease: "easeInOut", delay: isNetted ? 0.2 : 0 }}
-              className="absolute -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center text-sm font-semibold border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 z-20 shadow-md"
+              className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full flex items-center justify-center font-bold z-20 shadow-xl border-2 transition-all duration-700 ${isNetted ? 'w-14 h-14 bg-indigo-600 border-indigo-400 text-white shadow-[0_0_20px_rgba(99,102,241,0.4)]' : 'w-12 h-12 bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-sm font-semibold text-gray-900 dark:text-gray-100'}`}
             >
-              {roles[1]}
+              Kemi
             </motion.div>
             <motion.div
               animate={currentPos[2]}
               transition={{ duration: 0.8, ease: "easeInOut", delay: isNetted ? 0.2 : 0 }}
               className="absolute -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center text-sm font-semibold border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 z-20 shadow-md"
             >
-              {roles[2]}
+              Ben
             </motion.div>
             <motion.div
               animate={currentPos[3]}
               transition={{ duration: 0.8, ease: "easeInOut", delay: isNetted ? 0.2 : 0 }}
               className="absolute -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center text-sm font-semibold border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 z-20 shadow-md"
             >
-              {roles[3]}
+              You
             </motion.div>
             
             {/* Floating Expenses */}
@@ -273,9 +276,9 @@ export function NettingVisualizer() {
               <DollarSign className="w-4 h-4" /> Lisbon Receipts Logged
             </div>
             <div className="text-4xl font-black text-gray-900 dark:text-white line-through decoration-rose-500/50 decoration-4">
-              $1,200.00
+              $1,499.10
             </div>
-            <p className="text-xs text-gray-500 mt-2 font-medium">Total gross receipts across 23 Lisbon expenses.</p>
+            <p className="text-xs text-gray-500 mt-2 font-medium">Total gross receipts across 6 Lisbon multi-currency expenses.</p>
           </motion.div>
 
           <motion.div 
@@ -286,9 +289,9 @@ export function NettingVisualizer() {
               <CheckCircle2 className={`w-4 h-4 ${isNetted ? 'text-emerald-600 dark:text-emerald-400' : ''}`} /> Capital To Settle
             </div>
             <div className={`text-4xl font-black transition-colors duration-700 ${isNetted ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-white'}`}>
-              $300.00
+              $391.54
             </div>
-            <p className="text-xs text-gray-500 mt-2 font-medium">The net liquidity required to fully balance all 4 travelers.</p>
+            <p className="text-xs text-gray-500 mt-2 font-medium">The net liquidity required to fully balance all 4 travelers in AUSD.</p>
           </motion.div>
 
           <motion.div 
@@ -301,16 +304,16 @@ export function NettingVisualizer() {
                   <TrendingDown className={`w-4 h-4 ${isNetted ? 'text-indigo-600 dark:text-indigo-400' : ''}`} /> Transfers Reduced
                 </div>
                 <div className={`text-3xl font-black transition-colors duration-700 ${isNetted ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-900 dark:text-white'}`}>
-                  75.0%
+                  66.7%
                 </div>
               </div>
               <div className="h-10 px-4 bg-slate-100 dark:bg-black rounded-full flex items-center justify-center border border-gray-200 dark:border-white/10 shadow-xs shrink-0 font-mono">
-                <span className="text-base font-bold text-slate-500">12</span>
+                <span className="text-base font-bold text-slate-500">9</span>
                 <span className="text-xs text-slate-400 mx-2">→</span>
                 <span className="text-base font-black text-indigo-600 dark:text-indigo-400">3</span>
               </div>
             </div>
-            <p className="text-xs text-gray-500 mt-2 font-medium">Circular debt canceled without unnecessary intermediate wires.</p>
+            <p className="text-xs text-gray-500 mt-2 font-medium">Multi-currency debts collapsed into direct AUSD payments.</p>
           </motion.div>
         </div>
       </div>

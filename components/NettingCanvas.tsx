@@ -72,10 +72,10 @@ export function NettingCanvas({
     if (mode === "sample" && tabId === "lisbon-24") {
       // Default benchmark roster (Lisbon '24)
       return [
-        { name: "Aisha", balance: 30000 },
-        { name: "Ben", balance: -8000 },
-        { name: activeName, balance: -18000 },
-        { name: "Kemi", balance: -4000 }
+        { name: "Aisha", balance: 34472 },
+        { name: "Kemi", balance: 4682 },
+        { name: "Ben", balance: -1677 },
+        { name: activeName, balance: -37477 }
       ];
     }
     return [{ name: activeName, balance: 0, role: "admin" }];
@@ -297,21 +297,21 @@ export function NettingCanvas({
       setNettingState("simplified");
       sounds.playSuccessChime();
       fireSettlementConfetti();
-      const clearedAmount = `${formatCurrency(Math.round(totalActiveDebt * 0.75))} (75%)`;
-      toast.success("Tangle Graph Optimized!", {
-        description: `Cleared ${clearedAmount} in redundant transfers via Monad Netting.`
+      const netLiquidity = formatCurrency(totalActiveDebt);
+      toast.success("Netting Engine Optimized!", {
+        description: `Debts collapsed into ${simplifiedEdges.length} direct settlements (${netLiquidity} net liquidity).`
       });
 
       try {
         // Send a general notification about the optimization
         addNotification({
           type: "netting",
-          title: "Tangle Netting Optimized",
-          desc: `Netting algorithm simplified debts in ${tabId === "lisbon-24" ? "Lisbon Weekend" : "Group Tab"}. Cleared ${clearedAmount} in redundant transfers.`,
+          title: "Netting Engine Optimized",
+          desc: `Netting algorithm simplified debts in ${tabId === "lisbon-24" ? "Lisbon Weekend" : "Group Tab"}. Debts collapsed into ${simplifiedEdges.length} direct settlements (${netLiquidity} net liquidity).`,
           actor: "Mesh Engine",
           tabId,
           tabName: tabId === "lisbon-24" ? "Lisbon Weekend" : "Group Tab",
-          amount: Math.round(totalActiveDebt * 0.75),
+          amount: totalActiveDebt,
           link: `/tab/${tabId}`
         });
 
@@ -350,7 +350,7 @@ export function NettingCanvas({
             </div>
             <div>
               <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                The Tangle Netting Graph
+                The Netting Graph
               </h3>
               <p className="text-xs text-slate-500 dark:text-white/50">Multilateral Debt Netting • Monad Fast Finality</p>
             </div>
@@ -367,7 +367,7 @@ export function NettingCanvas({
           <div className="space-y-1.5 max-w-sm mx-auto">
             <h4 className="font-bold text-base text-slate-900 dark:text-white">Awaiting Group Expenses</h4>
             <p className="text-xs text-slate-600 dark:text-white/80 leading-relaxed">
-              Multilateral Netting collapses circular payment loops (A owes B, B owes C, C owes A) across multiple members.
+              Multilateral Netting calculates net positions across group members and collapses mutual debts into minimal direct payments.
               Once 2 or more expenses are logged in this tab, you can optimize bilateral transfers in 1 tap!
             </p>
           </div>
@@ -401,10 +401,10 @@ export function NettingCanvas({
           </div>
           <div>
             <h3 className="text-slate-900 dark:text-white font-bold text-base sm:text-lg flex items-center gap-2">
-              The Tangle Netting Graph
+              The Netting Graph
             </h3>
             <p className="text-xs text-slate-500 dark:text-white/50">
-              Multilateral Loop Cancellation • Monad Engine
+              Multilateral Debt Netting • Monad Engine
             </p>
           </div>
         </div>
@@ -415,11 +415,11 @@ export function NettingCanvas({
           </span>
         ) : nettingState === "simplified" ? (
           <span className="bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 shadow-sm">
-            <CheckCircle2 className="w-3.5 h-3.5" /> 75% Volume Cleared
+            <CheckCircle2 className="w-3.5 h-3.5" /> Netting Optimized
           </span>
         ) : (
           <span className="bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5">
-            <RefreshCw className="w-3 h-3 animate-spin" /> Un-Netted Loops
+            <RefreshCw className="w-3 h-3 animate-spin" /> Un-Netted Transfers
           </span>
         )}
       </div>
@@ -770,7 +770,7 @@ export function NettingCanvas({
               {hasActiveDebts ? "Netted Capital Required" : "Ledger Status"}
             </p>
             <p className="text-lg sm:text-xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
-              {hasActiveDebts ? formatCurrency(Math.round(totalActiveDebt * 0.25)) : "100% Balanced"}
+              {hasActiveDebts ? formatCurrency(totalActiveDebt) : "100% Balanced"}
             </p>
           </div>
         </div>
@@ -797,7 +797,7 @@ export function NettingCanvas({
             </button>
           ) : (
             <div className="w-full py-3.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 rounded-2xl font-bold text-sm flex justify-center items-center gap-2">
-              <CheckCircle2 className="w-5 h-5" /> 75.0% Debt Volume Cleared
+              <CheckCircle2 className="w-5 h-5" /> Netting Optimized • {simplifiedEdges.length} Direct Payments
             </div>
           )}
         </div>

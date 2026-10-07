@@ -1,19 +1,19 @@
 export const LANDING_CONTENT = {
   metadata: {
     title: "MeshTab | The End of Group Debt · Netted & Settled on Monad",
-    description: "Log shared expenses by photo, voice, or text. MeshTab untangles group debts from 12 transfers to 3, then settles them in one tap on Monad. Zero gas fees.",
+    description: "Log shared expenses by photo, voice, or text. MeshTab untangles group debts from 9 transfers to 3, then settles them in one tap on Monad. Zero gas fees.",
     keywords: ["Monad", "expense tracker", "debt netting", "stablecoin settlement", "gasless", "passkeys", "fintech", "travel expenses"],
   },
   hero: {
     badge: "Live on Monad Testnet · Sponsored Gas",
     headline: "The end of group debt.",
     headlineHighlight: "Nobody chases anybody.",
-    subheadline: "Log expenses by photo, voice, or text in any currency. MeshTab collapses 12 crisscrossing debts into 3 direct transfers, then settles them in one tap using your phone's fingerprint or face scan.",
+    subheadline: "Log expenses by photo, voice, or text in any currency. MeshTab collapses 9 multi-currency transfers into 3 direct AUSD payments, then settles them in one tap using your phone's fingerprint or face scan.",
     primaryCta: "Open the Lisbon Trip",
     primaryCtaMicro: "No account or wallet required · Takes 30 seconds",
     secondaryCta: "Testnet Settlement",
     metrics: [
-      { label: "Fewer Transfers", val: "75%" },
+      { label: "Fewer Transfers", val: "67%" },
       { label: "Gas Fees", val: "$0" },
       { label: "Settlement Finality", val: "~400ms" },
       { label: "Live Currencies", val: "7" }
@@ -29,29 +29,29 @@ export const LANDING_CONTENT = {
     ],
   },
   nettingVisualizer: {
-    stakes: "Four friends. Nine days in Lisbon. 23 expenses across three currencies. Here is what settling up actually looks like.",
+    stakes: "Four friends. Lisbon trip. 6 expenses across 3 currencies (EUR, GBP, USD). Here is what settling up actually looks like.",
     title: "Watch the math untangle.",
-    description: "12 crisscrossing debt obligations collapse into 3 direct transfers. $900 of circular debt resolved; only $300 of net liquidity needs to move.",
+    description: "9 fragmented cross-border transfers collapse into just 3 direct payments in AUSD. $391.54 of net liquidity clears the entire trip.",
     cta: "Untangle it",
     resetCta: "Reset to Chaos",
     demoLink: "Open this exact Lisbon trip in the demo →",
   },
   settlementMoment: {
     badge: "The Settlement Engine",
-    title: "Splitwise calculates who owes whom. MeshTab actually completes the payment.",
-    description: "Other apps leave you stranded to copy IBANs, chase Venmo requests, or pay 4% foreign exchange markups across disparate banking apps. MeshTab executes the final settlement schedule in a single atomic transaction on Monad.",
+    title: "Legacy apps tell you who owes whom. MeshTab actually clears the balance.",
+    description: "Traditional splitting apps lack cross-border settlement rails, leaving international travel groups stranded with manual bank wires and exchange markups. MeshTab executes the final settlement schedule in one tap on Monad.",
     metrics: [
-      { title: "Execution Speed", val: "400ms", desc: "Instant finality on Monad" },
+      { title: "Execution Speed", val: "800ms", desc: "Consensus finality on Monad" },
       { title: "User Gas Cost", val: "$0.00", desc: "Sponsored via Pimlico ERC-4337" },
       { title: "Authentication", val: "Passkey", desc: "Native Face ID / Touch ID" }
     ]
   },
   problemAgitation: {
     title: "Splitting a trip is easy. Paying it back isn't.",
-    description: "Four friends travel to Lisbon. Over nine days they accumulate 23 shared expenses across Euros, British Pounds, and US Dollars. Here is how the traditional payment system breaks down.",
+    description: "Four friends travel to Lisbon. Over their trip they accumulate shared expenses across Euros, British Pounds, and US Dollars. Here is where traditional payment systems break down.",
     painPoints: [
-      { title: "The Circle of Debt", desc: "If Aisha owes Kemi $50, and Kemi owes Ben $50, friends make multiple bank transfers instead of letting mutual obligations cancel out." },
-      { title: "The 3% Bank Cut", desc: "Every time friends pay each other across international borders, banks and cards take a 3 to 5% foreign exchange spread." },
+      { title: "Siloed Currencies", desc: "Traditional splitting tools don't net across different currencies, leaving groups with 9 separate international transfers across multiple bank accounts." },
+      { title: "Bank & Card Fees", desc: "Traditional payment rails often add foreign-transaction fees and FX markups on cross-border wires." },
       { title: "The Spreadsheet Trap", desc: "Someone spends hours in a spreadsheet trying to reconcile receipts, then spends three weeks chasing friends in WhatsApp." }
     ]
   },
@@ -83,13 +83,13 @@ export const LANDING_CONTENT = {
       {
         tag: "Live on Testnet",
         title: "Real-Time Pyth Network FX",
-        desc: "Live mid-market currency feeds across 7 global currencies. Log in EUR, settle in USD with zero bank markups.",
+        desc: "Live mid-market currency feeds across 6 major global currencies plus USD. Log in EUR, settle in AUSD with zero bank markups.",
         icon: "Coins"
       },
       {
         tag: "Live on Testnet",
         title: "Offline-First PWA Sync",
-        desc: "Log expenses on an airplane or without cellular coverage. Changes queue locally in IndexedDB and reconcile automatically on reconnect.",
+        desc: "Log expenses on an airplane or without cellular coverage. Changes queue locally in a persistent outbox and reconcile automatically on reconnect.",
         icon: "WifiOff"
       }
     ]
@@ -98,13 +98,13 @@ export const LANDING_CONTENT = {
     title: "What is live today vs. what comes next",
     description: "Radical transparency: the core settlement engine is live; consumer banking rails are planned.",
     live: [
-      { name: "Bipartite Netting Engine", detail: "Graph debt cancellation off-chain" },
+      { name: "Netting Engine", detail: "Greedy net-position matching off-chain" },
       { name: "Monad Settlement Contract", detail: "MeshTabLedger verified on testnet" },
       { name: "Biometric Passkey Accounts", detail: "Embedded smart accounts via Privy" },
       { name: "Sponsored Gas Relaying", detail: "ERC-4337 paymaster via Pimlico" },
       { name: "Gemini Flash OCR (Latest)", detail: "Receipt parsing with automated multi-tier fallback" },
-      { name: "Pyth Oracle FX Feeds", detail: "Live mid-market rates for 7 currencies" },
-      { name: "Offline Sync Outbox", detail: "IndexedDB local-first reconciliation" }
+      { name: "Pyth Oracle FX Feeds", detail: "Live mid-market rates for 6 currencies" },
+      { name: "Offline Sync Outbox", detail: "Persistent local-first reconciliation" }
     ],
     inDevelopment: [
       { name: "Fiat Card / Bank On-Ramp", detail: "Deposit local currency directly into AUSD" },
@@ -113,14 +113,14 @@ export const LANDING_CONTENT = {
     ]
   },
   comparison: {
-    title: "Splitwise vs. MeshTab",
-    headers: ["Workflow Step", "MeshTab", "Splitwise + Bank Apps"],
+    title: "Traditional Splitters vs. MeshTab",
+    headers: ["Workflow Step", "MeshTab", "Legacy Apps + Bank Wires"],
     rows: [
-      { feature: "Expense Logging", them: "Manual entry only", us: "Photo OCR + Voice + Offline" },
-      { feature: "Debt Simplification", them: "Calculates IOU list (math only)", us: "Bipartite Graph Netting (12 → 3)" },
-      { feature: "Payment Execution", them: "None (leaves you to Venmo/Wires)", us: "One-tap on-chain execution (400ms)" },
+      { feature: "Expense Logging", them: "Manual entry (or paid subs)", us: "Photo OCR + Voice + Offline" },
+      { feature: "Debt Simplification", them: "Siloed per currency (9 transfers)", us: "Cross-Currency Netting (9 → 3 in AUSD)" },
+      { feature: "Payment Execution", them: "Manual wires & bank transfers", us: "One-tap on-chain execution (800ms)" },
       { feature: "Account Setup", them: "Email & password required", us: "Face ID / Touch ID (Passkey)" },
-      { feature: "Cross-Border FX", them: "3–5% bank markup on each wire", us: "0% markup (Pyth Oracle rates)" }
+      { feature: "Cross-Border FX", them: "Bank conversion spreads", us: "Pyth Oracle mid-market rates" }
     ]
   },
   faq: [
@@ -134,11 +134,11 @@ export const LANDING_CONTENT = {
     },
     {
       question: "What happens if someone doesn't pay?",
-      answer: "MeshTab's settlement is atomic: everyone reviews the netted schedule, and transfers execute directly on-chain so balances clear cleanly without debt reassignment ambiguity."
+      answer: "MeshTab does not custody user funds. Settlement is peer-to-peer and requires each debtor's biometric approval. The app calculates the netted schedule and transfers execute directly on-chain so balances clear cleanly without debt reassignment ambiguity. Smart escrow reserves are on our post-hackathon roadmap."
     },
     {
-      question: "Why not just use Splitwise?",
-      answer: "Splitwise gives you an IOU list and abandons you to chase friends across banking apps. MeshTab completes the payment right inside the tab in one tap."
+      question: "Why not just use traditional expense splitting apps?",
+      answer: "Traditional group splitting apps only calculate who owes whom—they don't settle debts across borders or currencies. Users are left chasing friends across messaging threads, banking apps, and international wire transfers with heavy foreign exchange markups. MeshTab collapses multi-currency debt and settles the entire trip in one biometric tap using AUSD on Monad."
     },
     {
       question: "Is this real money?",

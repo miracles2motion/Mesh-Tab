@@ -35,7 +35,7 @@ function DemoContent() {
     resetLisbonDemo();
     sounds.playSuccessChime();
     toast.success("Loaded Lisbon Trip Demo", {
-      description: "Pre-loaded with 4 members, $1,200 expenses, and un-netted debts."
+      description: "Pre-loaded with 4 members, $1,499.10 across 3 currencies, and un-netted debts."
     });
     router.push("/home");
   };
@@ -117,14 +117,14 @@ function DemoContent() {
               </p>
 
               <p className="text-sm text-slate-600 dark:text-white/70 leading-relaxed mb-6">
-                Pre-populated with 4 international travelers, $1,200 in shared trip expenses, and 12 crisscrossing debt loops ready to simplify.
+                Pre-populated with 4 international travelers, $1,499.10 across EUR, GBP, and USD, ready to collapse 9 cross-border transfers into 3 direct AUSD payments.
               </p>
 
               {/* Feature Chips */}
               <div className="space-y-3 mb-8">
                 <div className="flex items-start gap-2.5 text-xs text-slate-700 dark:text-white/80">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                  <span><strong>Tangle Netting Visualizer:</strong> Collapse 12 crisscrossing debts into 3 direct payments ($900 cleared).</span>
+                  <span><strong>Netting Engine:</strong> Collapse 9 multi-currency transfers into 3 direct AUSD payments ($391.54 net liquidity).</span>
                 </div>
                 <div className="flex items-start gap-2.5 text-xs text-slate-700 dark:text-white/80">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />

@@ -27,11 +27,11 @@ export const SAMPLE_NOTIFICATIONS: AppNotification[] = [
     id: "notif-sample-1",
     type: "expense",
     title: "New Expense Added",
-    desc: "Aisha paid $600.00 for 'Villa booking' in Lisbon Weekend.",
+    desc: "Aisha paid €550.00 ($599.50) for 'Villa Booking' in Lisbon Weekend.",
     actor: "Aisha",
     tabId: "lisbon-24",
     tabName: "Lisbon Weekend",
-    amount: 60000,
+    amount: 59950,
     timestamp: Date.now() - 2 * 60 * 1000, // 2m ago
     unread: true,
     link: "/tab/lisbon-24"
@@ -39,8 +39,8 @@ export const SAMPLE_NOTIFICATIONS: AppNotification[] = [
   {
     id: "notif-sample-2",
     type: "netting",
-    title: "Tangle Netting Optimized",
-    desc: "Debts across 4 members were simplified. 12 transfers collapsed into 3 payments.",
+    title: "Netting Engine Optimized",
+    desc: "Debts across 4 members were simplified. 9 multi-currency transfers collapsed into 3 payments.",
     actor: "Mesh Engine",
     tabId: "lisbon-24",
     tabName: "Lisbon Weekend",
@@ -52,11 +52,11 @@ export const SAMPLE_NOTIFICATIONS: AppNotification[] = [
     id: "notif-sample-3",
     type: "expense",
     title: "New Expense Added",
-    desc: "Kemi paid $260.00 for 'Dinners & wine' in Lisbon Weekend.",
+    desc: "Kemi paid €240.00 ($261.60) for 'Dinners & Wine' in Lisbon Weekend.",
     actor: "Kemi",
     tabId: "lisbon-24",
     tabName: "Lisbon Weekend",
-    amount: 26000,
+    amount: 26160,
     timestamp: Date.now() - 5 * 60 * 60 * 1000, // 5h ago
     unread: false,
     link: "/tab/lisbon-24"
@@ -65,11 +65,11 @@ export const SAMPLE_NOTIFICATIONS: AppNotification[] = [
     id: "notif-sample-4",
     type: "settlement",
     title: "Settlement Received",
-    desc: "Ben settled his $80.00 balance in AUSD on Monad.",
+    desc: "Ben settled his $16.77 balance in AUSD on Monad.",
     actor: "Ben",
     tabId: "lisbon-24",
     tabName: "Lisbon Weekend",
-    amount: 8000,
+    amount: 1677,
     timestamp: Date.now() - 24 * 60 * 60 * 1000, // Yesterday
     unread: false,
     link: "/tab/lisbon-24"

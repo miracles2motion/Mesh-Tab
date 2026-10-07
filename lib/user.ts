@@ -277,7 +277,7 @@ export interface TabSummary {
 }
 
 export const SAMPLE_BENCHMARK_TABS: TabSummary[] = [
-  { id: "lisbon-24", name: "Lisbon Weekend", creator: "Aisha", role: "Member", balance: -27000, memberCount: 4, createdAt: Date.now() - 86400000 * 3, lastActivityAt: Date.now() - 7200000 },
+  { id: "lisbon-24", name: "Lisbon Weekend", creator: "Aisha", role: "Member", balance: -37477, memberCount: 4, createdAt: Date.now() - 86400000 * 3, lastActivityAt: Date.now() - 7200000 },
   { id: "miami-boat", name: "Miami Boat Trip", creator: "You", role: "Creator", balance: 50000, memberCount: 3, createdAt: Date.now() - 86400000 * 1, lastActivityAt: Date.now() - 300000 },
 ];
 
@@ -332,7 +332,7 @@ export function resetLisbonDemo() {
   // 1. Reset Lisbon tab members
   const defaultList: TabMember[] = [
     ...DEFAULT_LISBON_MEMBERS,
-    { name: activeUser, balance: -27000, type: "debtor", role: "member" }
+    { name: activeUser, balance: -37477, type: "debtor", role: "member" }
   ];
   localStorage.setItem("meshTab_members_lisbon-24", JSON.stringify(defaultList));
 
@@ -619,9 +619,9 @@ export interface TabMember {
 }
 
 export const DEFAULT_LISBON_MEMBERS: TabMember[] = [
-  { name: "Aisha", balance: 33000, type: "creditor", role: "admin" },
-  { name: "Kemi", balance: -1000, type: "debtor", role: "member" },
-  { name: "Ben", balance: -5000, type: "debtor", role: "member" },
+  { name: "Aisha", balance: 34472, type: "creditor", role: "admin" },
+  { name: "Kemi", balance: 4682, type: "creditor", role: "member" },
+  { name: "Ben", balance: -1677, type: "debtor", role: "member" },
 ];
 
 export function getStoredTabMembers(tabId: string, currentUserName?: string): TabMember[] {
@@ -632,7 +632,7 @@ export function getStoredTabMembers(tabId: string, currentUserName?: string): Ta
     if (mode === "sample" && tabId === "lisbon-24") {
       return [
         ...DEFAULT_LISBON_MEMBERS,
-        { name: activeUser, balance: -27000, type: "debtor", role: "member" }
+        { name: activeUser, balance: -37477, type: "debtor", role: "member" }
       ];
     }
     return [{ name: activeUser, balance: 0, type: "settled", role: "admin" }];
@@ -677,7 +677,7 @@ export function getStoredTabMembers(tabId: string, currentUserName?: string): Ta
     if (tabId === "lisbon-24") {
       const defaultList: TabMember[] = [
         ...DEFAULT_LISBON_MEMBERS,
-        { name: activeUser, balance: -27000, type: "debtor", role: "member" }
+        { name: activeUser, balance: -37477, type: "debtor", role: "member" }
       ];
       safeSetItem(storageKeyStr, JSON.stringify(defaultList));
       return defaultList;
@@ -805,11 +805,12 @@ export interface StoredExpense {
 
 export const DEFAULT_FEED: Record<string, StoredExpense[]> = {
   "lisbon-24": [
-    { id: "1", payer: "Aisha", amount: 60000, desc: "Villa booking", time: "Just now", createdAt: Date.now() - 3600000, splitType: "equal", participants: ["Aisha", "Kemi", "Ben", "You"], category: "stay", originalCurrency: "EUR", originalAmount: 555.50 },
-    { id: "2", payer: "Kemi", amount: 26000, desc: "Dinners & wine", time: "5h ago", createdAt: Date.now() - 18000000, splitType: "equal", participants: ["Aisha", "Kemi", "Ben", "You"], category: "dining", originalCurrency: "EUR", originalAmount: 240.00 },
-    { id: "3", payer: "Ben", amount: 22000, desc: "Excursions", time: "1d ago", createdAt: Date.now() - 86400000, splitType: "equal", participants: ["Aisha", "Kemi", "Ben", "You"], category: "activities", originalCurrency: "EUR", originalAmount: 203.70 },
-    { id: "settle-ls-1", payer: "You", amount: 15000, desc: "Settled up with Aisha", time: "2d ago", createdAt: Date.now() - 172800000, splitType: "exact", splits: { "Aisha": 15000 }, category: "other" },
-    { id: "4", payer: "Aisha", amount: 15000, desc: "Sightseeing tickets", time: "3d ago", createdAt: Date.now() - 259200000, splitType: "exact", splits: { "You": 15000 }, category: "activities", originalCurrency: "EUR", originalAmount: 138.89 },
+    { id: "1", payer: "Aisha", amount: 59950, desc: "Villa Booking", time: "Just now", createdAt: Date.now() - 3600000, splitType: "equal", participants: ["Aisha", "Kemi", "Ben", "You"], category: "stay", originalCurrency: "EUR", originalAmount: 550.00 },
+    { id: "2", payer: "Kemi", amount: 26160, desc: "Dinners & Wine", time: "5h ago", createdAt: Date.now() - 18000000, splitType: "equal", participants: ["Aisha", "Kemi", "Ben", "You"], category: "dining", originalCurrency: "EUR", originalAmount: 240.00 },
+    { id: "3", payer: "Ben", amount: 21800, desc: "Sintra Excursion", time: "1d ago", createdAt: Date.now() - 86400000, splitType: "equal", participants: ["Aisha", "Kemi", "Ben", "You"], category: "activities", originalCurrency: "EUR", originalAmount: 200.00 },
+    { id: "4", payer: "Kemi", amount: 16000, desc: "Flight Upgrade", time: "2d ago", createdAt: Date.now() - 172800000, splitType: "equal", participants: ["Aisha", "Kemi", "Ben", "You"], category: "transit", originalCurrency: "GBP", originalAmount: 125.00 },
+    { id: "5", payer: "Aisha", amount: 12000, desc: "Airport Transfers", time: "3d ago", createdAt: Date.now() - 259200000, splitType: "equal", participants: ["Aisha", "Kemi", "Ben", "You"], category: "transit", originalCurrency: "USD", originalAmount: 120.00 },
+    { id: "6", payer: "Ben", amount: 14000, desc: "Sunset Cruise", time: "4d ago", createdAt: Date.now() - 345600000, splitType: "equal", participants: ["Aisha", "Kemi", "Ben", "You"], category: "activities", originalCurrency: "USD", originalAmount: 140.00 },
   ],
   "miami-boat": [
     { id: "mb-1", payer: "You", amount: 150000, desc: "Yacht Rental", time: "2 days ago", createdAt: Date.now() - 172800000, splitType: "equal", participants: ["You", "John", "Sarah"], category: "activities" },
@@ -829,16 +830,6 @@ export function getStoredExpenses(tabId: string): StoredExpense[] {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        // Auto-inject missing demo settlement into existing cached sessions (only in sample mode)
-        if (mode === "sample" && tabId === "lisbon-24" && !parsed.some(e => e.id === "settle-ls-1")) {
-          const settlement = DEFAULT_FEED["lisbon-24"].find(e => e.id === "settle-ls-1");
-          const offsetExpense = DEFAULT_FEED["lisbon-24"].find(e => e.id === "4");
-          if (settlement && offsetExpense) {
-            const updated = [...parsed, settlement, offsetExpense];
-            safeSetItem(storageKeyStr, JSON.stringify(updated));
-            return updated;
-          }
-        }
         return parsed;
       }
     }
@@ -1558,20 +1549,23 @@ export function seedDemoExpenses(tabId: string, currentUserName?: string) {
 
   // 1. Seed members: Aisha, Kemi, Ben, and activeUser
   const demoMembers: TabMember[] = [
-    { name: "Aisha", balance: 30000, type: "creditor", role: "member" },
-    { name: "Kemi", balance: -4000, type: "debtor", role: "member" },
-    { name: "Ben", balance: -8000, type: "debtor", role: "member" },
-    { name: activeUser, balance: -18000, type: "debtor", role: "admin" }
+    { name: "Aisha", balance: 34472, type: "creditor", role: "member" },
+    { name: "Kemi", balance: 4682, type: "creditor", role: "member" },
+    { name: "Ben", balance: -1677, type: "debtor", role: "member" },
+    { name: activeUser, balance: -37477, type: "debtor", role: "admin" }
   ];
   const membersKey = storageKey("members", mode, tabId);
   safeSetItem(membersKey, JSON.stringify(demoMembers));
 
-  // 2. Seed 3 realistic expenses
+  // 2. Seed 6 realistic multi-currency expenses
   const demoParticipants = ["Aisha", "Kemi", "Ben", activeUser];
   const demoExpenses: StoredExpense[] = [
-    { id: `demo-${Date.now()}-1`, payer: "Aisha", amount: 60000, desc: "Seaside Villa Booking", time: "2h ago", createdAt: Date.now() - 7200000, splitType: "equal", participants: demoParticipants },
-    { id: `demo-${Date.now()}-2`, payer: "Kemi", amount: 26000, desc: "Tasting Menu & Wine", time: "5h ago", createdAt: Date.now() - 18000000, splitType: "equal", participants: demoParticipants },
-    { id: `demo-${Date.now()}-3`, payer: "Ben", amount: 22000, desc: "Catamaran Excursion", time: "1d ago", createdAt: Date.now() - 86400000, splitType: "equal", participants: demoParticipants }
+    { id: `demo-${Date.now()}-1`, payer: "Aisha", amount: 59950, desc: "Villa Booking", time: "Just now", createdAt: Date.now() - 3600000, splitType: "equal", participants: demoParticipants, category: "stay", originalCurrency: "EUR", originalAmount: 550.00 },
+    { id: `demo-${Date.now()}-2`, payer: "Kemi", amount: 26160, desc: "Dinners & Wine", time: "5h ago", createdAt: Date.now() - 18000000, splitType: "equal", participants: demoParticipants, category: "dining", originalCurrency: "EUR", originalAmount: 240.00 },
+    { id: `demo-${Date.now()}-3`, payer: "Ben", amount: 21800, desc: "Sintra Excursion", time: "1d ago", createdAt: Date.now() - 86400000, splitType: "equal", participants: demoParticipants, category: "activities", originalCurrency: "EUR", originalAmount: 200.00 },
+    { id: `demo-${Date.now()}-4`, payer: "Kemi", amount: 16000, desc: "Flight Upgrade", time: "2d ago", createdAt: Date.now() - 172800000, splitType: "equal", participants: demoParticipants, category: "transit", originalCurrency: "GBP", originalAmount: 125.00 },
+    { id: `demo-${Date.now()}-5`, payer: "Aisha", amount: 12000, desc: "Airport Transfers", time: "3d ago", createdAt: Date.now() - 259200000, splitType: "equal", participants: demoParticipants, category: "transit", originalCurrency: "USD", originalAmount: 120.00 },
+    { id: `demo-${Date.now()}-6`, payer: "Ben", amount: 14000, desc: "Sunset Cruise", time: "4d ago", createdAt: Date.now() - 345600000, splitType: "equal", participants: demoParticipants, category: "activities", originalCurrency: "USD", originalAmount: 140.00 },
   ];
   const expensesKey = storageKey("expenses", mode, tabId);
   safeSetItem(expensesKey, JSON.stringify(demoExpenses));
@@ -1581,7 +1575,7 @@ export function seedDemoExpenses(tabId: string, currentUserName?: string) {
   const tabs = getStoredTabs();
   const updatedTabs = tabs.map(t => {
     if (t.id === tabId) {
-      return { ...t, balance: -18000, memberCount: 4, lastActivityAt: Date.now() };
+      return { ...t, balance: -37477, memberCount: 4, lastActivityAt: Date.now() };
     }
     return t;
   });

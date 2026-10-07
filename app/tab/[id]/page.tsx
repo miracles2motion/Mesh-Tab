@@ -62,7 +62,7 @@ function DashboardContent() {
     name: isSampleLisbon
       ? "Lisbon Weekend"
       : rawTabId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-    balance: isSampleLisbon ? -18000 : 0,
+    balance: isSampleLisbon ? -37477 : 0,
     role: isCurrentUserCreator ? ("Creator" as const) : ("Member" as const),
     creator: creatorName,
     memberCount: activeMembers.length > 0 ? activeMembers.length : 1,
