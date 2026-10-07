@@ -712,7 +712,10 @@ export function NettingCanvas({
           </defs>
 
           {/* PAN & ZOOM WRAPPER */}
-          <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`} transform-origin="500 260">
+          <g 
+            transform={`translate(${pan.x}, ${pan.y}) translate(500, 260) scale(${zoom}) translate(-500, -260)`} 
+            style={{ transformOrigin: "500px 260px" }}
+          >
             
             {/* SUBTLE BACKGROUND GRID LINES */}
             <g opacity="0.04" stroke="#ffffff" strokeWidth="1">
