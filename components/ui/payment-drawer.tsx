@@ -3,6 +3,7 @@
 import React, { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Fingerprint, ArrowRight } from "lucide-react";
+import { formatCurrency } from "../../lib/utils";
 
 interface PaymentDrawerProps {
   isOpen: boolean;
@@ -66,7 +67,7 @@ export function PaymentDrawer({ isOpen, onClose, onPay, debtor, creditor, amount
               </p>
               <h2 className="text-2xl font-bold text-zinc-900 dark:text-white">Pay {creditor}</h2>
               <div className="text-4xl font-black mt-2 text-zinc-900 dark:text-white tracking-tighter">
-                ${(amount / 100).toFixed(2)}
+                {formatCurrency(amount)}
                 <span className="text-lg text-zinc-400 ml-1 font-semibold tracking-normal">AUSD</span>
               </div>
             </div>
