@@ -254,33 +254,6 @@ export default function GlobalHub() {
     <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300 pb-36 lg:pb-36">
       <GlobalNav />
       
-      {/* Welcome Bonus Nudge Banner */}
-      {mounted && isTestnetMode && testnetBalance === 0 && !isFetchingBalance && (
-        <div className="max-w-5xl mx-auto px-6 md:px-12 mt-6">
-          <div className="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between shadow-sm animate-in fade-in slide-in-from-top-4 gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-indigo-900 dark:text-indigo-100">Welcome Bonus Pending!</h3>
-                <p className="text-xs text-indigo-700/80 dark:text-indigo-200/80 mt-0.5">
-                  Looks like your account isn't funded yet. Claim your welcome bonus to start netting.
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => {
-                sounds.playClick();
-                setShowFaucetModal(true);
-              }}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all whitespace-nowrap"
-            >
-              Top Up
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Passkey Link Prompt removed to reduce noise - moved to settings */}
 
@@ -419,9 +392,23 @@ export default function GlobalHub() {
                       sounds.playClick();
                       setShowAddFundsModal(true);
                     }}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold shadow-md shadow-indigo-500/25 transition-all cursor-pointer hover:scale-105"
+                    className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-white text-xs font-bold shadow-md transition-all cursor-pointer hover:scale-105 active:scale-95 ${
+                      isTestnetMode && testnetBalance === 0
+                        ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 shadow-purple-500/25"
+                        : "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/25"
+                    }`}
                   >
-                    <Plus className="w-4 h-4" /> Add Funds
+                    {isTestnetMode && testnetBalance === 0 ? (
+                      <>
+                        <Sparkles className="w-4 h-4 text-amber-300" />
+                        <span>Claim $10,000 Agora AUSD</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4" />
+                        <span>Add Funds</span>
+                      </>
+                    )}
                   </button>
                   <button 
                     onClick={() => {
