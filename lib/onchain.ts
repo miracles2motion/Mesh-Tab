@@ -19,7 +19,7 @@ export function useRealAusdBalance(workspaceMode: string) {
       }
       
       if (!isEffectivelyOnline()) {
-        const cached = localStorage.getItem("meshTab_testnet_walletSnapshot");
+        const cached = localStorage.getItem("meshTab_testnet_agoraWalletSnapshot");
         if (cached) {
           const parsed = JSON.parse(cached);
           if (parsed.wallet === walletAddress) {
@@ -41,7 +41,7 @@ export function useRealAusdBalance(workspaceMode: string) {
       });
 
       const rawBalance = await publicClient.readContract({
-        address: (process.env.NEXT_PUBLIC_MOCK_AUSD_ADDRESS as `0x${string}`) || "0xF9bA02Cd0aFc210e0867852eEb0E994B07d9957F",
+        address: (process.env.NEXT_PUBLIC_AGORA_AUSD_ADDRESS as `0x${string}`) || "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC",
         abi: erc20Abi,
         functionName: "balanceOf",
         args: [walletAddress as `0x${string}`],
@@ -57,7 +57,7 @@ export function useRealAusdBalance(workspaceMode: string) {
         isStale: false
       };
 
-      localStorage.setItem("meshTab_testnet_walletSnapshot", JSON.stringify({
+      localStorage.setItem("meshTab_testnet_agoraWalletSnapshot", JSON.stringify({
         cents: newCents,
         at: Date.now(),
         wallet: walletAddress
@@ -81,34 +81,30 @@ export function useRealAusdBalance(workspaceMode: string) {
   };
 }
 
-export function useClaimWelcomeBonus(workspaceMode: string) {
+export function useClaimAgoraFunds(workspaceMode: string) {
   const { client } = useSmartWallets();
   const [isClaiming, setIsClaiming] = useState(false);
   const walletAddress = client?.account?.address;
 
+  // Determine claimed status based on holding Agora AUSD allocation (>= 10,000 AUSD)
   const { data: hasClaimed = false, refetch: checkHasClaimed } = useQuery({
-    queryKey: ["hasClaimedWelcomeBonus", workspaceMode, walletAddress],
+    queryKey: ["hasClaimedAgoraFunds", workspaceMode, walletAddress],
     queryFn: async () => {
       if (workspaceMode !== "testnet" || !walletAddress) return false;
       const publicClient = createPublicClient({
         chain: monadTestnet,
         transport: http(process.env.NEXT_PUBLIC_MONAD_RPC_URL || "https://testnet-rpc.monad.xyz")
       });
-      const claimed = await publicClient.readContract({
-        address: (process.env.NEXT_PUBLIC_MOCK_AUSD_ADDRESS as `0x${string}`) || "0xF9bA02Cd0aFc210e0867852eEb0E994B07d9957F",
-        abi: [{
-          inputs: [{ name: "", type: "address" }],
-          name: "hasReceivedBonus",
-          outputs: [{ name: "", type: "bool" }],
-          stateMutability: "view",
-          type: "function"
-        }],
-        functionName: "hasReceivedBonus",
+      const rawBal = await publicClient.readContract({
+        address: (process.env.NEXT_PUBLIC_AGORA_AUSD_ADDRESS as `0x${string}`) || "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC",
+        abi: erc20Abi,
+        functionName: "balanceOf",
         args: [walletAddress as `0x${string}`],
       });
-      return Boolean(claimed);
+      const balance = parseFloat(formatUnits(rawBal as bigint, 6));
+      return balance >= 10000;
     },
-    staleTime: Infinity,
+    staleTime: 10000,
     enabled: workspaceMode === "testnet" && !!walletAddress,
   });
 
@@ -124,21 +120,22 @@ export function useClaimWelcomeBonus(workspaceMode: string) {
     try {
       setIsClaiming(true);
       
-      const claimAbi = [{
-        "inputs": [],
-        "name": "claimWelcomeBonus",
+      const faucetAbi = [{
+        "inputs": [{ "name": "_receiver", "type": "address" }],
+        "name": "requestFunds",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
       }];
 
       const data = encodeFunctionData({
-        abi: claimAbi,
-        functionName: "claimWelcomeBonus"
+        abi: faucetAbi,
+        functionName: "requestFunds",
+        args: [walletAddress as `0x${string}`]
       });
 
       const txHash = await client.sendTransaction({
-        to: (process.env.NEXT_PUBLIC_MOCK_AUSD_ADDRESS as `0x${string}`) || "0xF9bA02Cd0aFc210e0867852eEb0E994B07d9957F",
+        to: (process.env.NEXT_PUBLIC_AGORA_FAUCET_ADDRESS as `0x${string}`) || "0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C",
         data,
       });
       
@@ -153,14 +150,17 @@ export function useClaimWelcomeBonus(workspaceMode: string) {
     } catch (err: any) {
       const userMessage = err?.message?.includes("Unsupported chain")
         ? "Network connection issue. Please try again in a moment."
-        : err?.message?.includes("already")
-        ? "You've already claimed your welcome bonus!"
-        : "Something went wrong. Please try again.";
+        : err?.message?.includes("Exceeds max")
+        ? "Your wallet already holds the maximum permitted AUSD balance."
+        : "Something went wrong requesting funds from Agora Faucet. Please try again.";
       return { success: false, error: userMessage };
     } finally {
       setIsClaiming(false);
     }
-  }, [client, workspaceMode, checkHasClaimed]);
+  }, [client, workspaceMode, walletAddress, checkHasClaimed]);
 
-  return { claimBonus, isClaiming, hasClaimed, checkHasClaimed };
+  return { claimBonus, claimFunds: claimBonus, isClaiming, hasClaimed, checkHasClaimed };
 }
+
+// Backward-compatible alias for existing imports
+export const useClaimWelcomeBonus = useClaimAgoraFunds;

@@ -85,8 +85,8 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
       try {
         if (!client) throw new Error("Could not find connected embedded wallet.");
 
-        const ausdAddress = (process.env.NEXT_PUBLIC_MOCK_AUSD_ADDRESS || "0xF9bA02Cd0aFc210e0867852eEb0E994B07d9957F") as `0x${string}`;
-        const ledgerAddress = (process.env.NEXT_PUBLIC_MESH_TAB_LEDGER_ADDRESS || "0x43405B9D8E30ff76910009E79131200c862fCA7d") as `0x${string}`;
+        const ausdAddress = (process.env.NEXT_PUBLIC_AGORA_AUSD_ADDRESS || "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC") as `0x${string}`;
+        const ledgerAddress = (process.env.NEXT_PUBLIC_MESH_TAB_LEDGER_ADDRESS || "0x54f02333ea8D80C175A1C8Bdb71ef709cF424C83") as `0x${string}`;
         
         // debtAmount is in cents. AUSD has 6 decimals.
         const amountWei = BigInt(debtAmount) * BigInt(10 ** 4); 

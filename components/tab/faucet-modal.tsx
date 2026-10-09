@@ -28,7 +28,7 @@ export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
   const [justClaimed, setJustClaimed] = useState(false);
 
   const isClaiming = workspaceMode === "testnet" ? isTestnetClaiming : isLocalClaiming;
-  const hasClaimed = workspaceMode === "testnet" ? testnetBalance >= 5000 : virtualBalance > 0;
+  const hasClaimed = workspaceMode === "testnet" ? testnetBalance >= 10000 : virtualBalance > 0;
 
   if (!isOpen) return null;
 
@@ -39,12 +39,12 @@ export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
         setJustClaimed(true);
         sounds.playCoinClink();
         fireFaucetConfetti();
-        toast.success("Welcome bonus claimed!", {
-          description: "$5,000 added to your balance."
+        toast.success("Agora AUSD Claimed!", {
+          description: "$10,000.00 AUSD added to your account."
         });
         setTimeout(() => setJustClaimed(false), 2500);
       } else {
-        toast.info(error || "You've already received your one-time welcome bonus!");
+        toast.info(error || "Your wallet already holds the allocated testnet funds!");
       }
       return;
     }
@@ -118,7 +118,7 @@ export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
           ) : (
             <>
               <Sparkles className="w-4 h-4" />
-              {workspaceMode === "testnet" ? "Claim $5,000 Welcome Bonus" : "Add $500 Sandbox Funds"}
+              {workspaceMode === "testnet" ? "Claim $10,000 Agora AUSD" : "Add $500 Sandbox Funds"}
             </>
           )}
         </Button>

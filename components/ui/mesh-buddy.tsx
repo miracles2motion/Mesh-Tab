@@ -395,11 +395,11 @@ export function MeshBuddy() {
         const reply: ChatMessage = {
           id: `faucet-${Date.now()}`,
           sender: "buddy",
-          text: `Done! Credited +$5,000.00 to your real balance. You can use this to settle debts in the settlement drawer!`,
-          spokenText: "Added 5000 dollars to your account."
+          text: `Done! Credited +$10,000.00 Agora AUSD to your account balance. You can use this to settle debts in the settlement drawer!`,
+          spokenText: "Added 10000 Agora AUSD to your account."
         };
         setMessages((prev) => [...prev, reply]);
-        speakText(reply.text, "Added 5000 dollars to your account.");
+        speakText(reply.text, "Added 10000 Agora AUSD to your account.");
       } else {
         toast.info(error || "Bonus already claimed");
       }

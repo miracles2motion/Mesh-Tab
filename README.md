@@ -37,8 +37,8 @@ To maintain complete transparency with judges, engineering leadership, and users
 
 | Feature | Category | Current Status & Architecture |
 |---|---|---|
-| **MeshTabLedger Settlement** | 🟢 Live On-Chain | Deployed on Monad Testnet (`payNettedDebt`). Executes atomic debt settlement in Agora AUSD. |
-| **Faucet / Welcome Bonus** | 🟢 Live On-Chain | Deployed contract function `claimWelcomeBonus()` minting 5,000 AUSD for instant test flights. |
+| **MeshTabAgoraLedger Settlement** | 🟢 Live On-Chain | Deployed on Monad Testnet (`payNettedDebt`). Executes atomic debt settlement in official Agora AUSD. |
+| **Agora AUSD Official Faucet** | 🟢 Live On-Chain | Official Agora faucet (`requestFunds`) providing 10,000 Agora AUSD for testnet group tabs. |
 | **Pimlico Gas Sponsorship** | 🟢 Live Production | 100% gasless transactions via ERC-4337 Paymaster integration with Privy Smart Wallets. |
 | **Pyth Hermes FX Engine** | 🟢 Live Production | Low-latency foreign exchange oracle proxy (`/api/pyth`) with 60s caching and graceful fallbacks. |
 | **Gemini Flash Vision OCR** | 🟢 Live Production | Multimodal receipt scanning endpoint (`/api/receipt-scan`) using Google GenAI SDK. |
@@ -54,12 +54,15 @@ To maintain complete transparency with judges, engineering leadership, and users
 
 ## 📜 Deployed Monad Testnet Contracts
 
-Both smart contracts are deployed and verified on **Monad Testnet (Chain ID: 10143)**:
+Smart contracts deployed and verified on **Monad Testnet (Chain ID: 10143)**:
 
-| Contract | Address | Monad Explorer | Functionality |
+| Contract | Address | Explorer | Role & Verification |
 |---|---|---|---|
-| **MeshTabLedger** | `0x43405B9D8E30ff76910009E79131200c862fCA7d` | [View on MonadExplorer](https://testnet.monadexplorer.com/address/0x43405B9D8E30ff76910009E79131200c862fCA7d) | Trustless group debt settlement via `payNettedDebt()` |
-| **Agora AUSD (Mock)** | `0xF9bA02Cd0aFc210e0867852eEb0E994B07d9957F` | [View on MonadExplorer](https://testnet.monadexplorer.com/address/0xF9bA02Cd0aFc210e0867852eEb0E994B07d9957F) | Institutional 6-decimal digital dollar + `claimWelcomeBonus()` |
+| **MeshTabAgoraLedger** | `0x54f02333ea8D80C175A1C8Bdb71ef709cF424C83` | [View on Monadscan](https://testnet.monadscan.com/address/0x54f02333ea8D80C175A1C8Bdb71ef709cF424C83) | Atomic group debt settlement engine (`payNettedDebt`) for official Agora AUSD |
+| **Agora AUSD (Official Token)** | `0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC` | [View on Monadscan](https://testnet.monadscan.com/address/0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC) | Official Agora digital dollar ERC-20 on Monad Testnet (6 decimals) |
+| **Agora Official Faucet** | `0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C` | [View on Monadscan](https://testnet.monadscan.com/address/0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C) | Official Agora liquidity faucet dripping 10,000 AUSD per claim (`requestFunds`) |
+
+> **Official Agora AUSD Integration.** MeshTab connects 100% directly to official Agora infrastructure on Monad Testnet. Evaluators can fund their smart account with **$10,000.00 Agora AUSD** in one tap directly from the official Agora Faucet, and settle netted group balances on-chain through `MeshTabAgoraLedger` ([Monadscan Settlement TX](https://testnet.monadscan.com/tx/0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0), Block 69400512).
 
 ---
 
@@ -166,8 +169,9 @@ UPSTASH_REDIS_REST_TOKEN="your_upstash_token"
 
 # 2. Monad Testnet Web3 Config
 NEXT_PUBLIC_MONAD_RPC_URL="https://testnet-rpc.monad.xyz"
-NEXT_PUBLIC_MOCK_AUSD_ADDRESS="0xF9bA02Cd0aFc210e0867852eEb0E994B07d9957F"
-NEXT_PUBLIC_MESH_TAB_LEDGER_ADDRESS="0x43405B9D8E30ff76910009E79131200c862fCA7d"
+NEXT_PUBLIC_AGORA_AUSD_ADDRESS="0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC"
+NEXT_PUBLIC_AGORA_FAUCET_ADDRESS="0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C"
+NEXT_PUBLIC_MESH_TAB_LEDGER_ADDRESS="0x54f02333ea8D80C175A1C8Bdb71ef709cF424C83"
 
 # 3. Privy Authentication & Smart Wallets
 NEXT_PUBLIC_PRIVY_APP_ID="your_privy_app_id"
@@ -208,8 +212,8 @@ npm run build
    - Tap **Settle Up** on your negative balance card.
    - In Demo Mode, watch your balance recalculate and your debt clear to $0.00 instantly with confetti feedback.
    - In Testnet Mode, approve and execute `payNettedDebt` on Monad Testnet gaslessly via Pimlico Paymaster.
-5. **Faucet Welcome Bonus (`/home`):**
-   - Connect your wallet on Testnet Mode and tap **Add Funds** $\to$ **Claim 5,000 AUSD** to mint testnet Agora digital dollars directly on Monad.
+5. **Official Agora Faucet (`/home`):**
+   - Connect your wallet on Testnet Mode and tap **Add Funds** $\to$ **Confirm $10,000.00 Agora AUSD Allocation** to fund your testnet account with instant testing liquidity directly from the official Agora Faucet on Monad.
 6. **Virtual Card & Yield Preview:**
    - Tap the **Virtual Card** banner on the Home dashboard to view instant card spendability controls.
    - Watch the **Agora APY Vault** ticker on the tab page compound group savings at 4.80% APY.
@@ -220,7 +224,7 @@ npm run build
 
 - **Phase 1: Metropolis Hackathon (Current) 🟢**
   - Instant FaceID passkeys & ERC-4337 smart accounts via **Privy**.
-  - Sub-second debt settlement on **Monad Testnet** (`MeshTabLedger.sol`).
+  - Sub-second debt settlement on **Monad Testnet** (`MeshTabAgoraLedger.sol`).
   - 100% sponsored gas fees powered by **Pimlico Verifying Paymasters**.
   - Institutional digital dollar liquidity via **Agora AUSD**.
   - Mid-market foreign exchange rates via **Pyth Network Hermes Oracles**.

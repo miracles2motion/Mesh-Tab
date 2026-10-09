@@ -63,7 +63,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
   const { claimBonus, isClaiming: isTestnetClaiming, hasClaimed, checkHasClaimed } = useClaimWelcomeBonus(workspaceMode);
 
   const initialAmount = isTestnet 
-    ? "5000.00" 
+    ? "10000.00" 
     : suggestedAmountCents && suggestedAmountCents > 0 
       ? (suggestedAmountCents / 100).toFixed(2) 
       : "100.00";
@@ -72,7 +72,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
   const [selectedMethod, setSelectedMethod] = useState<DepositMethod>("card");
   const [currentStep, setCurrentStep] = useState<"select" | "details" | "success">("select");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [lastDepositedCents, setLastDepositedCents] = useState(isTestnet ? 500000 : 10000);
+  const [lastDepositedCents, setLastDepositedCents] = useState(isTestnet ? 1000000 : 10000);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -85,7 +85,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
       setCurrentStep("select");
       setIsProcessing(false);
       if (isTestnet) {
-        setAmountStr("5000.00");
+        setAmountStr("10000.00");
         checkHasClaimed();
       } else if (suggestedAmountCents && suggestedAmountCents > 0) {
         setAmountStr((suggestedAmountCents / 100).toFixed(2));
@@ -95,13 +95,13 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
     }
   }, [isOpen, isTestnet, suggestedAmountCents, checkHasClaimed]);
 
-  // Compute integer cents from input string or fixed 5k on testnet
+  // Compute integer cents from input string or 10k on testnet
   const parsedFloat = parseFloat(amountStr) || 0;
-  const depositCents = isTestnet ? 500000 : Math.max(0, Math.round(parsedFloat * 100));
+  const depositCents = isTestnet ? 1000000 : Math.max(0, Math.round(parsedFloat * 100));
   // Total Net Available Balance across all tabs (funds available to spend right now)
   const currentNetBalance = availableCents;
   const newProjectedBalance = currentNetBalance + depositCents;
-  const isAlreadyAllocated = isTestnet && (hasClaimed || testnetBalance >= 5000);
+  const isAlreadyAllocated = isTestnet && (hasClaimed || testnetBalance >= 10000);
 
   const handleChipClick = (centsToAdd: number) => {
     sounds.playClick();
@@ -212,7 +212,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
                 Allocation Active
               </h3>
               <p className="text-slate-500 dark:text-white/60 text-sm mb-6 leading-relaxed">
-                Your wallet has already received the 1-time <strong className="text-slate-900 dark:text-white font-semibold">$5,000.00 Testnet Welcome Allocation</strong>. To prevent faucet exhaustion, each wallet address is provisioned once on Monad Testnet.
+                Your wallet has already received the official <strong className="text-slate-900 dark:text-white font-semibold">$10,000.00 Agora AUSD Allocation</strong> on Monad Testnet.
               </p>
 
               {/* Status details card */}
@@ -268,7 +268,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
                 </h2>
                 <p className="text-slate-500 dark:text-white/60 text-sm max-w-sm mx-auto">
                   {isTestnet 
-                    ? "Claim your initial $5,000.00 Agora AUSD testnet balance to test shared tabs."
+                    ? "Claim your $10,000.00 official Agora AUSD testnet allocation to test shared tabs."
                     : "Instant account funding with zero fees, powered by Privy on-ramps."}
                 </p>
               </div>
@@ -308,7 +308,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
                         step="any"
                         min="1"
                         max="10000"
-                        value={isTestnet ? "5000.00" : amountStr}
+                        value={isTestnet ? "10000.00" : amountStr}
                         disabled={isTestnet}
                         onChange={(e) => !isTestnet && setAmountStr(e.target.value)}
                         placeholder="100.00"
@@ -320,7 +320,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
                     {isTestnet ? (
                       <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 text-xs font-semibold">
                         <Sparkles className="w-3.5 h-3.5 shrink-0" />
-                        <span>Monad Testnet 1-Time Allocation ($5,000.00)</span>
+                        <span>Official Agora Testnet Allocation ($10,000.00 AUSD)</span>
                       </div>
                     ) : (
                       <div className="mt-4 flex items-center gap-2 flex-wrap">
@@ -643,7 +643,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
                 >
                   {isProcessing 
                     ? (isTestnet ? "Securing allocation via Monad & Pimlico..." : "Securing deposit via Privy...") 
-                    : (isTestnet ? "Confirm $5,000.00 Allocation" : `Confirm ${formatCurrency(depositCents)} Deposit`)}
+                    : (isTestnet ? "Confirm $10,000.00 Agora AUSD Allocation" : `Confirm ${formatCurrency(depositCents)} Deposit`)}
                 </Button>
               </div>
 
@@ -692,7 +692,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
                   <span>Funding Method</span>
                   <span className="font-semibold text-slate-800 dark:text-white">
                     {isTestnet
-                      ? "Monad Testnet AUSD Allocation"
+                      ? "Official Agora AUSD Faucet"
                       : (selectedMethod === "card" ? "Visa Platinum Debit (Instant)" :
                          selectedMethod === "bank" ? "Direct Bank (FedNow)" : 
                          "Google Pay")}
