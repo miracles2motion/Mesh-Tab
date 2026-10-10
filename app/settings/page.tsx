@@ -69,11 +69,11 @@ function SettingsContent() {
   const handleBack = () => {
     sounds.playClick();
     if (fromUrl && fromUrl.startsWith("/")) {
-      router.push(fromUrl);
-    } else if (typeof window !== "undefined" && window.history.length > 1) {
+      router.replace(fromUrl);
+    } else if (typeof window !== "undefined" && window.history.length > 1 && document.referrer && document.referrer.includes(window.location.host)) {
       router.back();
     } else {
-      router.push("/home");
+      router.replace("/home");
     }
   };
 

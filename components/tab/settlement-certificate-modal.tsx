@@ -33,10 +33,10 @@ export function SettlementCertificateModal({
 
   const capitalMoved = Math.round(grossVolume * 0.25);
   const capitalSaved = grossVolume - capitalMoved;
-  const savedPercent = grossVolume > 0 ? ((capitalSaved / grossVolume) * 100).toFixed(1) : "75.0";
+  const savedPercent = grossVolume > 0 ? ((capitalSaved / grossVolume) * 100).toFixed(1) : "0.0";
 
-  const txHash = "0x8f29a14891029c37e19f7b3d";
-  const explorerUrl = `https://testnet.monadexplorer.com/tx/${txHash}`;
+  const txHash = "0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0";
+  const explorerUrl = `https://testnet.monadscan.com/tx/${txHash}`;
 
   const shareText = `🎉 ${tabName} is 100% Settled on MeshTab!
 • Total Spend: ${formatCurrency(grossVolume)} across ${memberCount} friends

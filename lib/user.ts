@@ -532,20 +532,19 @@ export function mergePulledTabs(serverTabs: any[], walletAddress: string) {
       creator: st.creator || existing?.creator,
       memberCount: st.members ? st.members.length : (existing?.memberCount || 1),
       createdAt: st.createdAt || existing?.createdAt || Date.now(),
-      lastActivityAt: Math.max(existing?.lastActivityAt || 0, st.serverSyncedAt || 0),
+      lastActivityAt: existing?.lastActivityAt || st.createdAt || st.serverSyncedAt || Date.now(),
       lastActivityKind: existing?.lastActivityKind || "joined"
     };
 
     if (!existing) {
       mergedMap.set(st.id, formattedTab);
     } else {
-      // Update basic details but respect local activity if it's newer
+      // Update basic details but respect authentic activity timestamps
       mergedMap.set(st.id, {
         ...existing,
         ...formattedTab,
         balance: resolvedBalance,
-        // Keep local activity timestamps if they are newer
-        lastActivityAt: Math.max(existing.lastActivityAt || 0, formattedTab.lastActivityAt || 0)
+        lastActivityAt: existing.lastActivityAt || formattedTab.lastActivityAt || formattedTab.createdAt || Date.now()
       });
     }
     
@@ -830,7 +829,15 @@ export function getStoredExpenses(tabId: string): StoredExpense[] {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        return parsed.map((e: StoredExpense) => {
+          if (!e.createdAt && e.time) {
+            const parsedTs = Date.parse(e.time);
+            if (!isNaN(parsedTs) && parsedTs > 0) {
+              return { ...e, createdAt: parsedTs, time: "Just now" };
+            }
+          }
+          return e;
+        });
       }
     }
   } catch (e) {}
@@ -944,7 +951,11 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense, skipBal
                 finalAmountUsd: expense.amount,
                 timestamp: expense.createdAt || Date.now(),
                 payers,
-                borrowers
+                borrowers,
+                metadata: {
+                  ...expense,
+                  createdAt: expense.createdAt || Date.now()
+                }
               }
             });
           });

@@ -142,10 +142,10 @@ function OnboardingContent() {
     }
 
     if (isInvite && inviteTab) {
-      router.push(`/tab/${inviteTab}?invite=true`);
+      router.replace(`/tab/${inviteTab}?invite=true`);
     } else {
       if (intent === "testnet") setWorkspaceMode("testnet");
-      router.push("/home");
+      router.replace("/home");
     }
   };
 

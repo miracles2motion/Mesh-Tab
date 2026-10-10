@@ -77,15 +77,15 @@ function LoginContent() {
 
     if (!hasProfile || isNewUser) {
       // If no profile, they must onboard into the live Web3 app
-      router.push("/onboarding?fresh=true&intent=testnet");
+      router.replace("/onboarding?fresh=true&intent=testnet");
     } else {
       // Successful login always drops them into the live Web3 app
       setWorkspaceMode("testnet");
       
       if (isInvite) {
-        router.push(`/tab/${inviteTab}?invite=true`);
+        router.replace(`/tab/${inviteTab}?invite=true`);
       } else {
-        router.push("/home");
+        router.replace("/home");
       }
     }
   };

@@ -166,7 +166,7 @@ export function EarnTicker({ tabId = "lisbon-24", className = "" }: EarnTickerPr
                   Earn ~4.8% variable APY on group tab deposits while keeping capital 100% available for instant Visa spending.
                 </p>
                 <p className="text-xs text-slate-500 dark:text-white/60 leading-relaxed pt-1">
-                  On Monad Mainnet, idle Agora AUSD deposited into shared tabs is routed into high-grade institutional lending vaults via Privy Financial Flows. Funds earn daily interest but withdraw just-in-time when members tap to pay.
+                  On Monad Mainnet, idle Agora AUSD deposited into shared tabs is routed into high-grade lending vaults via Privy Financial Flows. Funds earn daily interest but withdraw just-in-time when members tap to pay.
                 </p>
               </div>
 

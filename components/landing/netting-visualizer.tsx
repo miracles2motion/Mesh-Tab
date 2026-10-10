@@ -257,12 +257,19 @@ export function NettingVisualizer() {
 
             {/* Direct Link to Demo */}
             <Link 
-              href="/demo"
+              href="/demo?from=/"
               className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline transition-all"
             >
               <span>{nettingVisualizer.demoLink}</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
+
+            {/* Illustrative Caption */}
+            {nettingVisualizer.caption && (
+              <p className="mt-3 text-[11px] text-slate-500 dark:text-white/40 text-center max-w-md italic">
+                {nettingVisualizer.caption}
+              </p>
+            )}
           </div>
         </div>
 

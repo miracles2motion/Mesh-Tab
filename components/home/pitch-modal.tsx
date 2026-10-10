@@ -159,7 +159,8 @@ export function PitchModal({ isOpen, onClose }: PitchModalProps) {
       {/* Quick Navigation */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
         <Link
-          href="/demo"
+          replace
+          href="/demo?from=/home"
           onClick={onClose}
           className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
         >

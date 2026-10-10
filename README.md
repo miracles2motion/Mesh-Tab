@@ -1,6 +1,7 @@
 # MeshTab ⚡
 
-> **Zero-Friction Collaborative Expense Sharing & Multilateral Debt Netting on Monad**  
+> **Close the tab. Keep the friends.**  
+> *Cross-currency group expense netting with one-tap on-chain settlement on Monad Testnet.*  
 > *Built for the Monad Metropolis 2026 Hackathon — Consumer Products & Payments Track*
 
 [![Live Demo](https://img.shields.io/badge/Demo-mesh--tab.vercel.app-6366F1?style=for-the-badge&logo=vercel)](https://mesh-tab.vercel.app/)
@@ -22,9 +23,9 @@
 **The Solution:** MeshTab combines high-throughput blockchain infrastructure with consumer fintech simplicity:
 - **Multilateral Netting Engine:** An off-chain greedy net-position matching algorithm that computes debtor and creditor positions, collapsing multi-currency debts into minimal direct payments ($\le N-1$ transfers) before on-chain settlement.
 - **Biometric Passkeys & Embedded Smart Accounts:** Instant FaceID/TouchID enrollment powered by **Privy**, generating ERC-4337 smart accounts with zero seed phrases, browser extensions, or popups.
-- **Gasless Agora AUSD Settlement:** 1-click debt settlement in **Agora AUSD** (6-decimal institutional digital dollars) executed through **Pimlico Paymasters** for 100% sponsored gas on Monad.
+- **Gasless Agora AUSD Settlement:** 1-click debt settlement in **Agora AUSD** (6-decimal digital dollars) executed through **Pimlico Paymasters** for 100% sponsored gas on Monad.
 - **Google Gemini Flash Vision AI OCR:** Snap a photo of any restaurant receipt, grocery slip, or hotel invoice to instantly extract the total amount and merchant name in ~1 second via `@google/genai`.
-- **Pyth Network Hermes Multi-Currency FX Engine:** Real-time foreign exchange feeds convert EUR, GBP, JPY, CAD, AUD, NGN, and BRL at institutional mid-market rates with 60-second caching and resilient fallback guarantees.
+- **Pyth Network Hermes Multi-Currency FX Engine:** Real-time foreign exchange feeds convert EUR, GBP, JPY, CAD, AUD, NGN, and BRL at mid-market rates with 60-second caching and resilient fallback guarantees.
 - **Voice-to-Expense Dictation & Smart Staging:** Speak expenses naturally using browser-native **Web Speech API**. The parser extracts amounts and vendors into an editable staging card for human verification before saving.
 - **Offline-First Resilience & The 3-Mode Architecture:** A persistent local outbox (`meshTab_testnet_outbox`) with operation folding and multi-tab Web Locks synchronizes sequentially (push-first-then-pull) upon reconnection. Operates across 3 isolated modes: `sample` (Lisbon '24 demo trip), `blank` (clean sandbox), and `testnet` (Monad Metropolis live on-chain mode).
 - **Zero-Dependency Procedural Audio:** 10 rich micro-interaction sound effects synthesized in real time via the native **Web Audio API** (`AudioContext`), eliminating external audio assets and 404 latency.
@@ -72,7 +73,7 @@ Smart contracts deployed and verified on **Monad Testnet (Chain ID: 10143)**:
 |---|---|---|
 | 🔄 **Netting Engine** | Off-chain greedy net-position matching rendered on an interactive SVG canvas | Collapses multi-currency group debts into minimal (≤ N-1) direct settlements. |
 | 📸 **Gemini Vision AI OCR** | Google Gemini Flash multimodal vision pipeline via `@google/genai` | Snap a photo of a paper receipt to extract the amount and merchant name in ~1 second. |
-| 💱 **Pyth Network FX Oracle** | Pyth Hermes REST API with 60-second edge revalidation | Split travel expenses in EUR, GBP, JPY, or AUD converted at mid-market institutional rates. |
+| 💱 **Pyth Network FX Oracle** | Pyth Hermes REST API with 60-second edge revalidation | Split travel expenses in EUR, GBP, JPY, or AUD converted at mid-market rates. |
 | 🎙️ **Voice-to-Expense Dictation** | Browser Web Speech API with currency regex parsing | Dictate `"Paid 45 dollars for groceries"` to pre-fill expenses hands-free. |
 | ⛽ **Gasless Sponsorship (ERC-4337)** | Pimlico Verifying Paymasters + Privy Smart Wallets | Users never hold or spend MON for gas fees; transactions execute seamlessly. |
 | 📴 **Offline Outbox Engine** | FIFO operations queue with multi-tab Web Locks and 2-way server sync | Log tabs and expenses on flights or in subways with optimistic local state. |
@@ -226,14 +227,13 @@ npm run build
   - Instant FaceID passkeys & ERC-4337 smart accounts via **Privy**.
   - Sub-second debt settlement on **Monad Testnet** (`MeshTabAgoraLedger.sol`).
   - 100% sponsored gas fees powered by **Pimlico Verifying Paymasters**.
-  - Institutional digital dollar liquidity via **Agora AUSD**.
+  - Digital dollar liquidity via **Agora AUSD**.
   - Mid-market foreign exchange rates via **Pyth Network Hermes Oracles**.
   - Multimodal receipt OCR powered by **Google Gemini Flash Vision**.
   - Resilient offline outbox queue with 2-way server synchronization.
 
-- **Phase 2: Monad Mainnet & Audited Yield (Q3 2026) 🟡**
-  - Smart contract security audit via **OpenZeppelin** / **Spearbit**.
-  - Deployment of `MeshTabLedger` to **Monad Mainnet** parallel execution environment.
+- **Phase 2: Monad Mainnet & Live Yield (Q3 2026) 🟡**
+  - Comprehensive security review and smart contract deployment on Monad Mainnet.
   - Native **Agora AUSD** ERC-4626 Tokenized Yield Vault integration.
   - Automated background netting settlement via **Privy Server Wallets**.
 

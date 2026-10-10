@@ -119,7 +119,7 @@ export function FreshDemoModal({ isOpen, onClose }: FreshDemoModalProps) {
       sessionStorage.removeItem("mesh_just_logged_out");
     }
     onClose();
-    router.push("/tab/new");
+    router.replace("/tab/new");
   };
 
   const handleLaunchHub = () => {
@@ -129,7 +129,7 @@ export function FreshDemoModal({ isOpen, onClose }: FreshDemoModalProps) {
       sessionStorage.removeItem("mesh_just_logged_out");
     }
     onClose();
-    router.push("/home");
+    router.replace("/home");
   };
 
   return (

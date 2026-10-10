@@ -340,26 +340,28 @@ export function ManageMembers({
              </div>
           </div>
 
-          <div className="w-full pt-3 border-t border-slate-200/80 dark:border-white/10 space-y-2">
-            <button
-              onClick={handleSimulateJoin}
-              disabled={isSimulating}
-              className="w-full py-2.5 px-4 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm disabled:opacity-50"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 animate-pulse" />
-              <span>{isSimulating ? "Authenticating WebAuthn Passkey..." : "⚡ Simulate Friend Scanning QR & Joining"}</span>
-            </button>
+          {workspaceMode !== "testnet" && (
+            <div className="w-full pt-3 border-t border-slate-200/80 dark:border-white/10 space-y-2">
+              <button
+                onClick={handleSimulateJoin}
+                disabled={isSimulating}
+                className="w-full py-2.5 px-4 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm disabled:opacity-50"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 animate-pulse" />
+                <span>{isSimulating ? "Authenticating WebAuthn Passkey..." : "⚡ Simulate Friend Scanning QR & Joining"}</span>
+              </button>
 
-            <button
-              onClick={handleSeedDemo}
-              className="w-full py-2 px-4 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-white/80 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-            >
-              <span>🏝️ Seed Demo Trip Activity (Villa, Dinners, Excursions)</span>
-            </button>
-            <p className="text-[10px] text-slate-500 dark:text-white/40 mt-1 text-center">
-              Quickly populate this tab with multi-member expenses for live presentation.
-            </p>
-          </div>
+              <button
+                onClick={handleSeedDemo}
+                className="w-full py-2 px-4 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-white/80 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              >
+                <span>🏝️ Seed Demo Trip Activity (Villa, Dinners, Excursions)</span>
+              </button>
+              <p className="text-[10px] text-slate-500 dark:text-white/40 mt-1 text-center">
+                Quickly populate this tab with multi-member expenses for live presentation.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Current Roster */}

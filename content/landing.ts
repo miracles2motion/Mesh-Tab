@@ -1,22 +1,24 @@
 export const LANDING_CONTENT = {
   metadata: {
-    title: "MeshTab | The End of Group Debt · Netted & Settled on Monad",
-    description: "Log shared expenses by photo, voice, or text. MeshTab untangles group debts from 9 transfers to 3, then settles them in one tap on Monad. Zero gas fees.",
+    title: "MeshTab | Close the tab. Keep the friends.",
+    description: "Log expenses in any currency. MeshTab nets them into fewer payments, and everyone settles in one tap.",
     keywords: ["Monad", "expense tracker", "debt netting", "stablecoin settlement", "gasless", "passkeys", "fintech", "travel expenses"],
   },
   hero: {
     badge: "Live on Monad Testnet · Sponsored Gas",
-    headline: "The end of group debt.",
-    headlineHighlight: "Nobody chases anybody.",
-    subheadline: "Log expenses by photo, voice, or text in any currency. MeshTab collapses 9 multi-currency transfers into 3 direct AUSD payments, then settles them in one tap using your phone's fingerprint or face scan.",
-    primaryCta: "Open the Lisbon Trip",
-    primaryCtaMicro: "No account or wallet required · Takes 30 seconds",
-    secondaryCta: "Testnet Settlement",
+    headline: "Close the tab.",
+    headlineHighlight: "Keep the friends.",
+    subline: "Group expenses, without the awkward money conversations.",
+    body: "Log expenses in any currency. MeshTab nets them into fewer payments, and everyone settles in one tap.",
+    primaryCta: "Start a tab.",
+    primaryCtaMicro: "Cross-currency debt netting and one-tap, sponsored on-chain settlement on Monad Testnet.",
+    secondaryCta: "Try the sample",
+    secondaryCtaMicro: "Opens the sample tab, no sign-in.",
     metrics: [
       { label: "Fewer Transfers", val: "67%" },
       { label: "Gas Fees", val: "$0" },
-      { label: "Settlement Finality", val: "~400ms" },
-      { label: "Live Currencies", val: "7" }
+      { label: "Settlement Finality", val: "800 ms" },
+      { label: "Currencies", val: "6 live rates, 3 indicative" }
     ]
   },
   socialProof: {
@@ -35,6 +37,7 @@ export const LANDING_CONTENT = {
     cta: "Untangle it",
     resetCta: "Reset to Chaos",
     demoLink: "Open this exact Lisbon trip in the demo →",
+    caption: "Illustrative example. Your tab's results depend on who paid and which currencies you use."
   },
   settlementMoment: {
     badge: "The Settlement Engine",
@@ -69,25 +72,25 @@ export const LANDING_CONTENT = {
     description: "Production-grade features built directly for the Monad Metropolis Hackathon.",
     items: [
       {
-        tag: "Live on Testnet",
+        tag: "Client-Side AI",
         title: "Receipt Scanning (Gemini Flash Latest)",
         desc: "Take a photo of any physical receipt. Merchant and total amounts parse in ~1s using Gemini Flash Latest with automated multi-tier fallback resilience.",
         icon: "Camera"
       },
       {
-        tag: "Live on Testnet",
+        tag: "Web Speech API",
         title: "Voice Expense Logging",
         desc: "Say '85 dollars for dinner' out loud. Speech is transcribed and converted into a verified draft expense.",
         icon: "Mic"
       },
       {
-        tag: "Live on Testnet",
+        tag: "Pyth Oracle",
         title: "Real-Time Pyth Network FX",
         desc: "Live mid-market currency feeds across 6 major global currencies plus USD. Log in EUR, settle in AUSD with zero bank markups.",
         icon: "Coins"
       },
       {
-        tag: "Live on Testnet",
+        tag: "Local-First PWA",
         title: "Offline-First PWA Sync",
         desc: "Log expenses on an airplane or without cellular coverage. Changes queue locally in a persistent outbox and reconcile automatically on reconnect.",
         icon: "WifiOff"
@@ -99,7 +102,7 @@ export const LANDING_CONTENT = {
     description: "Radical transparency: the core settlement engine is live; consumer banking rails are planned.",
     live: [
       { name: "Netting Engine", detail: "Greedy net-position matching off-chain" },
-      { name: "Monad Settlement Contract", detail: "MeshTabLedger verified on testnet" },
+      { name: "Monad Settlement Contract", detail: "MeshTabAgoraLedger verified on testnet" },
       { name: "Biometric Passkey Accounts", detail: "Embedded smart accounts via Privy" },
       { name: "Sponsored Gas Relaying", detail: "ERC-4337 paymaster via Pimlico" },
       { name: "Gemini Flash OCR (Latest)", detail: "Receipt parsing with automated multi-tier fallback" },
@@ -110,17 +113,6 @@ export const LANDING_CONTENT = {
       { name: "Fiat Card / Bank On-Ramp", detail: "Deposit local currency directly into AUSD" },
       { name: "Virtual Visa Card", detail: "Spend trip balances at physical merchants" },
       { name: "Automated Yield Vault", detail: "Earn yield on idle group trip reserves" }
-    ]
-  },
-  comparison: {
-    title: "Traditional Splitters vs. MeshTab",
-    headers: ["Workflow Step", "MeshTab", "Legacy Apps + Bank Wires"],
-    rows: [
-      { feature: "Expense Logging", them: "Manual entry (or paid subs)", us: "Photo OCR + Voice + Offline" },
-      { feature: "Debt Simplification", them: "Siloed per currency (9 transfers)", us: "Cross-Currency Netting (9 → 3 in AUSD)" },
-      { feature: "Payment Execution", them: "Manual wires & bank transfers", us: "One-tap on-chain execution (800ms)" },
-      { feature: "Account Setup", them: "Email & password required", us: "Face ID / Touch ID (Passkey)" },
-      { feature: "Cross-Border FX", them: "Bank conversion spreads", us: "Pyth Oracle mid-market rates" }
     ]
   },
   faq: [
@@ -134,15 +126,15 @@ export const LANDING_CONTENT = {
     },
     {
       question: "What happens if someone doesn't pay?",
-      answer: "MeshTab does not custody user funds. Settlement is peer-to-peer and requires each debtor's biometric approval. The app calculates the netted schedule and transfers execute directly on-chain so balances clear cleanly without debt reassignment ambiguity. Smart escrow reserves are on our post-hackathon roadmap."
+      answer: "MeshTab does not custody user funds and nothing forces payment. Settlement is peer-to-peer and requires each debtor's biometric approval. The app calculates the optimal netted schedule so friends settle cleanly when they are ready. Smart escrow reserves are on our roadmap."
     },
     {
-      question: "Why not just use traditional expense splitting apps?",
-      answer: "Traditional group splitting apps only calculate who owes whom—they don't settle debts across borders or currencies. Users are left chasing friends across messaging threads, banking apps, and international wire transfers with heavy foreign exchange markups. MeshTab collapses multi-currency debt and settles the entire trip in one biometric tap using AUSD on Monad."
+      question: "Why not Splitwise?",
+      answer: "Expense apps record who owes whom and net one currency at a time. MeshTab nets across currencies and settles in the same app."
     },
     {
       question: "Is this real money?",
-      answer: "No. This is a hackathon demo on Monad Testnet using testnet AUSD tokens available free from the in-app faucet."
+      answer: "No. This is a hackathon demo on Monad Testnet using Agora's official testnet AUSD (available free from the in-app faucet)."
     },
     {
       question: "Can I fund or withdraw with a debit card?",
@@ -150,16 +142,12 @@ export const LANDING_CONTENT = {
     },
     {
       question: "What is stored on-chain vs. off-chain?",
-      answer: "Expense receipts and graph netting are calculated off-chain for speed; final settlement payments execute on-chain via the MeshTabLedger contract on Monad Testnet."
-    },
-    {
-      question: "Has the contract been audited?",
-      answer: "Not yet. A formal security audit will precede any mainnet launch."
+      answer: "Expense receipts and graph netting are calculated off-chain for speed; final settlement payments execute on-chain via the MeshTabAgoraLedger contract on Monad Testnet."
     }
   ],
   finalCta: {
-    title: "Settle the tab.",
-    description: "Open the Lisbon trip demo. No sign-in, no wallet. Experience settlement in 30 seconds.",
-    cta: "Open the Lisbon Trip",
+    title: "Close the tab. Keep the friends.",
+    description: "Try the sample tab in 30 seconds. No sign-in or wallet required.",
+    cta: "Try the sample",
   }
 } as const;

@@ -29,6 +29,7 @@ import { AuthGuard } from "../../components/providers/auth-guard";
 import { useRealAusdBalance } from "../../lib/onchain";
 import { FaucetModal } from "../../components/tab/faucet-modal";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
+import { HomeRootHistoryGuard } from "../../components/providers/home-history-guard";
 
 
 export default function GlobalHub() {
@@ -239,6 +240,7 @@ export default function GlobalHub() {
 
   return (
     <AuthGuard>
+    <HomeRootHistoryGuard />
     <TransactionOverlay 
       state={txState} 
       messages={{
@@ -294,6 +296,7 @@ export default function GlobalHub() {
               {!isTestnetMode && (
                 <>
                   <Link 
+                    replace
                     href="/demo?from=/home"
                     className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors"
                     title="Open Demo Mode Selection"

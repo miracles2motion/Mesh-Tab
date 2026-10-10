@@ -10,6 +10,7 @@ export default function NotFound() {
         The tab or screen you are looking for does not exist or has been moved.
       </p>
       <Link
+        replace
         href="/home"
         className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-colors"
       >

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
-import { Sparkles, Fingerprint, ArrowRight, UserPlus, CheckCircle2 } from "lucide-react";
+import { Sparkles, Fingerprint, ArrowRight, ArrowLeft, UserPlus, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import { getStoredTabMembers, saveStoredTabMembers, type TabMember, saveNewTab, saveStoredUser, getWorkspaceMode } from "../../../../lib/user";
+import { getStoredTabMembers, saveStoredTabMembers, type TabMember, saveNewTab, saveStoredUser, getWorkspaceMode, getStoredTabs } from "../../../../lib/user";
 import { isEffectivelyOnline } from "../../../../lib/network";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
@@ -103,15 +104,21 @@ export default function JoinTabPage() {
     saveStoredTabMembers(tabId, updatedMembers);
     
     // Save to dashboard so it doesn't disappear when they close the app
+    const currentTabs = getStoredTabs();
+    const existingTab = currentTabs.find(t => t.id === tabId);
+    const now = Date.now();
+    const tabCreatedAt = existingTab?.createdAt || now;
+    const tabLastActivity = existingTab?.lastActivityAt || tabCreatedAt;
+
     saveNewTab({
       id: tabId,
       name: tabName,
       role: "Member",
       balance: 0,
       memberCount: updatedMembers.length,
-      createdAt: Date.now(),
-      lastActivityAt: Date.now(),
-      lastActivityKind: "joined"
+      createdAt: tabCreatedAt,
+      lastActivityAt: tabLastActivity,
+      lastActivityKind: existingTab?.lastActivityKind || "joined"
     });
 
     sounds.playSuccessChime();
@@ -139,6 +146,17 @@ export default function JoinTabPage() {
         
         {/* Top Gradient */}
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500" />
+
+        {/* Back to Hub Escape */}
+        <div className="w-full flex items-center justify-start mb-2">
+          <Link
+            replace
+            href="/home"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white transition-all text-xs font-semibold"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" /> Back to Hub
+          </Link>
+        </div>
 
         <div className="text-center space-y-6">
           <div className="w-20 h-20 bg-indigo-50 dark:bg-indigo-500/10 rounded-3xl flex items-center justify-center mx-auto border border-indigo-100 dark:border-indigo-500/20 shadow-inner">

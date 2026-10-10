@@ -19,8 +19,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://mesh-tab.vercel.app"),
-  title: "MeshTab | Smart Settlement",
-  description: "Gasless micro-expense tracking and multilateral debt netting on Monad.",
+  title: "MeshTab | Close the tab. Keep the friends.",
+  description: "Log expenses in any currency. MeshTab nets them into fewer payments, and everyone settles in one tap.",
   manifest: "/manifest.json",
   icons: {
     icon: "/favicon.svg",

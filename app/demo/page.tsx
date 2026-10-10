@@ -6,7 +6,7 @@ import { useState, Suspense } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Sparkles, CheckCircle2, ArrowRight, Compass, PlusCircle, Users, Receipt, ShieldCheck } from "lucide-react";
 import { ThemeToggle } from "../../components/theme-toggle";
-import { setWorkspaceMode, resetLisbonDemo } from "../../lib/user";
+import { getWorkspaceMode, setWorkspaceMode, resetLisbonDemo } from "../../lib/user";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
 import Image from "next/image";
@@ -22,11 +22,15 @@ function DemoContent() {
   const handleBack = () => {
     sounds.playClick();
     if (fromUrl && fromUrl.startsWith("/")) {
-      router.push(fromUrl);
-    } else if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
+      router.replace(fromUrl);
     } else {
-      router.push("/home");
+      const mode = getWorkspaceMode();
+      const hasUser = typeof window !== "undefined" && Boolean(localStorage.getItem("meshTab_displayName"));
+      if (mode && hasUser) {
+        router.replace("/home");
+      } else {
+        router.replace("/");
+      }
     }
   };
 
@@ -41,7 +45,7 @@ function DemoContent() {
     toast.success("Loaded Lisbon Trip Demo", {
       description: "Pre-loaded with 4 members, $1,499.10 across 3 currencies, and un-netted debts."
     });
-    router.push("/home");
+    router.replace("/home");
   };
 
   const handleSelectBlank = () => {
@@ -65,11 +69,11 @@ function DemoContent() {
           onClick={handleBack}
           className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
         >
-          <ArrowLeft className="w-4 h-4" /> {fromUrl?.startsWith("/tab") ? "Back to Tab" : fromUrl === "/home" ? "Back to Hub" : "Back"}
+          <ArrowLeft className="w-4 h-4" /> {fromUrl?.startsWith("/tab") ? "Back to Tab" : fromUrl === "/home" ? "Back to Hub" : fromUrl === "/" ? "Back to Home" : "Back"}
         </button>
         <div className="flex items-center gap-3">
           <ThemeToggle />
-          <Link href="/home" className="text-xs font-semibold px-3 py-1.5 rounded-full bg-slate-200/70 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/20 transition-colors">
+          <Link replace href="/home" className="text-xs font-semibold px-3 py-1.5 rounded-full bg-slate-200/70 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/20 transition-colors">
             Skip to Hub
           </Link>
         </div>

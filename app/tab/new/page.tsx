@@ -108,6 +108,7 @@ export default function CreateTab() {
       {/* Back to All Tabs */}
       <div className="w-full max-w-full px-4 md:px-12 mb-4 flex items-center justify-start relative z-10">
         <Link 
+          replace
           href="/home" 
           className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-white/80 transition-all text-xs font-semibold shadow-sm group"
           title="Return to All Tabs"

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { useModalHistoryTrap } from "../../lib/use-modal-history-trap";
 
 interface ModalProps {
   children: React.ReactNode;
@@ -38,9 +39,13 @@ export function Modal({ children, onClose, className, hideCloseButton = false, s
     }
   }, [onClose, router]);
 
+  // If this is an inline modal (onClose is passed), trap hardware back to dismiss it cleanly
+  useModalHistoryTrap(Boolean(onClose), handleClose);
+
   useEffect(() => {
     setMounted(true);
     document.body.style.overflow = "hidden";
+    document.body.style.overscrollBehaviorY = "none";
     
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") handleClose();
@@ -49,6 +54,7 @@ export function Modal({ children, onClose, className, hideCloseButton = false, s
     
     return () => {
       document.body.style.overflow = "auto";
+      document.body.style.overscrollBehaviorY = "auto";
       window.removeEventListener("keydown", handleEscape);
     };
   }, [handleClose]);

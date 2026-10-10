@@ -40,6 +40,7 @@ export default function GlobalError({
         </button>
 
         <Link
+          replace
           href="/home"
           className="px-6 py-3 rounded-2xl bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/15 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
         >

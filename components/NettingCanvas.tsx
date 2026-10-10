@@ -133,8 +133,13 @@ export function NettingCanvas({
     const activeDebtSum = debts.reduce((sum, d) => sum + Math.abs(d.balance ?? 0), 0);
     const hasDebts = debts.length > 0 && creds.length > 0 && activeDebtSum > 0;
 
-    if (n <= 4) {
-      // Diamond Coordinates on 1000x520 Widescreen Canvas
+    const cx = 500;
+    const cy = 260;
+    const baseRx = 405;
+    const baseRy = 190;
+
+    // SCENARIO A: 4 or fewer members with NO settled members (Classic Diamond benchmark)
+    if (n <= 4 && setts.length === 0) {
       const diamondCoords = [
         { x: 500, y: 110 }, // Top (Creditor)
         { x: 230, y: 260 }, // Left (Debtor)
@@ -159,23 +164,49 @@ export function NettingCanvas({
           color: bal > 0 ? "#10b981" : bal < 0 ? "#f43f5e" : "#10b981"
         });
       });
-    } else {
-      // Dual-Arc & Widescreen Orbital Layout for 5 to 20+ members
-      const cx = 500;
-      const cy = 260;
-      const rx = 390;
-      const ry = 185;
-
+    } 
+    // SCENARIO B: All members settled ($0 balance across entire group)
+    else if (creds.length === 0 && debts.length === 0) {
+      list.forEach((m, i) => {
+        const theta = -Math.PI / 2 + (i / n) * (2 * Math.PI);
+        const radialOffset = n > 10 ? (i % 2 === 0 ? 20 : -20) : 0;
+        const x = Math.round(cx + (baseRx + radialOffset) * Math.cos(theta));
+        const y = Math.round(cy + (baseRy + radialOffset * 0.5) * Math.sin(theta));
+        computedNodes.push({
+          id: m.name,
+          name: m.name,
+          initial: m.name[0].toUpperCase(),
+          balance: 0,
+          isCreditor: false,
+          isDebtor: false,
+          isSettled: true,
+          x,
+          y,
+          color: "#10b981"
+        });
+      });
+    } 
+    // SCENARIO C: Active netting (Creditors top, Debtors bottom, Settled members staggered along flanks with ZERO overlap)
+    else {
       const credCount = creds.length;
       const debtCount = debts.length;
+      const settCount = setts.length;
 
-      // Distribute Creditors along top arc: -5pi/6 to -pi/6 (from 150 deg to 30 deg through top)
+      // 1. Position Creditors along top arc (centered at -90 deg / top)
       creds.forEach((m, i) => {
-        const startAngle = (-5 * Math.PI) / 6;
-        const endAngle = -Math.PI / 6;
-        const theta = credCount === 1 ? -Math.PI / 2 : startAngle + (i / (credCount - 1)) * (endAngle - startAngle);
-        const x = Math.round(cx + rx * Math.cos(theta));
-        const y = Math.round(cy + ry * Math.sin(theta));
+        let theta: number;
+        if (credCount === 1) {
+          theta = -Math.PI / 2; // -90 deg
+        } else if (credCount === 2) {
+          theta = i === 0 ? (-2 * Math.PI) / 3 : -Math.PI / 3; // -120 deg and -60 deg
+        } else {
+          const startAngle = (-4 * Math.PI) / 5; // -144 deg
+          const endAngle = -Math.PI / 5;         // -36 deg
+          theta = startAngle + (i / (credCount - 1)) * (endAngle - startAngle);
+        }
+        const radialOffset = credCount > 6 ? (i % 2 === 0 ? 15 : -15) : 0;
+        const x = Math.round(cx + (baseRx + radialOffset) * Math.cos(theta));
+        const y = Math.round(cy + (baseRy + radialOffset * 0.5) * Math.sin(theta));
         computedNodes.push({
           id: m.name,
           name: m.name,
@@ -190,13 +221,21 @@ export function NettingCanvas({
         });
       });
 
-      // Distribute Debtors along bottom arc: 5pi/6 to pi/6 (from 150 deg to 30 deg through bottom)
+      // 2. Position Debtors along bottom arc (centered at +90 deg / bottom)
       debts.forEach((m, i) => {
-        const startAngle = (5 * Math.PI) / 6;
-        const endAngle = Math.PI / 6;
-        const theta = debtCount === 1 ? Math.PI / 2 : startAngle + (i / (debtCount - 1)) * (endAngle - startAngle);
-        const x = Math.round(cx + rx * Math.cos(theta));
-        const y = Math.round(cy + ry * Math.sin(theta));
+        let theta: number;
+        if (debtCount === 1) {
+          theta = Math.PI / 2; // 90 deg
+        } else if (debtCount === 2) {
+          theta = i === 0 ? (2 * Math.PI) / 3 : Math.PI / 3; // 120 deg and 60 deg
+        } else {
+          const startAngle = (4 * Math.PI) / 5; // 144 deg
+          const endAngle = Math.PI / 5;         // 36 deg
+          theta = startAngle + (i / (debtCount - 1)) * (endAngle - startAngle);
+        }
+        const radialOffset = debtCount > 6 ? (i % 2 === 0 ? 15 : -15) : 0;
+        const x = Math.round(cx + (baseRx + radialOffset) * Math.cos(theta));
+        const y = Math.round(cy + (baseRy + radialOffset * 0.5) * Math.sin(theta));
         computedNodes.push({
           id: m.name,
           name: m.name,
@@ -211,24 +250,71 @@ export function NettingCanvas({
         });
       });
 
-      // Flank any settled members along horizontal sides
-      setts.forEach((m, i) => {
-        const theta = i % 2 === 0 ? 0 : Math.PI;
-        const x = Math.round(cx + rx * Math.cos(theta));
-        const y = Math.round(cy + ry * Math.sin(theta));
-        computedNodes.push({
-          id: m.name,
-          name: m.name,
-          initial: m.name[0].toUpperCase(),
-          balance: 0,
-          isCreditor: false,
-          isDebtor: false,
-          isSettled: true,
-          x,
-          y,
-          color: "#10b981"
+      // 3. Position Settled members along lateral flanks with guaranteed non-overlapping 2-tier staggering
+      if (settCount > 0) {
+        const leftCount = Math.ceil(settCount / 2);
+        const rightCount = Math.floor(settCount / 2);
+        const leftSetts = setts.slice(0, leftCount);
+        const rightSetts = setts.slice(leftCount);
+
+        // Left Flank (centered around 180 deg / Pi)
+        leftSetts.forEach((m, i) => {
+          let theta: number;
+          if (leftCount === 1) {
+            theta = Math.PI; // 180 deg
+          } else {
+            // Span from 145 deg (2.53 rad) to 215 deg (3.75 rad)
+            const startAngle = (145 * Math.PI) / 180;
+            const endAngle = (215 * Math.PI) / 180;
+            theta = startAngle + (i / (leftCount - 1)) * (endAngle - startAngle);
+          }
+          // If more than 3 nodes on flank, stagger radius so adjacent nodes are offset horizontally by ~60px
+          const radialOffset = leftCount > 3 ? (i % 2 === 0 ? 25 : -35) : 0;
+          const x = Math.round(cx + (baseRx + radialOffset) * Math.cos(theta));
+          const y = Math.round(cy + (baseRy + radialOffset * 0.4) * Math.sin(theta));
+          computedNodes.push({
+            id: m.name,
+            name: m.name,
+            initial: m.name[0].toUpperCase(),
+            balance: 0,
+            isCreditor: false,
+            isDebtor: false,
+            isSettled: true,
+            x,
+            y,
+            color: "#10b981"
+          });
         });
-      });
+
+        // Right Flank (centered around 0 deg)
+        rightSetts.forEach((m, i) => {
+          let theta: number;
+          if (rightCount === 1) {
+            theta = 0; // 0 deg
+          } else {
+            // Span from -35 deg (-0.61 rad) to +35 deg (+0.61 rad)
+            const startAngle = (-35 * Math.PI) / 180;
+            const endAngle = (35 * Math.PI) / 180;
+            theta = startAngle + (i / (rightCount - 1)) * (endAngle - startAngle);
+          }
+          // If more than 3 nodes on flank, stagger radius so adjacent nodes are offset horizontally by ~60px
+          const radialOffset = rightCount > 3 ? (i % 2 === 0 ? 25 : -35) : 0;
+          const x = Math.round(cx + (baseRx + radialOffset) * Math.cos(theta));
+          const y = Math.round(cy + (baseRy + radialOffset * 0.4) * Math.sin(theta));
+          computedNodes.push({
+            id: m.name,
+            name: m.name,
+            initial: m.name[0].toUpperCase(),
+            balance: 0,
+            isCreditor: false,
+            isDebtor: false,
+            isSettled: true,
+            x,
+            y,
+            color: "#10b981"
+          });
+        });
+      }
     }
 
     return {
@@ -477,8 +563,7 @@ export function NettingCanvas({
     touchStartRef.current = null;
   };
 
-  const creditorNames = creditors.length > 0 ? creditors.map(c => c.name).join(", ") : "Creditor";
-  const baseNodeRadius = nodes.length <= 4 ? 28 : nodes.length <= 8 ? 24 : nodes.length <= 12 ? 20 : 18;
+  const baseNodeRadius = nodes.length <= 4 ? 28 : nodes.length <= 8 ? 24 : nodes.length <= 14 ? 20 : nodes.length <= 22 ? 17 : 15;
   const unNettedCount = Math.max(nodes.length * 2, Math.round((nodes.length * (nodes.length - 1)) / 1.5));
   const settledCapital = Math.round(grossVolume > 0 ? grossVolume * 0.26 : totalActiveDebt);
 
@@ -934,15 +1019,15 @@ export function NettingCanvas({
                     {node.initial}
                   </text>
 
-                  {/* Name & Balance Labels (Creditor labels on TOP, Debtor labels on BOTTOM to prevent incoming arrows from crossing text) */}
-                  {isTargetCreditor ? (
+                  {/* Name & Balance Labels (Upper half renders ABOVE, Lower half renders BELOW to keep center clean) */}
+                  {node.y < 260 ? (
                     <g>
                       <text
                         x="0"
-                        y={-(nodeRadius + 20)}
+                        y={-(nodeRadius + 18)}
                         textAnchor="middle"
                         fill={currentUserName && node.name.toLowerCase() === currentUserName.toLowerCase() ? "#a5b4fc" : "#f8fafc"}
-                        fontSize={nodes.length <= 4 ? "12" : nodes.length > 12 ? "9.5" : "11"}
+                        fontSize={nodes.length <= 4 ? "12" : nodes.length <= 8 ? "11" : nodes.length <= 14 ? "10" : "9"}
                         fontWeight="bold"
                         fontFamily="sans-serif"
                       >
@@ -950,18 +1035,18 @@ export function NettingCanvas({
                           ? `${node.name.length > 7 && nodes.length > 12 ? node.name.slice(0,6) + '…' : node.name} (You)` 
                           : creatorName && node.name.toLowerCase() === creatorName.toLowerCase()
                           ? `${node.name.length > 7 && nodes.length > 12 ? node.name.slice(0,6) + '…' : node.name} ★`
-                          : (node.name.length > 8 && nodes.length > 12 ? node.name.slice(0,7) + '…' : node.name)}
+                          : (node.name.length > 8 && nodes.length > 14 ? node.name.slice(0,7) + '…' : node.name)}
                       </text>
                       <text
                         x="0"
-                        y={-(nodeRadius + 8)}
+                        y={-(nodeRadius + 7)}
                         textAnchor="middle"
-                        fill="#34d399"
-                        fontSize={nodes.length <= 4 ? "10.5" : "9.5"}
+                        fill={node.isCreditor ? "#34d399" : node.isDebtor ? "#fb7185" : "#34d399"}
+                        fontSize={nodes.length <= 4 ? "10.5" : nodes.length <= 12 ? "9.5" : "8.5"}
                         fontWeight="bold"
                         fontFamily="sans-serif"
                       >
-                        {node.balance > 0 ? `+${formatCurrency(node.balance)}` : formatCurrency(node.balance)}
+                        {node.isCreditor ? `+${formatCurrency(node.balance)}` : node.isDebtor ? formatCurrency(node.balance) : "✓ $0.00"}
                       </text>
                     </g>
                   ) : (
@@ -971,7 +1056,7 @@ export function NettingCanvas({
                         y={nodeRadius + 14}
                         textAnchor="middle"
                         fill={currentUserName && node.name.toLowerCase() === currentUserName.toLowerCase() ? "#a5b4fc" : "#f8fafc"}
-                        fontSize={nodes.length <= 4 ? "12" : nodes.length > 12 ? "9.5" : "11"}
+                        fontSize={nodes.length <= 4 ? "12" : nodes.length <= 8 ? "11" : nodes.length <= 14 ? "10" : "9"}
                         fontWeight="bold"
                         fontFamily="sans-serif"
                       >
@@ -979,18 +1064,18 @@ export function NettingCanvas({
                           ? `${node.name.length > 7 && nodes.length > 12 ? node.name.slice(0,6) + '…' : node.name} (You)` 
                           : creatorName && node.name.toLowerCase() === creatorName.toLowerCase()
                           ? `${node.name.length > 7 && nodes.length > 12 ? node.name.slice(0,6) + '…' : node.name} ★`
-                          : (node.name.length > 8 && nodes.length > 12 ? node.name.slice(0,7) + '…' : node.name)}
+                          : (node.name.length > 8 && nodes.length > 14 ? node.name.slice(0,7) + '…' : node.name)}
                       </text>
                       <text
                         x="0"
-                        y={nodeRadius + 26}
+                        y={nodeRadius + 25}
                         textAnchor="middle"
-                        fill={node.isSettled ? "#34d399" : "#fb7185"}
-                        fontSize={nodes.length <= 4 ? "10.5" : "9.5"}
+                        fill={node.isCreditor ? "#34d399" : node.isDebtor ? "#fb7185" : "#34d399"}
+                        fontSize={nodes.length <= 4 ? "10.5" : nodes.length <= 12 ? "9.5" : "8.5"}
                         fontWeight="bold"
                         fontFamily="sans-serif"
                       >
-                        {node.isSettled ? "✓ $0.00" : formatCurrency(node.balance)}
+                        {node.isCreditor ? `+${formatCurrency(node.balance)}` : node.isDebtor ? formatCurrency(node.balance) : "✓ $0.00"}
                       </text>
                     </g>
                   )}

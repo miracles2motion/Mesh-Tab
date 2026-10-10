@@ -66,7 +66,7 @@ export function SettlementShowcase() {
 
           <div className="flex items-center gap-3 shrink-0">
             <Link 
-              href="/demo"
+              href="/demo?from=/"
               className="px-6 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-md transition-all hover:scale-105"
             >
               Experience 1-Tap Settlement

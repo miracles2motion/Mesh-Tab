@@ -275,6 +275,7 @@ function DashboardContent() {
       <header className="px-4 sm:px-6 md:px-12 pt-4 sm:pt-6 pb-4 flex items-center justify-between border-b border-slate-200 dark:border-white/10 mb-8 max-w-7xl mx-auto w-full gap-4 sticky top-[64px] z-30 bg-[#f5f5f7]/95 dark:bg-[#0a0a0a]/95 backdrop-blur-xl">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <Link 
+            replace
             href="/home" 
             className="inline-flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-white/80 transition-all text-xs sm:text-sm font-semibold shadow-sm group shrink-0" 
             title="Return to All Tabs"
@@ -322,7 +323,7 @@ function DashboardContent() {
             </button>
             {isMoreOptionsOpen && (
               <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 shadow-xl overflow-hidden z-50 flex flex-col text-sm font-semibold text-slate-700 dark:text-white/80">
-                {!hasOutstandingTabDebt && (
+                {!hasOutstandingTabDebt && grossVolume > 0 && (
                   <button
                     onClick={() => { setIsMoreOptionsOpen(false); setIsCertificateOpen(true); }}
                     className="w-full text-left px-4 py-3 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-2 text-emerald-600 dark:text-emerald-400"

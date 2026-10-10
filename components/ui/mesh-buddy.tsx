@@ -24,6 +24,7 @@ import {
   ArrowLeft,
   Trash2
 } from "lucide-react";
+import { useModalHistoryTrap } from "../../lib/use-modal-history-trap";
 import {
   useBuddySettings,
   useUserProfile,
@@ -365,15 +366,21 @@ export function MeshBuddy() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen]);
 
-  // Mobile viewport: lock background scrolling when drawer is open
+  // Mobile back trap: Hardware or gesture back closes MeshBuddy drawer
+  useModalHistoryTrap(isOpen, () => setIsOpen(false));
+
+  // Mobile viewport: lock background scrolling & prevent pull-to-refresh when drawer is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
+      document.body.style.overscrollBehaviorY = "none";
     } else {
       document.body.style.overflow = "";
+      document.body.style.overscrollBehaviorY = "auto";
     }
     return () => {
       document.body.style.overflow = "";
+      document.body.style.overscrollBehaviorY = "auto";
     };
   }, [isOpen]);
 
@@ -580,7 +587,7 @@ export function MeshBuddy() {
           `• ⌨️ **Manual Entry**: Type the amount, description, and select who paid and how to split.`;
 
         actionItems = [
-          { label: "Back to Tab", action: () => router.push(currentTabId ? `/tab/${currentTabId}` : isCleanMode ? "/home" : "/tab/lisbon-24") },
+          { label: "Back to Tab", action: () => router.replace(currentTabId ? `/tab/${currentTabId}` : isCleanMode ? "/home" : "/tab/lisbon-24") },
         ];
       } else if (pathname?.includes("/members")) {
         const stats = currentTabId ? getLiveTabStats(currentTabId, userName, tabDisplayName) : null;
@@ -598,7 +605,7 @@ export function MeshBuddy() {
           `• They sign in with Face ID or Touch ID in seconds—no passwords or app downloads needed!`;
 
         actionItems = [
-          { label: "Back to Tab", action: () => router.push(currentTabId ? `/tab/${currentTabId}` : isCleanMode ? "/home" : "/tab/lisbon-24") },
+          { label: "Back to Tab", action: () => router.replace(currentTabId ? `/tab/${currentTabId}` : isCleanMode ? "/home" : "/tab/lisbon-24") },
         ];
       } else if (pathname === "/settings") {
         spokenPunchline = "Here are your account and security settings.";
@@ -611,7 +618,7 @@ export function MeshBuddy() {
           `• 🎮 Switch workspace modes between Clean Slate and Sample Trip.`;
 
         actionItems = [
-          { label: "Go to Hub", action: () => router.push("/home") },
+          { label: "Go to Hub", action: () => router.replace("/home") },
           { label: "🚰 Claim Faucet (+$500)", action: handleClaimFaucet },
         ];
       } else if (pathname === "/notifications") {
@@ -623,7 +630,7 @@ export function MeshBuddy() {
           `• 🧹 **Stay Organized**: Filter by unread, expenses, or settlements, or clear all anytime.`;
 
         actionItems = [
-          { label: "🏠 Return to Hub", action: () => router.push("/home") },
+          { label: "🏠 Return to Hub", action: () => router.replace("/home") },
           { label: "⚙️ Manage Settings", action: () => router.push(pathname ? `/settings?from=${encodeURIComponent(pathname)}` : "/settings") },
         ];
       } else if (pathname === "/error") {
@@ -633,7 +640,7 @@ export function MeshBuddy() {
           `An unexpected screen error was intercepted, but all your group tabs and account balances are safely preserved in your browser. You can reload the route or return to the hub safely.`;
 
         actionItems = [
-          { label: "🏠 Return to Hub", action: () => router.push("/home") },
+          { label: "🏠 Return to Hub", action: () => router.replace("/home") },
           { label: "🎮 Open Demo Sandbox", action: () => router.push(pathname ? `/demo?from=${encodeURIComponent(pathname)}` : "/demo") },
         ];
       } else {
@@ -723,7 +730,7 @@ export function MeshBuddy() {
         replyText = "You are in Clean Slate mode with no tab selected. Create or open a tab to view its expense ledger!";
         actionItems = [
           { label: "➕ Create New Tab", action: () => router.push("/tab/new") },
-          { label: "🏠 Go to Hub", action: () => router.push("/home") },
+          { label: "🏠 Go to Hub", action: () => router.replace("/home") },
         ];
       } else {
         const activeTabKey = currentTabId || (isCleanMode ? "" : "lisbon-24");
@@ -825,7 +832,7 @@ export function MeshBuddy() {
     } else if (/why monad|what is monad|parallel evm|10000 tps|tps|blockchain/i.test(q)) {
       replyText = `MeshTab runs on an ultra-fast modern transaction network! 🚀 Traditional payment apps process things one-by-one and can lag or lock up during busy weekends. Our payment engine processes thousands of transactions per second with instant 400ms blocks and ~800ms consensus finality.\n\nThat means 20 people on a group trip can log drinks, split dinners, and confirm payments at the exact same instant without waiting or transfer delays!`;
       actionItems = [
-        { label: "🏆 Open Pitch Presentation", action: () => router.push("/home") },
+        { label: "🏆 Open Pitch Presentation", action: () => router.replace("/home") },
         { label: "🌀 Learn About Netting", action: () => handleAskQuestion("how does netting work") },
       ];
     } else if (/passkey|passkeys|privy|biometric|webauthn|touch id|face id/i.test(q)) {
@@ -916,7 +923,7 @@ export function MeshBuddy() {
       replyText = "When friends settle up and you are owed money, your balance turns green (+). You can tap 'Cash Out to Bank' on your balance card to transfer your Digital Dollars directly to your debit card (Visa Direct) or bank account in seconds!";
       actionItems = [
         { label: "🏦 Open Bank Settings", action: () => router.push(pathname ? `/settings?from=${encodeURIComponent(pathname)}` : "/settings") },
-        { label: "Go to Hub", action: () => router.push("/home") },
+        { label: "Go to Hub", action: () => router.replace("/home") },
       ];
     } else if (q.includes("receipt") || q.includes("camera") || q.includes("ocr") || q.includes("scan")) {
       spokenPunchline = "Tap Smart Scan to photograph a receipt, and the line items will be extracted automatically.";
@@ -934,7 +941,7 @@ export function MeshBuddy() {
       } else {
         replyText = "Group members join tabs through simple QR codes or links. They sign in with Face ID or Touch ID in seconds without complicated passwords or forms.";
         actionItems = [
-          { label: "Go to Hub", action: () => router.push("/home") }
+          { label: "Go to Hub", action: () => router.replace("/home") }
         ];
       }
     } else if (q.includes("fee") || q.includes("privy") || q.includes("gas")) {
@@ -969,6 +976,10 @@ export function MeshBuddy() {
               dest = `/tab/${currentTabId}/expense/new`;
             } else if (isCustomTab && dest.includes("/tab/lisbon-24/members")) {
               dest = `/tab/${currentTabId}/members`;
+            } else if (dest === "/demo") {
+              dest = `/demo?from=${encodeURIComponent(pathname || "/home")}`;
+            } else if (dest === "/settings") {
+              dest = `/settings?from=${encodeURIComponent(pathname || "/home")}`;
             }
             return { label: act.label, action: () => router.push(dest) };
           } else if (act.type === "faucet") {

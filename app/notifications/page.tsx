@@ -46,11 +46,11 @@ function NotificationsContent() {
   const handleBack = () => {
     sounds.playClick();
     if (fromUrl && fromUrl.startsWith("/")) {
-      router.push(fromUrl);
-    } else if (typeof window !== "undefined" && window.history.length > 1) {
+      router.replace(fromUrl);
+    } else if (typeof window !== "undefined" && window.history.length > 1 && document.referrer && document.referrer.includes(window.location.host)) {
       router.back();
     } else {
-      router.push("/home");
+      router.replace("/home");
     }
   };
 
@@ -350,6 +350,7 @@ function NotificationsContent() {
                 </button>
               )}
               <Link
+                replace
                 href="/home"
                 className="px-4 py-2 rounded-xl bg-indigo-600 text-xs font-bold text-white hover:bg-indigo-700 transition-all shadow-md shadow-indigo-500/20 cursor-pointer"
               >

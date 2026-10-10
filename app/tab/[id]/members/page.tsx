@@ -37,6 +37,7 @@ export default function MembersFallbackPage() {
     <div className="min-h-screen bg-[#f5f5f7] dark:bg-black/40 flex flex-col items-center justify-start pb-12 overflow-y-auto text-slate-900 dark:text-white">
       <div className="w-full max-w-full mb-4 mt-8 px-4 md:px-12 flex items-center justify-between">
         <Link 
+          replace
           href={`/tab/${params.id}`} 
           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white transition-all text-xs font-semibold shadow-sm"
         >

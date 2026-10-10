@@ -330,7 +330,14 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
 
         recognition.onerror = () => {
           setIsRecording(false);
-          fallbackVoiceDemo();
+          if (workspaceMode !== "testnet") {
+            fallbackVoiceDemo();
+          } else {
+            toast.error("Microphone unavailable", {
+              description: "Please enter the amount and note manually."
+            });
+            setAiNotice(null);
+          }
         };
 
         recognition.start();
@@ -339,7 +346,13 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
         // Fall through to fallback
       }
     }
-    fallbackVoiceDemo();
+    if (workspaceMode !== "testnet") {
+      fallbackVoiceDemo();
+    } else {
+      toast.error("Speech Recognition not supported", {
+        description: "Please enter the amount and note manually."
+      });
+    }
   };
 
   const fallbackVoiceDemo = () => {
@@ -675,31 +688,33 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
                 </div>
               </div>
 
-              {/* Quick Preset Chips for Demo Pitch */}
-              <div className="flex items-center gap-1.5 flex-wrap px-1">
-                <span className="text-[10px] font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider mr-0.5">Demo Presets:</span>
-                <button
-                  type="button"
-                  onClick={() => handleSelectPresetReceipt("Specialty Espresso & Pastries", "14.20")}
-                  className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-[11px] font-semibold border border-indigo-200 dark:border-indigo-500/20 transition-all cursor-pointer"
-                >
-                  ☕ Coffee $14.20
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSelectPresetReceipt("Seafood Dinner & Wine", "84.50")}
-                  className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-[11px] font-semibold border border-indigo-200 dark:border-indigo-500/20 transition-all cursor-pointer"
-                >
-                  🍽️ Dinner $84.50
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSelectPresetReceipt("Airport Transfer / Taxi", "32.00")}
-                  className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-[11px] font-semibold border border-indigo-200 dark:border-indigo-500/20 transition-all cursor-pointer"
-                >
-                  🚕 Taxi $32.00
-                </button>
-              </div>
+              {/* Quick Preset Chips for Demo Pitch (hidden in testnet mode) */}
+              {workspaceMode !== "testnet" && (
+                <div className="flex items-center gap-1.5 flex-wrap px-1">
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider mr-0.5">Demo Presets:</span>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectPresetReceipt("Specialty Espresso & Pastries", "14.20")}
+                    className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-[11px] font-semibold border border-indigo-200 dark:border-indigo-500/20 transition-all cursor-pointer"
+                  >
+                    ☕ Coffee $14.20
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectPresetReceipt("Seafood Dinner & Wine", "84.50")}
+                    className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-[11px] font-semibold border border-indigo-200 dark:border-indigo-500/20 transition-all cursor-pointer"
+                  >
+                    🍽️ Dinner $84.50
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectPresetReceipt("Airport Transfer / Taxi", "32.00")}
+                    className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 text-[11px] font-semibold border border-indigo-200 dark:border-indigo-500/20 transition-all cursor-pointer"
+                  >
+                    🚕 Taxi $32.00
+                  </button>
+                </div>
+              )}
 
               {aiNotice && (
                 <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center gap-2 animate-in fade-in">

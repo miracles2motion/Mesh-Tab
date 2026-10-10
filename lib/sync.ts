@@ -123,7 +123,7 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
                   const tabs = getStoredTabs();
                   const nextTabs = tabs.map(t => {
                     if (t.id === tabId) {
-                      return { ...t, balance: userMember.balance, memberCount: updatedMembers.length, lastActivityAt: Date.now() };
+                      return { ...t, balance: userMember.balance, memberCount: updatedMembers.length };
                     }
                     return t;
                   });
@@ -142,15 +142,35 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
             const mappedExpenses: StoredExpense[] = rawServerExpenses
               .filter((e: any) => !deletedIdSet.has(e.expenseId))
               .map((e: any) => {
+                const expTimestamp = typeof e.timestamp === "number"
+                  ? e.timestamp
+                  : e.createdAt
+                    ? (typeof e.createdAt === "number" ? e.createdAt : new Date(e.createdAt).getTime())
+                    : e.timestamp
+                      ? new Date(e.timestamp).getTime()
+                      : (e.serverSyncedAt ? Number(e.serverSyncedAt) : Date.now());
+
                 if (e.metadata) {
-                  return { ...e.metadata, syncStatus: "synced" as const };
+                  return { 
+                    ...e.metadata, 
+                    createdAt: e.metadata.createdAt || expTimestamp,
+                    time: "Just now",
+                    syncStatus: "synced" as const 
+                  };
                 }
                 return {
                   id: e.expenseId || Math.random().toString(36).substr(2, 9),
                   payer: e.payers?.[0]?.name || "Unknown",
                   amount: e.finalAmountUsd || 0,
                   desc: e.description || "",
-                  time: new Date(e.timestamp || Date.now()).toISOString(),
+                  createdAt: expTimestamp,
+                  time: "Just now",
+                  splitType: e.splitType || "equal",
+                  splits: e.splits,
+                  participants: e.participants || (e.borrowers ? e.borrowers.map((b: any) => b.name) : undefined),
+                  category: e.category || "other",
+                  originalCurrency: e.originalCurrency || "USD",
+                  originalAmount: e.originalAmount,
                   syncStatus: "synced" as const
                 };
               });

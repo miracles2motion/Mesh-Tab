@@ -23,6 +23,7 @@ export default function ExpenseDetailsFallbackPage({
         <header className="px-6 md:px-12 py-3 md:py-4 max-w-5xl mx-auto w-full flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link 
+              replace
               href={`/tab/${routeParams.id || resolvedParams.id}`} 
               className="w-10 h-10 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shadow-sm text-slate-700 dark:text-white/80 shrink-0"
               title="Back to Tab"

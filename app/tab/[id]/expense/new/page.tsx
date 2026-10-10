@@ -30,6 +30,7 @@ export default function AddExpenseFallbackPage() {
       <GlobalNav />
       <div className="w-full max-w-full mb-4 mt-8 px-4 md:px-12 flex items-center justify-between">
         <Link 
+          replace
           href={`/tab/${params.id}`} 
           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white transition-all text-xs font-semibold shadow-sm"
         >
@@ -43,7 +44,7 @@ export default function AddExpenseFallbackPage() {
               tabId={tabId}
               members={memberNames} 
               currentUser={currentUserName}
-              onSuccess={() => router.push(`/tab/${params.id}`)} 
+              onSuccess={() => router.replace(`/tab/${params.id}`)} 
             />
           ) : (
             <div className="w-full h-full min-h-[400px] flex items-center justify-center">

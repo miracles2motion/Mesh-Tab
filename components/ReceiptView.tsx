@@ -23,8 +23,8 @@ export function ReceiptView({
   const displayAmount = amount;
   const formatCurrency = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
-  const txHash = "0x8f29a14891029c37e19f7b3d";
-  const explorerUrl = `https://testnet.monadexplorer.com/tx/${txHash}`;
+  const txHash = "0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0";
+  const explorerUrl = `https://testnet.monadscan.com/tx/${txHash}`;
 
   const handleShare = () => {
     const text = `Settled ${formatCurrency(displayAmount)} AUSD via MeshTab: Payment ID #8f29a1 on Monad`;

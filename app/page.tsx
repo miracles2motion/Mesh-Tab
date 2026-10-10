@@ -8,7 +8,6 @@ import { NettingVisualizer } from "../components/landing/netting-visualizer";
 import { SettlementShowcase } from "../components/landing/settlement-showcase";
 import { FeatureGrid } from "../components/landing/feature-grid";
 import { MaturityMatrix } from "../components/landing/maturity-matrix";
-import { ComparisonTable } from "../components/landing/comparison-table";
 import { FAQAccordion } from "../components/landing/faq-accordion";
 import { ThemeToggle } from "../components/theme-toggle";
 import { Sparkles } from "lucide-react";
@@ -43,8 +42,8 @@ export default function LandingPage() {
           </Link>
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <Link href="/demo" className="btn-primary py-2 text-sm px-5 flex items-center gap-1.5 shadow-md shadow-indigo-500/20">
-              <Sparkles className="w-3.5 h-3.5" /> Open Demo
+            <Link href="/demo?from=/" className="btn-primary py-2 text-sm px-5 flex items-center gap-1.5 shadow-md shadow-indigo-500/20">
+              <Sparkles className="w-3.5 h-3.5" /> {finalCta.cta}
             </Link>
           </div>
         </div>
@@ -59,7 +58,6 @@ export default function LandingPage() {
         <HowItWorks />
         <FeatureGrid />
         <MaturityMatrix />
-        <ComparisonTable />
         <FAQAccordion />
 
         {/* Final CTA Section */}
@@ -68,7 +66,7 @@ export default function LandingPage() {
             <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">{finalCta.title}</h2>
             <p className="text-indigo-100 text-base md:text-lg mb-8 max-w-xl mx-auto">{finalCta.description}</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/demo" className="bg-white text-indigo-600 px-8 py-4 rounded-full font-bold text-lg hover:scale-105 transition-transform shadow-xl inline-block">
+              <Link href="/demo?from=/" className="bg-white text-indigo-600 px-8 py-4 rounded-full font-bold text-lg hover:scale-105 transition-transform shadow-xl inline-block">
                 {finalCta.cta}
               </Link>
               <TestnetLoginButton />

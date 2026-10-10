@@ -7,7 +7,7 @@ import { useNow } from "@/lib/hooks/use-now";
 import { clsx } from "clsx";
 
 interface LiveTimeProps {
-  ts?: number;
+  ts?: number | string;
   kind?: "created" | "joined" | "expense" | "edited" | "settled" | "member";
   variant?: "activity" | "compact" | "full";
   className?: string;
@@ -22,7 +22,29 @@ export function LiveTime({
   fallback = "Earlier"
 }: LiveTimeProps) {
   const [mounted, setMounted] = useState(false);
-  const now = useNow(ts);
+
+  // Resolve effective timestamp (epoch ms) from ts or fallback if fallback is an ISO/date string
+  let effectiveTs: number | undefined = undefined;
+  if (typeof ts === "number" && !isNaN(ts) && ts > 0) {
+    effectiveTs = ts;
+  } else if (typeof ts === "string") {
+    const parsed = Date.parse(ts);
+    if (!isNaN(parsed) && parsed > 0) {
+      effectiveTs = parsed;
+    }
+  }
+
+  if (!effectiveTs && fallback) {
+    const looksLikeDate = fallback.includes("T") || fallback.includes("-") || fallback.includes(":");
+    if (looksLikeDate) {
+      const parsed = Date.parse(fallback);
+      if (!isNaN(parsed) && parsed > 0) {
+        effectiveTs = parsed;
+      }
+    }
+  }
+
+  const now = useNow(effectiveTs);
   
   useEffect(() => {
     setMounted(true);
@@ -36,7 +58,7 @@ export function LiveTime({
     );
   }
 
-  if (!ts) {
+  if (!effectiveTs) {
     return (
       <span className={clsx("text-muted-foreground", className)}>
         {fallback}
@@ -44,9 +66,9 @@ export function LiveTime({
     );
   }
 
-  const timeAgo = formatRelative(ts, now);
-  const absoluteTime = formatAbsolute(ts);
-  const isFresh = (now - ts) < 5 * 60 * 1000; // < 5 minutes
+  const timeAgo = formatRelative(effectiveTs, now);
+  const absoluteTime = formatAbsolute(effectiveTs);
+  const isFresh = (now - effectiveTs) < 5 * 60 * 1000; // < 5 minutes
 
   let prefix = "";
   if (variant === "activity" && kind) {
@@ -64,7 +86,7 @@ export function LiveTime({
 
   return (
     <time 
-      dateTime={new Date(ts).toISOString()}
+      dateTime={new Date(effectiveTs).toISOString()}
       title={absoluteTime}
       className={clsx("inline-flex items-center gap-1.5 text-muted-foreground transition-colors", className)}
     >

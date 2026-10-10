@@ -79,3 +79,25 @@ body::-webkit-scrollbar {
   background: transparent;
 }
 
+/* Mobile Pull-to-Refresh & Bottom Drawer Touch Isolation */
+.drawer-container {
+  overscroll-behavior-y: contain;
+  overscroll-behavior-x: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.drawer-handle {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Safe area padding utilities for mobile edge-to-edge displays */
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 1rem));
+}
+
+.mb-safe {
+  margin-bottom: max(1rem, env(safe-area-inset-bottom, 1rem));
+}
+
