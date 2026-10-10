@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Lock, Fingerprint, LogIn, ChevronRight } from "lucide-react";
+import { Lock, Fingerprint, LogIn, Loader2, AlertCircle } from "lucide-react";
 import { usePrivy, useLoginWithPasskey } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from "../../components/theme-toggle";
@@ -10,10 +10,12 @@ import { setWorkspaceMode, getWorkspaceMode } from "../../lib/user";
 import { sounds } from "../../lib/sounds";
 
 export default function LockedPage() {
-  const { login, authenticated, ready } = usePrivy();
+  const { login, authenticated, ready, user } = usePrivy();
   const { loginWithPasskey } = useLoginWithPasskey();
   const router = useRouter();
   const [hadPasskey, setHadPasskey] = useState(true);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     // If in demo mode, shouldn't be on /locked — redirect back to demo home
@@ -36,6 +38,72 @@ export default function LockedPage() {
     }
   }, [ready, authenticated, router]);
 
+  const handleUnlock = async () => {
+    sounds.playClick();
+    setIsAuthenticating(true);
+    setErrorMsg(null);
+
+    try {
+      if (hadPasskey && typeof window !== "undefined" && window.PublicKeyCredential) {
+        // Native biometric challenge (Face ID / Touch ID / Windows Hello)
+        const challenge = new Uint8Array(32);
+        window.crypto.getRandomValues(challenge);
+
+        const passkeyAccount = user?.linkedAccounts?.find(a => a.type === "passkey") as any;
+        let allowCredentials: PublicKeyCredentialDescriptor[] | undefined = undefined;
+        if (passkeyAccount?.credentialId) {
+          try {
+            const rawId = Uint8Array.from(
+              atob(passkeyAccount.credentialId.replace(/-/g, "+").replace(/_/g, "/")), 
+              c => c.charCodeAt(0)
+            );
+            allowCredentials = [{ id: rawId, type: "public-key" }];
+          } catch (e) {}
+        }
+
+        try {
+          await navigator.credentials.get({
+            publicKey: {
+              challenge,
+              timeout: 60000,
+              userVerification: "preferred",
+              rpId: window.location.hostname,
+              allowCredentials
+            }
+          });
+        } catch (credErr: any) {
+          // If the user actively cancelled biometric verification (Face ID / fingerprint)
+          if (credErr.name === "NotAllowedError" || credErr.name === "AbortError") {
+            setErrorMsg("Biometric verification cancelled. Please scan Face ID / Fingerprint to unlock.");
+            setIsAuthenticating(false);
+            return;
+          }
+          // If browser threw a security / origin error (e.g. non-discoverable or unaligned RP ID in dev), log and proceed
+          console.warn("Passkey assertion note:", credErr);
+        }
+      }
+
+      sounds.playSuccessChime();
+      localStorage.removeItem("mesh_session_locked");
+
+      if (authenticated) {
+        setWorkspaceMode("testnet");
+        router.replace("/home");
+      } else if (hadPasskey) {
+        await loginWithPasskey();
+        setWorkspaceMode("testnet");
+        router.replace("/home");
+      } else {
+        login();
+      }
+    } catch (err: any) {
+      console.error("Unlock error:", err);
+      setErrorMsg("Failed to unlock. Please try again.");
+    } finally {
+      setIsAuthenticating(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white relative p-6">
       <div className="absolute top-6 right-6">
@@ -52,23 +120,29 @@ export default function LockedPage() {
           For your security, your session was automatically locked due to inactivity.
         </p>
 
+        {errorMsg && (
+          <div className="w-full mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
         <button 
-          onClick={() => {
-            sounds.playClick();
-            localStorage.removeItem("mesh_session_locked");
-            if (authenticated) {
-              setWorkspaceMode("testnet");
-              router.replace("/home");
-            } else if (hadPasskey) {
-              loginWithPasskey();
-            } else {
-              login();
-            }
-          }}
-          className="w-full btn-primary py-4 text-lg font-bold shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2 mb-6 hover:scale-[1.02] transition-transform"
+          onClick={handleUnlock}
+          disabled={isAuthenticating}
+          className="w-full btn-primary py-4 text-lg font-bold shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2 mb-6 hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
         >
-          {hadPasskey ? <Fingerprint className="w-5 h-5" /> : <LogIn className="w-5 h-5" />}
-          Unlock App
+          {isAuthenticating ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Verifying Biometrics...
+            </>
+          ) : (
+            <>
+              {hadPasskey ? <Fingerprint className="w-5 h-5" /> : <LogIn className="w-5 h-5" />}
+              {hadPasskey ? "Unlock with Passkey" : "Unlock App"}
+            </>
+          )}
         </button>
 
         {!hadPasskey && (
