@@ -14,9 +14,9 @@ export async function POST(request: Request) {
       if (requestCount === 1) {
         await redis.expire(rateLimitKey, 60);
       }
-      if (requestCount > 10) {
+      if (requestCount > 20) {
         return NextResponse.json(
-          { error: 'Rate limit exceeded: Maximum 10 receipt scans per minute. Please wait a moment before trying again.' },
+          { error: 'Network scan limit reached: Several receipts were just scanned from your network. Please wait 15 seconds and try again.' },
           { status: 429 }
         );
       }

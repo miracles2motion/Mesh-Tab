@@ -38,7 +38,7 @@ To maintain complete transparency with judges, engineering leadership, and users
 
 | Feature | Category | Current Status & Architecture |
 |---|---|---|
-| **MeshTabAgoraLedger Settlement** | 🟢 Live On-Chain | Deployed on Monad Testnet (`payNettedDebt`). Executes atomic debt settlement in official Agora AUSD. |
+| **MeshTabAgoraLedger Settlement** | 🟢 Live On-Chain | Deployed on Monad Testnet (`payNettedDebt`). Executes one-tap debt settlement in official Agora AUSD. |
 | **Agora AUSD Official Faucet** | 🟢 Live On-Chain | Official Agora faucet (`requestFunds`) providing 10,000 Agora AUSD for testnet group tabs. |
 | **Pimlico Gas Sponsorship** | 🟢 Live Production | 100% gasless transactions via ERC-4337 Paymaster integration with Privy Smart Wallets. |
 | **Pyth Hermes FX Engine** | 🟢 Live Production | Low-latency foreign exchange oracle proxy (`/api/pyth`) with 60s caching and graceful fallbacks. |
@@ -59,11 +59,13 @@ Smart contracts deployed and verified on **Monad Testnet (Chain ID: 10143)**:
 
 | Contract | Address | Explorer | Role & Verification |
 |---|---|---|---|
-| **MeshTabAgoraLedger** | `0x54f02333ea8D80C175A1C8Bdb71ef709cF424C83` | [View on Monadscan](https://testnet.monadscan.com/address/0x54f02333ea8D80C175A1C8Bdb71ef709cF424C83) | Atomic group debt settlement engine (`payNettedDebt`) for official Agora AUSD |
+| **MeshTabAgoraLedger** | `0x54f02333ea8D80C175A1C8Bdb71ef709cF424C83` | [View on Monadscan](https://testnet.monadscan.com/address/0x54f02333ea8D80C175A1C8Bdb71ef709cF424C83) | Group debt settlement engine (`payNettedDebt`) for official Agora AUSD |
 | **Agora AUSD (Official Token)** | `0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC` | [View on Monadscan](https://testnet.monadscan.com/address/0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC) | Official Agora digital dollar ERC-20 on Monad Testnet (6 decimals) |
 | **Agora Official Faucet** | `0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C` | [View on Monadscan](https://testnet.monadscan.com/address/0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C) | Official Agora liquidity faucet dripping 10,000 AUSD per claim (`requestFunds`) |
 
 > **Official Agora AUSD Integration.** MeshTab connects 100% directly to official Agora infrastructure on Monad Testnet. Evaluators can fund their smart account with **$10,000.00 Agora AUSD** in one tap directly from the official Agora Faucet, and settle netted group balances on-chain through `MeshTabAgoraLedger` ([Monadscan Settlement TX](https://testnet.monadscan.com/tx/0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0), Block 69400512).
+>
+> 🛡️ **Judge Evidence Pack & Latency Benchmark:** On-chain invariant verification, explorer receipts, and a 10-trial latency study (median 236ms query / ~820ms user tap-to-settle) are compiled in [`meshtab-artifacts/evidence/EVIDENCE_PACK.md`](../meshtab-artifacts/evidence/EVIDENCE_PACK.md).
 
 ---
 

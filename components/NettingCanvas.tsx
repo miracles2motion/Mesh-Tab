@@ -27,7 +27,7 @@ import { toast } from "sonner";
 import { sounds } from "../lib/sounds";
 import { fireSettlementConfetti } from "../lib/confetti";
 import { formatCurrency } from "../lib/utils";
-import { getStoredUser, DEFAULT_USER_NAME, getWorkspaceMode } from "../lib/user";
+import { getStoredUser, DEFAULT_USER_NAME, getWorkspaceMode, getStoredExpenses, StoredExpense } from "../lib/user";
 import { addNotification, getPaymentRequestNotifId } from "../lib/notifications";
 import Link from "next/link";
 
@@ -401,15 +401,107 @@ export function NettingCanvas({
     return edges;
   }, [nodes, creditors, debtors, hasActiveDebts]);
 
-  // 3b. Compute baseline unnetted transfer count (pairwise per-currency / debtor-to-creditor baseline)
+  // 3b. Compute baseline unnetted transfer count (per-currency greedy netting baseline per PRD)
   const unnettedTransfers = useMemo(() => {
     if (!hasActiveDebts || simplifiedEdges.length === 0) return 0;
+
+    // Helper: calculate greedy netting within each distinct currency pool
+    const computePerCurrencyBaseline = (expenses: StoredExpense[], memberNames: string[]): number => {
+      if (!expenses || expenses.length === 0) return 0;
+      
+      const currencyGroups = new Map<string, StoredExpense[]>();
+      for (const exp of expenses) {
+        const cur = (exp.originalCurrency || "USD").toUpperCase();
+        const list = currencyGroups.get(cur) || [];
+        list.push(exp);
+        currencyGroups.set(cur, list);
+      }
+
+      let totalBaseline = 0;
+
+      for (const [, groupExpenses] of currencyGroups.entries()) {
+        const netPositions = new Map<string, number>();
+        for (const name of memberNames) {
+          netPositions.set(name.toLowerCase(), 0);
+        }
+
+        for (const exp of groupExpenses) {
+          const cost = typeof exp.originalAmount === "number" && exp.originalAmount > 0 
+            ? Math.round(exp.originalAmount * 100) 
+            : exp.amount;
+          
+          const payerKey = exp.payer.toLowerCase();
+          netPositions.set(payerKey, (netPositions.get(payerKey) || 0) + cost);
+
+          const participants = exp.participants && exp.participants.length > 0 
+            ? exp.participants 
+            : memberNames;
+          
+          if (exp.splits && Object.keys(exp.splits).length > 0) {
+            for (const [pName, share] of Object.entries(exp.splits)) {
+              const pKey = pName.toLowerCase();
+              const shareCents = Math.round(share);
+              netPositions.set(pKey, (netPositions.get(pKey) || 0) - shareCents);
+            }
+          } else {
+            const sharePerPerson = Math.round(cost / (participants.length || 1));
+            for (const p of participants) {
+              const pKey = p.toLowerCase();
+              netPositions.set(pKey, (netPositions.get(pKey) || 0) - sharePerPerson);
+            }
+          }
+        }
+
+        const curCreditors: { remaining: number }[] = [];
+        const curDebtors: { remaining: number }[] = [];
+
+        for (const [, net] of netPositions.entries()) {
+          if (net > 0) curCreditors.push({ remaining: net });
+          else if (net < 0) curDebtors.push({ remaining: Math.abs(net) });
+        }
+
+        curCreditors.sort((a, b) => b.remaining - a.remaining);
+        curDebtors.sort((a, b) => b.remaining - a.remaining);
+
+        let cIdx = 0;
+        let dIdx = 0;
+        let curTransfers = 0;
+
+        while (cIdx < curCreditors.length && dIdx < curDebtors.length) {
+          const cred = curCreditors[cIdx];
+          const debt = curDebtors[dIdx];
+          const settleAmount = Math.min(cred.remaining, debt.remaining);
+
+          if (settleAmount > 0) {
+            curTransfers++;
+            cred.remaining -= settleAmount;
+            debt.remaining -= settleAmount;
+          }
+
+          if (cred.remaining <= 0) cIdx++;
+          if (debt.remaining <= 0) dIdx++;
+        }
+
+        totalBaseline += curTransfers;
+      }
+
+      return totalBaseline;
+    };
+
+    const tabExpenses = tabId ? getStoredExpenses(tabId) : [];
+    const memberNames = nodes.map(n => n.name);
+    const perCurrencyBaseline = computePerCurrencyBaseline(tabExpenses, memberNames);
+
+    if (perCurrencyBaseline > 0) {
+      return perCurrencyBaseline;
+    }
+
     // Lisbon benchmark default: 9 unnetted cross-currency transfers collapse to 3
     if (tabId === "lisbon-24" && nodes.length === 4) return 9;
-    // Custom tabs: pairwise creditor-debtor baseline
-    const pairwiseBaseline = creditors.length * debtors.length;
-    return Math.max(simplifiedEdges.length, pairwiseBaseline);
-  }, [hasActiveDebts, simplifiedEdges.length, tabId, nodes.length, creditors.length, debtors.length]);
+
+    // For single-currency tabs without multi-currency fragmentation, baseline equals direct payments
+    return simplifiedEdges.length;
+  }, [hasActiveDebts, simplifiedEdges.length, tabId, nodes]);
 
   const paymentsSaved = Math.max(0, unnettedTransfers - simplifiedEdges.length);
 
