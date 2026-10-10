@@ -19,17 +19,45 @@ export default function JoinTabPage() {
   const paramName = searchParams?.get("n");
   const tabName = paramName || tabId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   const router = useRouter();
-  const { getAccessToken, authenticated, user, login } = usePrivy();
+  const { ready, getAccessToken, authenticated, user, login } = usePrivy();
   const { client } = useSmartWallets();
   const smartWalletAddress = client?.account?.address || user?.wallet?.address;
   const [name, setName] = useState(() => {
     if (typeof window !== "undefined") {
-      return getStoredUser().name || "";
+      const explicitName = localStorage.getItem("meshTab_displayName");
+      // Only prefill if user previously set an explicit display name (ignore empty or demo fallback)
+      if (explicitName && explicitName.trim()) {
+        return explicitName.trim();
+      }
     }
     return "";
   });
   const [step, setStep] = useState<"name" | "auth" | "success">("name");
   const [isJoining, setIsJoining] = useState(false);
+
+  // Auto-passthrough: If current user is already an active member of this tab, bypass join screen
+  useEffect(() => {
+    if (typeof window === "undefined" || !tabId || !ready) return;
+
+    if (authenticated && step === "name" && !isJoining) {
+      const localTabs = getStoredTabs();
+      const isTabInDashboard = localTabs.some(t => t.id === tabId);
+
+      const explicitName = (localStorage.getItem("meshTab_displayName") || "").trim().toLowerCase();
+      const members = getStoredTabMembers(tabId);
+      const isMemberLocally = members.some(m => 
+        (smartWalletAddress && m.walletAddress && m.walletAddress.toLowerCase() === smartWalletAddress.toLowerCase()) ||
+        (explicitName && m.name.toLowerCase() === explicitName)
+      );
+
+      if (isTabInDashboard || isMemberLocally) {
+        toast.info(`Already in ${tabName}`, {
+          description: "Opening your shared ledger..."
+        });
+        router.replace(`/tab/${tabId}`);
+      }
+    }
+  }, [ready, authenticated, tabId, tabName, smartWalletAddress, step, isJoining, router]);
 
   // Resume pending join if returning from OAuth / Privy authentication redirect
   useEffect(() => {
@@ -105,6 +133,7 @@ export default function JoinTabPage() {
     // Save profile locally and sync to Redis
     saveStoredUser(targetName, 0, effectiveWallet, token || undefined);
 
+    let isAlreadyMemberOnServer = false;
     if (isEffectivelyOnline() && mode === "testnet") {
       try {
         const extractedJoinCode = tabId.includes("-") ? tabId.split("-").pop() : tabId.slice(-8);
@@ -142,6 +171,11 @@ export default function JoinTabPage() {
 
           toast.error("Join Failed", { description: errData.error || "Unable to join tab on server." });
           return;
+        }
+
+        const serverData = await res.json().catch(() => ({}));
+        if (serverData?.message === "Already a member") {
+          isAlreadyMemberOnServer = true;
         }
       } catch (e) {
         console.error("Failed to push join to server:", e);
@@ -186,9 +220,9 @@ export default function JoinTabPage() {
     saveNewTab({
       id: tabId,
       name: tabName,
-      role: "Member",
-      balance: 0,
-      memberCount: updatedMembers.length,
+      role: existingTab?.role || "Member",
+      balance: existingTab?.balance || 0,
+      memberCount: updatedMembers.length > 0 ? updatedMembers.length : (existingTab?.memberCount || 2),
       createdAt: tabCreatedAt,
       lastActivityAt: tabLastActivity,
       lastActivityKind: existingTab?.lastActivityKind || "joined"
@@ -197,6 +231,14 @@ export default function JoinTabPage() {
     try {
       sessionStorage.removeItem("mesh_pending_join");
     } catch {}
+
+    if (isAlreadyMemberOnServer) {
+      toast.info(`Already in ${tabName}`, {
+        description: `Opening your shared ledger...`
+      });
+      router.replace(`/tab/${tabId}`);
+      return;
+    }
 
     sounds.playSuccessChime();
     setStep("success");
@@ -224,15 +266,31 @@ export default function JoinTabPage() {
         {/* Top Gradient */}
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-500" />
 
-        {/* Back to Hub Escape */}
+        {/* Smart Escape Navigation */}
         <div className="w-full flex items-center justify-start mb-2">
-          <Link
-            replace
-            href="/home"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white transition-all text-xs font-semibold"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" /> Back to Hub
-          </Link>
+          {authenticated ? (
+            <Link
+              replace
+              href="/home"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white transition-all text-xs font-semibold"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Back to Dashboard
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== "undefined" && window.history.length > 1) {
+                  router.back();
+                } else {
+                  router.push("/");
+                }
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white transition-all text-xs font-semibold cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Back
+            </button>
+          )}
         </div>
 
         <div className="text-center space-y-6">
@@ -250,7 +308,7 @@ export default function JoinTabPage() {
           <div className="space-y-4">
             {step === "name" && (
               <div className="animate-in fade-in slide-in-from-bottom-2 space-y-4">
-                {authenticated && name && name !== "David" ? (
+                {authenticated && name ? (
                   <div className="flex flex-col items-center gap-3">
                     <div className="w-16 h-16 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold text-2xl shadow-lg border-2 border-white/20">
                       {name.charAt(0).toUpperCase()}
@@ -262,14 +320,14 @@ export default function JoinTabPage() {
                     <button
                       onClick={handleJoin}
                       disabled={isJoining}
-                      className="w-full mt-2 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold text-lg flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] active:scale-[0.98]"
+                      className="w-full mt-2 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold text-lg flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] active:scale-[0.98] cursor-pointer"
                     >
                       Confirm & Join <ArrowRight className="w-5 h-5" />
                     </button>
                     <button
                       type="button"
                       onClick={() => router.push(`/onboarding?invite=true&tab=${tabId}&n=${encodeURIComponent(tabName)}`)}
-                      className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors py-1"
+                      className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors py-1 cursor-pointer"
                     >
                       Switch Profile / Change Name
                     </button>
@@ -278,7 +336,7 @@ export default function JoinTabPage() {
                   <div>
                     <input
                       type="text"
-                      placeholder="Your Name (e.g. Liam)"
+                      placeholder="Your Name (e.g. Liam, Sarah)"
                       value={name}
                       onChange={e => setName(e.target.value)}
                       onKeyDown={e => e.key === "Enter" && handleJoin()}
@@ -289,7 +347,7 @@ export default function JoinTabPage() {
                     <button
                       onClick={handleJoin}
                       disabled={!name.trim()}
-                      className="w-full mt-4 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold text-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] active:scale-[0.98]"
+                      className="w-full mt-4 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold text-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(79,70,229,0.3)] hover:shadow-[0_0_30px_rgba(79,70,229,0.5)] active:scale-[0.98] cursor-pointer"
                     >
                       Continue <ArrowRight className="w-5 h-5" />
                     </button>

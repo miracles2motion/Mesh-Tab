@@ -126,7 +126,7 @@ export const LANDING_CONTENT = {
     },
     {
       question: "What happens if someone doesn't pay?",
-      answer: "MeshTab does not custody user funds and nothing forces payment. Settlement is peer-to-peer and requires each debtor's biometric approval. The app calculates the optimal netted schedule so friends settle cleanly when they are ready. Smart escrow reserves are on our roadmap."
+      answer: "MeshTab does not custody user funds and nothing forces payment. Settlement is peer-to-peer and requires the debtor's authorization in their authenticated passkey session. The app calculates the optimal netted schedule so friends settle cleanly when they are ready. Smart escrow reserves are on our roadmap."
     },
     {
       question: "Why not traditional splitting apps?",

@@ -58,6 +58,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
   const [paymentMethod, setPaymentMethod] = useState<"ausd" | "card">("ausd");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [lastTxHash, setLastTxHash] = useState<string | undefined>(undefined);
   const [justToppedUp, setJustToppedUp] = useState(false);
 
   const defaultPayCurrency = tabId.includes("lisbon") ? "EUR" : "USD";
@@ -111,33 +112,36 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
 
         toast.loading(`Processing settlement with ${primaryCreditor || "creditor"}...`, { id: "tx-toast" });
 
-        const approveHash = await client.sendTransaction({
-          to: ausdAddress,
-          data: encodeFunctionData({
-            abi: erc20Abi,
-            functionName: "approve",
-            args: [ledgerAddress, amountWei]
-          })
+        // [ATOMIC ERC-4337 BATCHING]: Bundle approve + payNettedDebt into a single UserOp (1 tap, 1 block inclusion)
+        const txHash = await (client as any).sendTransaction({
+          calls: [
+            {
+              to: ausdAddress,
+              data: encodeFunctionData({
+                abi: erc20Abi,
+                functionName: "approve",
+                args: [ledgerAddress, amountWei]
+              })
+            },
+            {
+              to: ledgerAddress,
+              data: encodeFunctionData({
+                abi: MeshTabLedgerABI,
+                functionName: "payNettedDebt",
+                args: [tabId, targetCreditorAddress, amountWei]
+              })
+            }
+          ]
         });
 
         const publicClient = createPublicClient({
             chain: monadTestnet,
             transport: http(process.env.NEXT_PUBLIC_MONAD_RPC_URL || "https://testnet-rpc.monad.xyz")
         });
-        await publicClient.waitForTransactionReceipt({ hash: approveHash });
-
-        const txHash = await client.sendTransaction({
-          to: ledgerAddress,
-          data: encodeFunctionData({
-            abi: MeshTabLedgerABI,
-            functionName: "payNettedDebt",
-            args: [tabId, targetCreditorAddress, amountWei]
-          })
-        });
-
         await publicClient.waitForTransactionReceipt({ hash: txHash });
         
         toast.dismiss("tx-toast");
+        setLastTxHash(txHash);
 
       } catch (err: any) {
         toast.dismiss("tx-toast");
@@ -171,6 +175,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
         }} 
         amount={debtAmount > 0 ? debtAmount : (workspaceMode === "sample" && tabId === "lisbon-24" ? 18000 : 0)} 
         recipient={primaryCreditor}
+        txHash={lastTxHash}
       />
     );
   }

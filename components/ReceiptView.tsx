@@ -10,12 +10,14 @@ export function ReceiptView({
   isOpen, 
   onClose, 
   amount,
-  recipient
+  recipient,
+  txHash: customTxHash
 }: { 
   isOpen: boolean; 
   onClose: () => void; 
   amount: number;
   recipient?: string;
+  txHash?: string;
 }) {
   const [copied, setCopied] = useState(false);
   
@@ -23,7 +25,7 @@ export function ReceiptView({
   const displayAmount = amount;
   const formatCurrency = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
-  const txHash = "0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0";
+  const txHash = customTxHash || "0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0";
   const explorerUrl = `https://testnet.monadscan.com/tx/${txHash}`;
 
   const handleShare = () => {
@@ -104,7 +106,7 @@ export function ReceiptView({
                   className="text-indigo-600 dark:text-indigo-400 font-mono flex items-center gap-1 font-semibold text-xs bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors"
                   title="View on Monad Testnet Explorer"
                 >
-                  <span>0x8f29...a1</span>
+                  <span>{txHash.slice(0, 6)}...{txHash.slice(-4)}</span>
                   <ExternalLink className="w-3 h-3 text-indigo-500" />
                 </a>
               </div>

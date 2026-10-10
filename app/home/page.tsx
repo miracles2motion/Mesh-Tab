@@ -40,7 +40,7 @@ export default function GlobalHub() {
   const { tabs: mockTabs, saveTab } = useStoredTabs();
   const { balance: virtualBalance } = useVirtualBalance();
   const { mode: workspaceMode, setMode: setWorkspaceMode } = useWorkspaceMode();
-  const { totalCents, heldCents, availableCents, isStale, asOf, isLoading } = useAvailableBalance(profile.name || "David");
+  const { totalCents, heldCents, availableCents, isStale, asOf, isLoading: isBalanceAvailableLoading } = useAvailableBalance(profile.name || "David");
   const { unreadCount } = useNotifications();
 
   // Use workspaceMode as the source of truth, not the URL
@@ -64,6 +64,7 @@ export default function GlobalHub() {
   const [activeFilter, setActiveFilter] = useState<"all" | "owe" | "owed">("all");
   const [mounted, setMounted] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
 
   const { showAddress } = useDeveloperMode();
   const fullAddress = client?.account?.address;
@@ -85,6 +86,21 @@ export default function GlobalHub() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (isTestnetMode) {
+      const timer = setTimeout(() => {
+        setLoadingTimeout(true);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [isTestnetMode]);
+
+  // Loading state during initial unlock or page transition while testnet RPC resolves
+  const isBalanceLoading = !loadingTimeout && (
+    !mounted || 
+    (isTestnetMode && testnetBalance === 0 && (!fullAddress || isFetchingBalance || isBalanceAvailableLoading))
+  );
 
   const currentUserName = profile.name || "David";
 
@@ -355,6 +371,7 @@ export default function GlobalHub() {
           {mounted && isTestnetMode && (
             <button
               onClick={() => {
+                if (isBalanceLoading) return;
                 sounds.playClick();
                 setShowFaucetModal(true);
               }}
@@ -363,8 +380,8 @@ export default function GlobalHub() {
             >
               <Coins className="w-3.5 h-3.5" />
               <span className="tabular-nums">
-                {isFetchingBalance && testnetBalance === 0 ? (
-                  <span className="w-8 h-3 bg-purple-200 dark:bg-purple-500/20 rounded animate-pulse inline-block" />
+                {isBalanceLoading ? (
+                  <span className="w-10 h-3.5 bg-purple-200 dark:bg-purple-500/20 rounded animate-pulse inline-block align-middle" />
                 ) : (
                   <AnimatedCounter value={testnetBalance} prefix="$" decimals={2} />
                 )}
@@ -395,15 +412,15 @@ export default function GlobalHub() {
               <span className="text-slate-600 dark:text-white/70 font-semibold text-xs uppercase tracking-wider">
                 {isTestnetMode ? "Total Balance" : "Total Net Balance"}
               </span>
-              {!mounted ? (
-                <div className="h-10 w-44 bg-slate-200 dark:bg-white/10 rounded-2xl animate-pulse mt-1 mb-2" />
+              {isBalanceLoading ? (
+                <div className="h-10 sm:h-12 w-52 bg-slate-200 dark:bg-white/10 rounded-2xl animate-pulse mt-1 mb-2" />
               ) : (
                 <div className={`text-3xl sm:text-4xl md:text-5xl font-bold mt-1 tracking-tight break-words min-w-0 ${isTestnetMode ? "text-slate-900 dark:text-white" : netBalance < 0 ? "text-rose-600 dark:text-rose-400" : netBalance > 0 ? "text-emerald-500 dark:text-emerald-400" : "text-slate-900 dark:text-white"}`}>
                   {!isTestnetMode && netBalance < 0 ? "-" : !isTestnetMode && netBalance > 0 ? "+" : ""}<AnimatedCounter value={isTestnetMode ? (totalCents / 100) : (Math.abs(netBalance) / 100)} prefix="$" decimals={2} />
                 </div>
               )}
               <p className="text-slate-500 dark:text-white/50 text-xs mt-2 font-medium">
-                {!mounted ? (
+                {isBalanceLoading ? (
                   <span className="inline-block h-3.5 w-36 bg-slate-200 dark:bg-white/10 rounded animate-pulse" />
                 ) : (
                   `Across ${syncedTabs.length} active shared ${syncedTabs.length === 1 ? "group" : "groups"}`
@@ -414,16 +431,25 @@ export default function GlobalHub() {
                 <div className="mt-4 flex items-center gap-3 flex-wrap">
                   <button
                     onClick={() => {
+                      if (isBalanceLoading) return;
                       sounds.playClick();
                       setShowAddFundsModal(true);
                     }}
+                    disabled={isBalanceLoading}
                     className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-white text-xs font-bold shadow-md transition-all cursor-pointer hover:scale-105 active:scale-95 ${
-                      isTestnetMode && testnetBalance === 0
+                      isBalanceLoading
+                        ? "bg-indigo-600/60 cursor-wait opacity-80"
+                        : isTestnetMode && testnetBalance === 0
                         ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 shadow-purple-500/25"
                         : "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/25"
                     }`}
                   >
-                    {isTestnetMode && testnetBalance === 0 ? (
+                    {isBalanceLoading ? (
+                      <>
+                        <span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                        <span>Loading Ledger...</span>
+                      </>
+                    ) : isTestnetMode && testnetBalance === 0 ? (
                       <>
                         <Sparkles className="w-4 h-4 text-amber-300" />
                         <span>Claim $10,000 Agora AUSD</span>
@@ -437,18 +463,19 @@ export default function GlobalHub() {
                   </button>
                   <button 
                     onClick={() => {
+                      if (isBalanceLoading) return;
                       if (availableCents > 0) {
                         sounds.playClick();
                         setShowCashOutModal(true);
                       }
                     }}
-                    disabled={availableCents <= 0}
+                    disabled={isBalanceLoading || availableCents <= 0}
                     className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-white text-xs font-bold shadow-md transition-all ${
-                      availableCents > 0 
+                      !isBalanceLoading && availableCents > 0 
                         ? "bg-emerald-600 hover:bg-emerald-700 active:scale-95 shadow-emerald-500/25 cursor-pointer" 
                         : "bg-slate-300 dark:bg-white/10 text-slate-500 dark:text-white/40 shadow-none cursor-not-allowed"
                     }`}
-                    title={availableCents > 0 ? "Cash Out" : heldCents > 0 ? "Settle what you owe to unlock" : "Needs connection"}
+                    title={isBalanceLoading ? "Loading balance..." : availableCents > 0 ? "Cash Out" : heldCents > 0 ? "Settle what you owe to unlock" : "Needs connection"}
                   >
                     <ArrowDownToLine className="w-4 h-4" /> {availableCents > 0 ? "Cash Out" : "Cash Out to Bank"}
                   </button>
@@ -463,18 +490,22 @@ export default function GlobalHub() {
                     <CreditCard className="w-4 h-4 text-indigo-400 dark:text-indigo-600" /> Virtual Card
                   </button>
                   <EarnTicker className="hidden sm:inline-flex" />
-                  <span className={`text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 border ${
-                    availableCents > 0 
+                  <span className={`text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 border transition-all ${
+                    !isBalanceLoading && availableCents > 0 
                       ? "text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20"
                       : "text-slate-500 dark:text-white/50 bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10"
                   }`}>
-                    <CheckCircle2 className={`w-3.5 h-3.5 ${availableCents > 0 ? "text-emerald-500" : "text-slate-400"}`} />
-                    <span>{formatCurrency(availableCents)} available</span>
+                    <CheckCircle2 className={`w-3.5 h-3.5 ${!isBalanceLoading && availableCents > 0 ? "text-emerald-500" : "text-slate-400"}`} />
+                    {isBalanceLoading ? (
+                      <span className="inline-block h-3.5 w-20 bg-slate-200 dark:bg-white/10 rounded animate-pulse align-middle" />
+                    ) : (
+                      <span><AnimatedCounter value={availableCents / 100} prefix="$" decimals={2} /> available</span>
+                    )}
                   </span>
                   {heldCents > 0 && (
                     <span className="text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5 border text-slate-500 dark:text-white/50 bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10" title="Held for what you owe">
                       <span className="w-3 h-3 flex items-center justify-center bg-slate-400 text-white rounded-full text-[8px]">i</span>
-                      <span>{formatCurrency(heldCents)} held for what you owe</span>
+                      <span>{isBalanceLoading ? <span className="inline-block h-3.5 w-16 bg-slate-200 dark:bg-white/10 rounded animate-pulse align-middle" /> : `${formatCurrency(heldCents)} held for what you owe`}</span>
                     </span>
                   )}
                 </div>
@@ -490,7 +521,7 @@ export default function GlobalHub() {
                   <span>You Owe</span>
                 </div>
                 <div className="font-bold text-slate-900 dark:text-white text-base">
-                  {!mounted ? <span className="inline-block h-4 w-14 bg-slate-200 dark:bg-white/10 rounded animate-pulse" /> : formatCurrency(totalYouOwe)}
+                  {isBalanceLoading ? <span className="inline-block h-4 w-14 bg-slate-200 dark:bg-white/10 rounded animate-pulse" /> : formatCurrency(totalYouOwe)}
                 </div>
               </div>
               <div className="w-px h-8 bg-slate-200 dark:bg-white/10" />
@@ -500,7 +531,7 @@ export default function GlobalHub() {
                   <span>You're Owed</span>
                 </div>
                 <div className="font-bold text-slate-900 dark:text-white text-base">
-                  {!mounted ? <span className="inline-block h-4 w-14 bg-slate-200 dark:bg-white/10 rounded animate-pulse" /> : formatCurrency(totalOwedToYou)}
+                  {isBalanceLoading ? <span className="inline-block h-4 w-14 bg-slate-200 dark:bg-white/10 rounded animate-pulse" /> : formatCurrency(totalOwedToYou)}
                 </div>
               </div>
               {mounted && (
@@ -512,7 +543,11 @@ export default function GlobalHub() {
                       <span>{isTestnetMode ? "Wallet Balance" : "Settled Payouts"}</span>
                     </div>
                     <div className={`font-bold text-base ${totalCents > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-white/40"}`}>
-                      {formatCurrency(totalCents)}
+                      {isBalanceLoading ? (
+                        <span className="inline-block h-4 w-16 bg-slate-200 dark:bg-white/10 rounded animate-pulse" />
+                      ) : (
+                        <AnimatedCounter value={totalCents / 100} prefix="$" decimals={2} />
+                      )}
                     </div>
                   </div>
                 </>
