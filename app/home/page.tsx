@@ -155,6 +155,13 @@ export default function GlobalHub() {
         toast.error("Invalid Code", { description: "Testnet join codes must be exactly 8 characters long." });
         return;
       }
+
+      const activeName = profile.name?.trim();
+      if (!activeName) {
+        toast.error("Profile Setup Required", { description: "Please set up your profile name before joining a tab." });
+        router.push("/onboarding?intent=testnet");
+        return;
+      }
       
       setShowJoinModal(false);
       setTxState("processing");
@@ -171,7 +178,7 @@ export default function GlobalHub() {
           },
           body: JSON.stringify({
             joinCode: joinCode.toLowerCase(),
-            name: profile.name || "Anonymous",
+            name: activeName,
             mode: "testnet",
             walletAddress: smartWalletAddress
           })
@@ -179,20 +186,35 @@ export default function GlobalHub() {
 
         const data = await res.json();
         
-        if (data.success) {
+        if (data.success && data.tabId) {
           setTxState("success");
-          await new Promise(r => setTimeout(r, 1000));
-          setTxState("idle");
+          sounds.playSuccessChime();
           setJoinCode("");
+          
+          // Persist joined tab locally so it's in dashboard immediately
+          saveTab({
+            id: data.tabId,
+            name: `Group #${joinCode.toUpperCase()}`,
+            role: "Member",
+            balance: 0,
+            memberCount: 2,
+            createdAt: Date.now(),
+            lastActivityAt: Date.now(),
+            lastActivityKind: "joined"
+          });
           
           // Trigger the sync provider to pull the newly joined tab
           window.dispatchEvent(new Event("meshtab:outbox:updated"));
           
-          // Route immediately to the tab (it might show a placeholder for 1 second before the pull finishes, which is fine)
+          // Route immediately to the tab
           router.push(`/tab/${data.tabId}`);
         } else {
           setTxState("idle");
-          toast.error("Join Failed", { description: data.error === "NOT_FOUND" ? "No tab found matching this code." : data.message || "Failed to join tab." });
+          toast.error("Join Failed", { 
+            description: data.error === "NOT_FOUND" 
+              ? "No tab found on Monad Testnet matching this code. Demo tabs are stored locally on their device." 
+              : data.error || data.message || "Failed to join tab." 
+          });
         }
       } catch (err) {
         setTxState("idle");

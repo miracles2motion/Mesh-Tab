@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { addNotification, resetNotificationsToMode } from "./notifications";
+import { addNotification, resetNotificationsToMode, getExpenseNotifId, getSettlementNotifId, removeNotification } from "./notifications";
 import { isEffectivelyOnline } from "./network";
 import { usePrivy } from "@privy-io/react-auth";
 import { storageKey, safeSetItem, getDeletedTabIds } from "./storage-keys";
@@ -149,6 +149,7 @@ export async function saveStoredUser(name: string, colorIndex?: number, walletAd
       if (authToken) {
         headers["Authorization"] = `Bearer ${authToken}`;
       }
+      const buddy = getBuddySettings();
       const res = await fetch("/api/user/profile", {
         method: "POST",
         headers,
@@ -156,7 +157,8 @@ export async function saveStoredUser(name: string, colorIndex?: number, walletAd
           wallet: walletAddress, 
           name: trimmed, 
           oldName: nameChanged ? oldName : undefined, 
-          avatarColorIndex: colorIndex 
+          avatarColorIndex: colorIndex,
+          buddySettings: buddy
         })
       });
       const data = await res.json();
@@ -223,6 +225,15 @@ export function useUserProfile() {
             localStorage.setItem("meshTab_avatarColorIndex", String(data.avatarColorIndex));
             window.dispatchEvent(new Event("meshTab-profile-update"));
           }
+
+          if (data.buddySettings && typeof data.buddySettings === "object") {
+            const currentBuddy = localStorage.getItem("meshTab_buddySettings");
+            const newBuddyStr = JSON.stringify(data.buddySettings);
+            if (currentBuddy !== newBuddyStr) {
+              localStorage.setItem("meshTab_buddySettings", newBuddyStr);
+              window.dispatchEvent(new Event("meshTab-buddy-update"));
+            }
+          }
         }
       });
     }
@@ -271,7 +282,7 @@ export interface TabSummary {
   memberCount: number;
   createdAt?: number;
   lastActivityAt?: number;
-  lastActivityKind?: "created" | "joined" | "expense" | "edited" | "settled" | "member";
+  lastActivityKind?: "created" | "joined" | "expense" | "edited" | "settled" | "member" | "deleted_expense";
   lastActivity?: string; // For backward compatibility
   currency?: string;
 }
@@ -334,10 +345,12 @@ export function resetLisbonDemo() {
     ...DEFAULT_LISBON_MEMBERS,
     { name: activeUser, balance: -37477, type: "debtor", role: "member" }
   ];
-  localStorage.setItem("meshTab_members_lisbon-24", JSON.stringify(defaultList));
+  localStorage.setItem(storageKey("members", "sample", "lisbon-24"), JSON.stringify(defaultList));
+  localStorage.removeItem("meshTab_members_lisbon-24"); // Clean up legacy key
 
   // 2. Clear added/settled expenses for Lisbon to restore initial benchmark
-  localStorage.removeItem("meshTab_expenses_lisbon-24");
+  localStorage.removeItem(storageKey("expenses", "sample", "lisbon-24"));
+  localStorage.removeItem("meshTab_expenses_lisbon-24"); // Clean up legacy key
 
   // 3. Ensure benchmark tabs are active in the sample namespace
   try {
@@ -444,12 +457,15 @@ export function saveNewTab(tab: TabSummary) {
 
   try {
     addNotification({
+      id: `notif-tab-${tab.id}`,
       type: "tab_created",
       title: "Group Tab Created",
       desc: `You created "${tab.name}". Ready to share group costs!`,
       actor: "You",
       tabId: tab.id,
       tabName: tab.name,
+      timestamp: tab.createdAt || Date.now(),
+      link: `/tab/${tab.id}`
     });
   } catch (e) {}
 }
@@ -641,7 +657,7 @@ export function getStoredTabMembers(tabId: string, currentUserName?: string): Ta
   const storageKeyStr = storageKey("members", mode, tabId);
 
   try {
-    const raw = localStorage.getItem(storageKeyStr);
+    const raw = localStorage.getItem(storageKeyStr) || (mode === "sample" ? localStorage.getItem(`meshTab_members_${tabId}`) : null);
     if (raw) {
       const parsed: TabMember[] = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -825,7 +841,7 @@ export function getStoredExpenses(tabId: string): StoredExpense[] {
 
   const storageKeyStr = storageKey("expenses", mode, tabId);
   try {
-    const raw = localStorage.getItem(storageKeyStr);
+    const raw = localStorage.getItem(storageKeyStr) || (mode === "sample" ? localStorage.getItem(`meshTab_expenses_${tabId}`) : null);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -990,8 +1006,10 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense, skipBal
     const tabs = getStoredTabs();
     const tabName = tabId === "lisbon-24" ? "Lisbon Weekend" : (tabs.find(t => t.id === tabId)?.name || "Group Tab");
     const isSettle = expense.id.startsWith("settle-");
+    const notifId = isSettle ? getSettlementNotifId(expense.id) : getExpenseNotifId(expense.id);
 
     addNotification({
+      id: notifId,
       type: isSettle ? "settlement" : "expense",
       title: isSettle ? "Debt Settled" : "New Expense Added",
       desc: isSettle 
@@ -1001,7 +1019,8 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense, skipBal
       tabId,
       tabName,
       amount: expense.amount,
-      link: `/tab/${tabId}`
+      timestamp: expense.createdAt || Date.now(),
+      link: isSettle ? `/tab/${tabId}` : `/tab/${tabId}/expense/${expense.id}`
     });
   } catch (e) {}
 
@@ -1107,11 +1126,7 @@ export function deleteStoredExpense(tabId: string, expenseId: string): { success
           });
         }
 
-        const membersKey = mode === "sample"
-          ? `meshTab_members_${tabId}`
-          : mode === "testnet"
-            ? `meshTab_testnet_members_${tabId}`
-            : `meshTab_clean_members_${tabId}`;
+        const membersKey = storageKey("members", mode, tabId);
         localStorage.setItem(membersKey, JSON.stringify(updatedMembers));
         window.dispatchEvent(new Event("meshTab-members-update"));
 
@@ -1123,7 +1138,7 @@ export function deleteStoredExpense(tabId: string, expenseId: string): { success
           const tabs = getStoredTabs();
           const nextTabs = tabs.map(t => {
             if (t.id === tabId) {
-              return { ...t, balance: userMember.balance, lastActivityAt: Date.now(), lastActivityKind: "edited" };
+              return { ...t, balance: userMember.balance, lastActivityAt: Date.now(), lastActivityKind: "deleted_expense" as const };
             }
             return t;
           });
@@ -1137,6 +1152,31 @@ export function deleteStoredExpense(tabId: string, expenseId: string): { success
   const filtered = current.filter(e => e.id !== expenseId);
   safeSetItem(storageKeyStr, JSON.stringify(filtered));
   window.dispatchEvent(new Event("meshTab-expenses-update"));
+
+  // Live Notification Dispatch
+  try {
+    const tabs = getStoredTabs();
+    const tabName = tabId === "lisbon-24" ? "Lisbon Weekend" : (tabs.find(t => t.id === tabId)?.name || "Group Tab");
+    const profile = getStoredUser();
+
+    // Clear stale "New Expense Added" notification so no dead links remain
+    try {
+      removeNotification(getExpenseNotifId(expenseId));
+    } catch (e) {}
+
+    addNotification({
+      id: `notif-exp-del-${expenseId}`,
+      type: "expense",
+      title: "Expense Removed",
+      desc: `${profile.name || "You"} removed '${target.desc}' ($${(target.amount / 100).toFixed(2)}) from ${tabName}.`,
+      actor: profile.name || "You",
+      tabId,
+      tabName,
+      amount: target.amount,
+      timestamp: Date.now(),
+      link: `/tab/${tabId}`
+    });
+  } catch (e) {}
 
   return { success: true };
 }
@@ -1334,7 +1374,7 @@ export function getSettledPayoutBalance(): number {
   if (typeof window === "undefined") return 0;
   const mode = getWorkspaceMode();
   const key = storageKey("settledPayoutBalance", mode);
-  const val = localStorage.getItem(key);
+  const val = localStorage.getItem(key) || (mode === "sample" ? localStorage.getItem("meshTab_settledPayoutBalance") : null);
   
   if (val === null) {
     if (mode === "sample") {
@@ -1525,12 +1565,38 @@ export function getBuddySettings(): BuddySettings {
   return { enabled: true, name: defaultName, voice: "mute", color: AVATAR_COLORS[0] };
 }
 
-export function saveBuddySettings(settings: Partial<BuddySettings>) {
+export function hydrateBuddyFromProfile(buddySettings: any) {
+  if (typeof window === "undefined" || !buddySettings) return;
+  try {
+    const current = getBuddySettings();
+    const updated: BuddySettings = { ...current, ...buddySettings };
+    localStorage.setItem("meshTab_buddySettings", JSON.stringify(updated));
+    window.dispatchEvent(new Event("meshTab-buddy-update"));
+  } catch {}
+}
+
+export function saveBuddySettings(settings: Partial<BuddySettings>, walletAddress?: string, authToken?: string) {
   if (typeof window === "undefined") return;
   const current = getBuddySettings();
   const updated: BuddySettings = { ...current, ...settings };
   localStorage.setItem("meshTab_buddySettings", JSON.stringify(updated));
   window.dispatchEvent(new Event("meshTab-buddy-update"));
+
+  const effectiveWallet = walletAddress || (typeof window !== "undefined" ? localStorage.getItem("meshTab_walletAddress") : null);
+  if (effectiveWallet && isEffectivelyOnline()) {
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
+      fetch("/api/user/profile", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          wallet: effectiveWallet,
+          buddySettings: updated
+        })
+      }).catch(() => {});
+    } catch {}
+  }
 }
 
 export function useBuddySettings() {

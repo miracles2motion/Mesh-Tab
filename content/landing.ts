@@ -129,8 +129,8 @@ export const LANDING_CONTENT = {
       answer: "MeshTab does not custody user funds and nothing forces payment. Settlement is peer-to-peer and requires each debtor's biometric approval. The app calculates the optimal netted schedule so friends settle cleanly when they are ready. Smart escrow reserves are on our roadmap."
     },
     {
-      question: "Why not Splitwise?",
-      answer: "Expense apps record who owes whom and net one currency at a time. MeshTab nets across currencies and settles in the same app."
+      question: "Why not traditional splitting apps?",
+      answer: "Traditional expense apps record who owes whom and net only one currency at a time. MeshTab nets across currencies and settles directly in digital dollars in the same app."
     },
     {
       question: "Is this real money?",

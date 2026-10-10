@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { ThemeToggle } from "../../components/theme-toggle";
-import { saveStoredUser, AVATAR_COLORS, saveBuddySettings, setWorkspaceMode } from "../../lib/user";
+import { saveStoredUser, AVATAR_COLORS, saveBuddySettings, setWorkspaceMode, getWorkspaceMode, getStoredTabMembers, saveStoredTabMembers, saveNewTab } from "../../lib/user";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
@@ -48,6 +48,112 @@ function OnboardingContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const quickNames = ["Sarah", "Alex", "Liam", "Elena", "Marcus"];
+  const [isCheckingProfile, setIsCheckingProfile] = useState(true);
+
+  // Auto-restore profile if user already configured their account on another device
+  useEffect(() => {
+    const effectiveWallet = smartWalletAddress || user?.wallet?.address;
+    if (!effectiveWallet) {
+      setIsCheckingProfile(false);
+      return;
+    }
+
+    let cancelled = false;
+    fetch(`/api/user/profile?wallet=${effectiveWallet}`)
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => {
+        if (cancelled) return;
+        setIsCheckingProfile(false);
+
+        if (data && data.name) {
+          // Existing user detected: restore profile & buddy settings
+          localStorage.setItem("meshTab_displayName", data.name.trim());
+          localStorage.setItem("meshTab_avatarColorIndex", String(data.avatarColorIndex ?? 0));
+          if (data.buddySettings) {
+            localStorage.setItem("meshTab_buddySettings", JSON.stringify(data.buddySettings));
+            window.dispatchEvent(new Event("meshTab-buddy-update"));
+          }
+          window.dispatchEvent(new Event("meshTab-profile-update"));
+
+          setWorkspaceMode(intent === "testnet" ? "testnet" : "sample");
+
+          toast.success(`Welcome back, ${data.name.trim()}!`, {
+            description: "Your profile and MeshBuddy settings have been restored."
+          });
+
+          if (isInvite && inviteTab) {
+            // Commit returning user to invited tab on Monad Testnet
+            (async () => {
+              try {
+                const token = (await getAccessToken()) || "";
+                const joinCode = inviteTab.includes("-") ? inviteTab.split("-").pop() : inviteTab.slice(-8);
+                const joinRes = await fetch("/api/tab/join", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": token ? `Bearer ${token}` : ""
+                  },
+                  body: JSON.stringify({
+                    tabId: inviteTab,
+                    joinCode,
+                    name: data.name.trim(),
+                    mode: "testnet",
+                    walletAddress: effectiveWallet && /^0x[a-fA-F0-9]{40}$/.test(effectiveWallet) ? effectiveWallet : undefined
+                  })
+                });
+
+                if (joinRes.ok) {
+                  const tabName = searchParams?.get("n") || inviteTab.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                  const members = getStoredTabMembers(inviteTab);
+                  const existing = members.find(m => m.name.toLowerCase() === data.name.trim().toLowerCase());
+                  let updatedMembers = members;
+                  if (!existing) {
+                    updatedMembers = [...members, {
+                      name: data.name.trim(),
+                      balance: 0,
+                      type: "settled",
+                      role: "member",
+                      walletAddress: effectiveWallet || undefined
+                    }];
+                  }
+                  saveStoredTabMembers(inviteTab, updatedMembers);
+                  saveNewTab({
+                    id: inviteTab,
+                    name: tabName,
+                    role: "Member",
+                    balance: 0,
+                    memberCount: updatedMembers.length,
+                    createdAt: Date.now(),
+                    lastActivityAt: Date.now(),
+                    lastActivityKind: "joined"
+                  });
+                  router.replace(`/tab/${inviteTab}`);
+                  return;
+                } else if (joinRes.status === 404) {
+                  toast.error("Tab Not Found on Testnet", {
+                    description: "This tab does not exist on Monad Testnet. Demo tabs are stored only on their local device."
+                  });
+                  router.replace("/home");
+                  return;
+                }
+              } catch (e) {
+                console.error("Failed to commit returning user to tab", e);
+              }
+              router.replace(`/tab/${inviteTab}`);
+            })();
+          } else {
+            router.replace("/home");
+          }
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setIsCheckingProfile(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [smartWalletAddress, user?.wallet?.address, isInvite, inviteTab, intent, router]);
 
   const handleContinueName = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,12 +248,90 @@ function OnboardingContent() {
     }
 
     if (isInvite && inviteTab) {
-      router.replace(`/tab/${inviteTab}?invite=true`);
+      const mode = intent === "testnet" ? "testnet" : getWorkspaceMode();
+      if (mode === "testnet") {
+        try {
+          const token = (await getAccessToken()) || "";
+          const effectiveWallet = smartWalletAddress || user?.wallet?.address;
+          const joinCode = inviteTab.includes("-") ? inviteTab.split("-").pop() : inviteTab.slice(-8);
+          const finalName = name.trim();
+
+          const joinRes = await fetch("/api/tab/join", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": token ? `Bearer ${token}` : ""
+            },
+            body: JSON.stringify({
+              tabId: inviteTab,
+              joinCode,
+              name: finalName,
+              mode: "testnet",
+              walletAddress: effectiveWallet && /^0x[a-fA-F0-9]{40}$/.test(effectiveWallet) ? effectiveWallet : undefined
+            })
+          });
+
+          if (!joinRes.ok) {
+            const errData = await joinRes.json().catch(() => ({}));
+            if (joinRes.status === 404 || errData.error === "NOT_FOUND") {
+              toast.error("Tab Not Found on Testnet", {
+                description: "This tab does not exist on Monad Testnet. Demo tabs are stored only on their local device."
+              });
+              router.replace("/home");
+              return;
+            }
+          } else {
+            const tabName = searchParams?.get("n") || inviteTab.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            const members = getStoredTabMembers(inviteTab);
+            const existing = members.find(m => m.name.toLowerCase() === finalName.toLowerCase());
+            let updatedMembers = members;
+            if (!existing) {
+              updatedMembers = [...members, {
+                name: finalName,
+                balance: 0,
+                type: "settled",
+                role: "member",
+                walletAddress: effectiveWallet || undefined
+              }];
+            }
+            saveStoredTabMembers(inviteTab, updatedMembers);
+            saveNewTab({
+              id: inviteTab,
+              name: tabName,
+              role: "Member",
+              balance: 0,
+              memberCount: updatedMembers.length,
+              createdAt: Date.now(),
+              lastActivityAt: Date.now(),
+              lastActivityKind: "joined"
+            });
+            toast.success("Joined Group Tab!", {
+              description: `Welcome to ${tabName}, ${finalName}!`
+            });
+            router.replace(`/tab/${inviteTab}`);
+            return;
+          }
+        } catch (e) {
+          console.error("Failed to commit new user to tab during onboarding", e);
+        }
+      }
+      router.replace(`/tab/${inviteTab}`);
     } else {
       if (intent === "testnet") setWorkspaceMode("testnet");
       router.replace("/home");
     }
   };
+
+  if (isCheckingProfile && (smartWalletAddress || user?.wallet?.address)) {
+    return (
+      <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-indigo-600/30 border-t-indigo-600 rounded-full animate-spin" />
+          <p className="text-xs text-slate-400 font-medium tracking-wide uppercase">Restoring profile & buddy settings...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white flex flex-col items-center justify-center p-4 sm:p-6 relative overflow-y-auto py-12 transition-colors duration-300">

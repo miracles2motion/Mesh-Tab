@@ -89,6 +89,12 @@ export function ManageMembers({
 
   const handleSimulateJoin = async () => {
     if (isSimulating) return;
+    if (memberList.length >= 20) {
+      toast.error("Maximum Capacity Reached", {
+        description: "This tab has reached the maximum capacity of 20 members. To ensure instant settlement speed, additional members cannot join."
+      });
+      return;
+    }
     setIsSimulating(true);
     sounds.playClick();
 
@@ -140,6 +146,12 @@ export function ManageMembers({
   };
 
   const handleSeedDemo = () => {
+    if (memberList.length >= 17) {
+      toast.error("Roster Limit Exceeded", {
+        description: "Seeding 4 members would exceed the 20-member tab limit. Remove existing members first."
+      });
+      return;
+    }
     sounds.playClick();
     seedDemoExpenses(tabId, activeUser);
     // SyncProvider will handle offline syncing
@@ -315,6 +327,23 @@ export function ManageMembers({
         {/* Invite Section */}
         <div className="space-y-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-5 rounded-2xl flex flex-col items-center text-center">
           <h3 className="text-xs font-bold text-slate-700 dark:text-white/80 uppercase tracking-wider mb-1">Invite Friends via QR Code</h3>
+          
+          {workspaceMode !== "testnet" ? (
+            <div className="w-full bg-amber-500/10 border border-amber-500/20 rounded-xl p-2.5 text-center">
+              <div className="text-[11px] font-bold text-amber-700 dark:text-amber-400">Device-Only Demo Tab</div>
+              <div className="text-[10px] text-amber-600/80 dark:text-amber-300/70 mt-0.5">
+                Stored in this browser only. To collaborate across phones in real-time, create a tab in Testnet mode.
+              </div>
+            </div>
+          ) : (
+            <div className="w-full bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-2.5 text-center">
+              <div className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">Live Monad Testnet Tab</div>
+              <div className="text-[10px] text-emerald-600/80 dark:text-emerald-300/70 mt-0.5">
+                Friends join in 1 tap by scanning the QR code or entering the 8-character code below.
+              </div>
+            </div>
+          )}
+
           <div className="bg-white p-3.5 rounded-xl shadow-md border border-slate-200">
             <QRCodeSVG value={inviteLink} size={130} level="H" includeMargin={false} />
           </div>
@@ -344,16 +373,23 @@ export function ManageMembers({
             <div className="w-full pt-3 border-t border-slate-200/80 dark:border-white/10 space-y-2">
               <button
                 onClick={handleSimulateJoin}
-                disabled={isSimulating}
-                className="w-full py-2.5 px-4 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm disabled:opacity-50"
+                disabled={isSimulating || memberList.length >= 20}
+                className="w-full py-2.5 px-4 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 animate-pulse" />
-                <span>{isSimulating ? "Authenticating WebAuthn Passkey..." : "⚡ Simulate Friend Scanning QR & Joining"}</span>
+                <span>
+                  {memberList.length >= 20
+                    ? "Max Tab Capacity Reached (20/20 Members)"
+                    : isSimulating
+                    ? "Authenticating WebAuthn Passkey..."
+                    : "⚡ Simulate Friend Scanning QR & Joining"}
+                </span>
               </button>
 
               <button
                 onClick={handleSeedDemo}
-                className="w-full py-2 px-4 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-white/80 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                disabled={memberList.length >= 17}
+                className="w-full py-2 px-4 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-white/80 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span>🏝️ Seed Demo Trip Activity (Villa, Dinners, Excursions)</span>
               </button>
@@ -367,7 +403,7 @@ export function ManageMembers({
         {/* Current Roster */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-bold text-slate-700 dark:text-white/80 uppercase tracking-wider">Group Roster ({memberList.length})</h3>
+            <h3 className="text-xs font-bold text-slate-700 dark:text-white/80 uppercase tracking-wider">Group Roster ({memberList.length}/20 max)</h3>
             <span className="text-[11px] text-slate-500 dark:text-white/40 font-medium">Only Admin can remove members</span>
           </div>
 

@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { getStoredTabMembers, getStoredExpenses, getWorkspaceMode, getStoredUser, getStoredTabs, TabMember, StoredExpense } from "./user";
 import { isEffectivelyOnline } from "./network";
 import { storageKey, safeSetItem } from "./storage-keys";
+import { addNotification, getExpenseNotifId, getMemberJoinNotifId, getSettlementNotifId, removeNotification } from "./notifications";
 
 const FAST_INTERVAL = 15000;  // 15s polling during active user interaction
 const SLOW_INTERVAL = 60000; // 60s back-off when idle to protect Upstash quota
@@ -109,28 +110,55 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
                  };
               });
 
-              const storageKeyStr = storageKey("members", mode, tabId);
-              safeSetItem(storageKeyStr, JSON.stringify(updatedMembers));
-              window.dispatchEvent(new CustomEvent("meshTab-members-update", { detail: { fromServer: true } }));
-              stateUpdated = true;
+              if (haveMembersChanged(updatedMembers, localMembers)) {
+                const storageKeyStr = storageKey("members", mode, tabId);
+                safeSetItem(storageKeyStr, JSON.stringify(updatedMembers));
+                window.dispatchEvent(new CustomEvent("meshTab-members-update", { detail: { fromServer: true } }));
+                stateUpdated = true;
 
-              // Update user balance in stored tab summaries for home dashboard
-              try {
-                const profile = getStoredUser();
-                const userMember = updatedMembers.find((m: any) => m.name.toLowerCase() === profile.name.toLowerCase());
-                if (userMember) {
-                  const key = storageKey("tabs", mode);
-                  const tabs = getStoredTabs();
-                  const nextTabs = tabs.map(t => {
-                    if (t.id === tabId) {
-                      return { ...t, balance: userMember.balance, memberCount: updatedMembers.length };
-                    }
-                    return t;
-                  });
-                  safeSetItem(key, JSON.stringify(nextTabs));
-                  window.dispatchEvent(new Event("meshTab-tabs-update"));
+                // Derive peer join notifications if not the first hydration
+                if (localMembers.length > 0) {
+                  try {
+                    const profile = getStoredUser();
+                    const currentName = profile.name ? profile.name.toLowerCase() : "";
+                    const tabs = getStoredTabs();
+                    const tabName = tabs.find(t => t.id === tabId)?.name || "Group Space";
+
+                    updatedMembers.forEach(m => {
+                      if (m.name.toLowerCase() !== currentName && !localMembers.some(lm => lm.name.toLowerCase() === m.name.toLowerCase())) {
+                        addNotification({
+                          id: getMemberJoinNotifId(tabId, m.name),
+                          type: "tab_created",
+                          title: "New Member Joined",
+                          desc: `${m.name} joined "${tabName}" via passkey.`,
+                          actor: m.name,
+                          tabId,
+                          tabName,
+                          link: `/tab/${tabId}`
+                        });
+                      }
+                    });
+                  } catch (e) {}
                 }
-              } catch (e) {}
+
+                // Update user balance in stored tab summaries for home dashboard
+                try {
+                  const profile = getStoredUser();
+                  const userMember = updatedMembers.find((m: any) => m.name.toLowerCase() === profile.name.toLowerCase());
+                  if (userMember) {
+                    const key = storageKey("tabs", mode);
+                    const tabs = getStoredTabs();
+                    const nextTabs = tabs.map(t => {
+                      if (t.id === tabId) {
+                        return { ...t, balance: userMember.balance, memberCount: updatedMembers.length };
+                      }
+                      return t;
+                    });
+                    safeSetItem(key, JSON.stringify(nextTabs));
+                    window.dispatchEvent(new Event("meshTab-tabs-update"));
+                  }
+                } catch (e) {}
+              }
           }
 
           // Smart Deep Merge for Expenses (protects offline pending and cleans up tombstones)
@@ -189,6 +217,73 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
               safeSetItem(storageKeyStr, JSON.stringify(mergedExpenses));
               window.dispatchEvent(new CustomEvent("meshTab-expenses-update", { detail: { fromServer: true } }));
               stateUpdated = true;
+
+              // Derive peer expense and settlement notifications if not first hydration
+              if (localExpenses.length > 0) {
+                try {
+                  const profile = getStoredUser();
+                  const currentName = profile.name ? profile.name.toLowerCase() : "";
+                  const tabs = getStoredTabs();
+                  const tabName = tabs.find(t => t.id === tabId)?.name || "Group Space";
+
+                  mappedExpenses.forEach(exp => {
+                    const isNew = !localExpenses.some(le => le.id === exp.id);
+                    const isPeer = exp.payer.toLowerCase() !== currentName;
+                    if (isNew && isPeer) {
+                      const isSettle = exp.id.startsWith("settle-") || exp.desc.toLowerCase().includes("settled balance");
+                      if (isSettle) {
+                        addNotification({
+                          id: getSettlementNotifId(exp.id),
+                          type: "settlement",
+                          title: "Settlement Received",
+                          desc: `${exp.payer} settled $${(exp.amount / 100).toFixed(2)} in Agora AUSD on Monad.`,
+                          actor: exp.payer,
+                          tabId,
+                          tabName,
+                          amount: exp.amount,
+                          link: `/tab/${tabId}`
+                        });
+                      } else {
+                        addNotification({
+                          id: getExpenseNotifId(exp.id),
+                          type: "expense",
+                          title: "New Expense Added",
+                          desc: `${exp.payer} added '${exp.desc}' for $${(exp.amount / 100).toFixed(2)} in ${tabName}.`,
+                          actor: exp.payer,
+                          tabId,
+                          tabName,
+                          amount: exp.amount,
+                          link: `/tab/${tabId}/expense/${exp.id}`
+                        });
+                      }
+                    }
+                  });
+
+                  // Check for expense deletions on server
+                  deletedIdSet.forEach(delId => {
+                    // Remove stale "New Expense Added" notification so no dead links remain
+                    try {
+                      removeNotification(getExpenseNotifId(delId));
+                    } catch (e) {}
+
+                    const wasLocal = localExpenses.find(le => le.id === delId);
+                    if (wasLocal && wasLocal.payer.toLowerCase() !== currentName) {
+                      addNotification({
+                        id: `notif-exp-del-${delId}`,
+                        type: "expense",
+                        title: "Expense Removed",
+                        desc: `${wasLocal.payer} removed '${wasLocal.desc}' ($${(wasLocal.amount / 100).toFixed(2)}) from ${tabName}.`,
+                        actor: wasLocal.payer,
+                        tabId,
+                        tabName,
+                        amount: wasLocal.amount,
+                        timestamp: Date.now(),
+                        link: `/tab/${tabId}`
+                      });
+                    }
+                  });
+                } catch (e) {}
+              }
             }
           }
 

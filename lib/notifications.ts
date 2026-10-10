@@ -89,6 +89,19 @@ export const BLANK_NOTIFICATIONS: AppNotification[] = [
   }
 ];
 
+export const TESTNET_NOTIFICATIONS: AppNotification[] = [
+  {
+    id: "notif-testnet-1",
+    type: "tab_created",
+    title: "Testnet Workspace Ready",
+    desc: "Your Monad Testnet workspace is live. All group tabs settle using Agora AUSD with cryptographic finality.",
+    actor: "MeshTab",
+    timestamp: Date.now() - 60 * 1000,
+    unread: false,
+    link: "/home"
+  }
+];
+
 function getNotificationsStorageKey(mode?: WorkspaceMode): string {
   const activeMode = mode || getWorkspaceMode();
   return activeMode === "testnet" ? "meshTab_testnet_notifications" : activeMode === "blank" ? "meshTab_clean_notifications" : "meshTab_sample_notifications";
@@ -96,13 +109,15 @@ function getNotificationsStorageKey(mode?: WorkspaceMode): string {
 
 export function getStoredNotifications(): AppNotification[] {
   const mode = getWorkspaceMode();
-  if (typeof window === "undefined") return mode === "blank" ? BLANK_NOTIFICATIONS : SAMPLE_NOTIFICATIONS;
+  if (typeof window === "undefined") {
+    return mode === "testnet" ? TESTNET_NOTIFICATIONS : mode === "blank" ? BLANK_NOTIFICATIONS : SAMPLE_NOTIFICATIONS;
+  }
   const key = getNotificationsStorageKey(mode);
   try {
     const raw = localStorage.getItem(key);
-    if (raw) {
+    if (raw !== null) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         if (mode === "blank" || mode === "testnet") {
           return parsed.filter((n) => n.tabId !== "lisbon-24");
         }
@@ -111,7 +126,7 @@ export function getStoredNotifications(): AppNotification[] {
     }
   } catch (e) {}
 
-  return mode === "blank" ? BLANK_NOTIFICATIONS : SAMPLE_NOTIFICATIONS;
+  return mode === "testnet" ? TESTNET_NOTIFICATIONS : mode === "blank" ? BLANK_NOTIFICATIONS : SAMPLE_NOTIFICATIONS;
 }
 
 export function saveStoredNotifications(notifs: AppNotification[], mode?: WorkspaceMode) {
@@ -123,6 +138,22 @@ export function saveStoredNotifications(notifs: AppNotification[], mode?: Worksp
   } catch (e) {}
 }
 
+export function getExpenseNotifId(expenseId: string): string {
+  return `notif-exp-${expenseId}`;
+}
+
+export function getMemberJoinNotifId(tabId: string, memberName: string): string {
+  return `notif-join-${tabId}-${memberName.toLowerCase().replace(/\s+/g, "_")}`;
+}
+
+export function getSettlementNotifId(expenseId: string): string {
+  return `notif-settle-${expenseId}`;
+}
+
+export function getPaymentRequestNotifId(tabId: string, debtor: string, creditor: string): string {
+  return `notif-payreq-${tabId}-${debtor.toLowerCase().replace(/\s+/g, "_")}-${creditor.toLowerCase().replace(/\s+/g, "_")}`;
+}
+
 export function addNotification(
   notif: Omit<AppNotification, "id" | "timestamp" | "unread"> & {
     timestamp?: number;
@@ -131,14 +162,21 @@ export function addNotification(
   }
 ): AppNotification {
   const current = getStoredNotifications();
+  const targetId = notif.id || `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const existing = current.find((n) => n.id === targetId);
+
+  // Preserve read status permanently once marked read — never flip back to unread on re-sync
+  const unreadStatus = existing !== undefined ? existing.unread : (notif.unread !== undefined ? notif.unread : true);
+  const effectiveTs = existing?.timestamp || notif.timestamp || Date.now();
+
   const newNotif: AppNotification = {
     ...notif,
-    id: notif.id || `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    timestamp: notif.timestamp || Date.now(),
-    unread: notif.unread !== undefined ? notif.unread : true
+    id: targetId,
+    timestamp: effectiveTs,
+    unread: unreadStatus
   };
 
-  const updated = [newNotif, ...current.filter((n) => n.id !== newNotif.id)];
+  const updated = [newNotif, ...current.filter((n) => n.id !== targetId)];
   saveStoredNotifications(updated);
   return newNotif;
 }
@@ -155,6 +193,19 @@ export function markAllNotificationsAsRead() {
   saveStoredNotifications(updated);
 }
 
+export function removeNotification(id: string) {
+  if (typeof window === "undefined") return;
+  const current = getStoredNotifications();
+  const updated = current.filter((n) => n.id !== id);
+  const mode = getWorkspaceMode();
+  saveStoredNotifications(updated, mode);
+}
+
+export function hasNotification(id: string): boolean {
+  const current = getStoredNotifications();
+  return current.some((n) => n.id === id);
+}
+
 export function clearAllNotifications() {
   if (typeof window === "undefined") return;
   const mode = getWorkspaceMode();
@@ -163,7 +214,7 @@ export function clearAllNotifications() {
 
 export function resetNotificationsToMode(mode: WorkspaceMode) {
   if (typeof window === "undefined") return;
-  const notifs = mode === "sample" ? SAMPLE_NOTIFICATIONS : BLANK_NOTIFICATIONS;
+  const notifs = mode === "sample" ? SAMPLE_NOTIFICATIONS : mode === "testnet" ? TESTNET_NOTIFICATIONS : BLANK_NOTIFICATIONS;
   saveStoredNotifications(notifs, mode);
 }
 

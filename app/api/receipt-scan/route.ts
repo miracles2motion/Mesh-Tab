@@ -1,8 +1,30 @@
 import { GoogleGenAI } from '@google/genai';
 import { NextResponse } from 'next/server';
+import { redis } from '@/lib/redis';
 
 export async function POST(request: Request) {
   try {
+    // 1. IP-based Rate Limiter (Max 10 scans / min per IP)
+    const ipHeader = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'anonymous';
+    const clientIp = ipHeader.split(',')[0].trim();
+
+    try {
+      const rateLimitKey = `meshtab:ratelimit:receipt-scan:${clientIp}`;
+      const requestCount = await redis.incr(rateLimitKey);
+      if (requestCount === 1) {
+        await redis.expire(rateLimitKey, 60);
+      }
+      if (requestCount > 10) {
+        return NextResponse.json(
+          { error: 'Rate limit exceeded: Maximum 10 receipt scans per minute. Please wait a moment before trying again.' },
+          { status: 429 }
+        );
+      }
+    } catch (rlErr) {
+      // Fail-open if Redis is temporarily unreachable so users are not blocked
+      console.warn('Receipt scan rate-limit check skipped:', rlErr);
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
     if (!file) {
@@ -19,14 +41,12 @@ export async function POST(request: Request) {
 
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-    // Instead of hardcoding deprecated versions, we use Google's rolling aliases
-    // 'gemini-flash-latest' always points to the most current, stable, working model.
-    // We fall back to specific high-capacity models if the primary is congested.
+    // Canonical Google GenAI models (removed non-existent 'gemini-3.8-flash')
     const fallbackModels = [
-      'gemini-flash-latest', 
-      'gemini-3.8-flash', 
-      'gemini-3.7-flash', 
-      'gemini-flash-lite-latest'
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash',
+      'gemini-2.5-flash-lite'
     ];
     let lastError: any = null;
     let text = "{}";

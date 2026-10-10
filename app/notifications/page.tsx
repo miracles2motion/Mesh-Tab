@@ -24,6 +24,7 @@ import { ThemeToggle } from "../../components/theme-toggle";
 import { MeshBuddy } from "../../components/ui/mesh-buddy";
 import { useNotifications, NotificationType, AppNotification } from "../../lib/notifications";
 import { LiveTime } from "@/components/ui/live-time";
+import { formatAbsolute } from "../../lib/time";
 import { useWorkspaceMode } from "../../lib/user";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
@@ -58,8 +59,8 @@ function NotificationsContent() {
     return notifications.filter((notif) => {
       if (filter === "unread") return notif.unread;
       if (filter === "expense") return notif.type === "expense";
-      if (filter === "settlement") return notif.type === "settlement" || notif.type === "cashout";
-      if (filter === "netting") return notif.type === "netting";
+      if (filter === "settlement") return notif.type === "settlement" || notif.type === "cashout" || notif.type === "payment_request";
+      if (filter === "netting") return notif.type === "netting" || notif.type === "payment_request";
       return true;
     });
   }, [notifications, filter]);
@@ -164,7 +165,11 @@ function NotificationsContent() {
               )}
             </div>
             <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5">
-              {workspaceMode === "blank" ? "Activity and settlement updates across your tabs." : "Sample Trip Mode (Lisbon & Demo updates)"}
+              {workspaceMode === "testnet"
+                ? "Live cryptographic activity and settlements on Monad Testnet."
+                : workspaceMode === "blank"
+                ? "Activity and settlement updates across your tabs."
+                : "Sample Trip Mode (Lisbon & Demo updates)"}
             </p>
           </div>
         </div>
@@ -270,7 +275,10 @@ function NotificationsContent() {
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-xs text-slate-400 dark:text-white/40 tabular-nums">
+                        <span 
+                          className="text-xs text-slate-400 dark:text-white/40 tabular-nums cursor-default"
+                          title={formatAbsolute(notif.timestamp)}
+                        >
                           <LiveTime ts={notif.timestamp} variant="compact" fallback="Recent" />
                         </span>
                         {notif.unread && (
@@ -282,6 +290,13 @@ function NotificationsContent() {
                     <p className="text-xs sm:text-sm text-slate-600 dark:text-white/65 leading-relaxed break-words">
                       {notif.desc}
                     </p>
+
+                    {/* Accurate Absolute Calendar Date & Time */}
+                    <div className="mt-2 flex items-center gap-2 text-[11px] text-slate-400 dark:text-white/35 tabular-nums">
+                      <span>{new Date(notif.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                      <span>•</span>
+                      <span>{new Date(notif.timestamp).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</span>
+                    </div>
 
                     {/* 1-Tap Quick Actions */}
                     {(notif.type === "payment_request" || notif.type === "expense") && notif.tabId && (

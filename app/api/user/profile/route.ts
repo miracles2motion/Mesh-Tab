@@ -13,7 +13,11 @@ export async function GET(request: Request) {
   }
 
   try {
-    const profile = await redis.get(`user:${wallet.toLowerCase()}`);
+    const raw: any = await redis.get(`user:${wallet.toLowerCase()}`);
+    let profile: any = null;
+    if (raw) {
+      profile = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    }
     return NextResponse.json(profile || null);
   } catch (error) {
     console.error('Error fetching profile:', error);
@@ -31,38 +35,47 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { wallet, name, avatarColorIndex, oldName } = body;
+    const { wallet, name, avatarColorIndex, oldName, buddySettings } = body;
 
-    if (!wallet || !name) {
-      return NextResponse.json({ error: 'Wallet and name required' }, { status: 400 });
+    if (!wallet) {
+      return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
     }
 
     const key = `user:${wallet.toLowerCase()}`;
-    const existingProfile: any = await redis.get(key);
+    const rawExisting: any = await redis.get(key);
+    let existingProfile: any = null;
+    if (rawExisting) {
+      existingProfile = typeof rawExisting === 'string' ? JSON.parse(rawExisting) : rawExisting;
+    }
+
+    const profileName = name ? name.trim() : (existingProfile?.name || "");
+    if (!profileName && !existingProfile) {
+      return NextResponse.json({ error: 'Name required for initial profile' }, { status: 400 });
+    }
 
     const now = Date.now();
     const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000; // 30 days in ms
 
-    // If profile exists, check rate limit
-    if (existingProfile && existingProfile.lastUpdated) {
-      const timeSinceLastUpdate = now - existingProfile.lastUpdated;
-      if (timeSinceLastUpdate < THIRTY_DAYS) {
-        // If the name is actually different, reject it
-        if (existingProfile.name !== name.trim()) {
+    // If profile exists and name is changed, check rate limit
+    if (name && existingProfile && existingProfile.name && existingProfile.lastUpdated) {
+      const isNameChanging = existingProfile.name.trim().toLowerCase() !== name.trim().toLowerCase();
+      if (isNameChanging) {
+        const timeSinceLastUpdate = now - existingProfile.lastUpdated;
+        if (timeSinceLastUpdate < THIRTY_DAYS) {
           const daysLeft = Math.ceil((THIRTY_DAYS - timeSinceLastUpdate) / (1000 * 60 * 60 * 24));
           return NextResponse.json(
             { error: `You can only change your name once every 30 days. Please wait ${daysLeft} days.` },
             { status: 429 }
           );
         }
-        // If they are just changing their avatar color, we allow it to bypass the 30-day limit for better UX
       }
     }
 
     const newProfile = {
-      name: name.trim(),
-      avatarColorIndex: typeof avatarColorIndex === 'number' ? avatarColorIndex : 0,
-      lastUpdated: now,
+      name: profileName,
+      avatarColorIndex: typeof avatarColorIndex === 'number' ? avatarColorIndex : (existingProfile?.avatarColorIndex ?? 0),
+      buddySettings: buddySettings !== undefined ? buddySettings : (existingProfile?.buddySettings || undefined),
+      lastUpdated: name && existingProfile && existingProfile.name !== name.trim() ? now : (existingProfile?.lastUpdated || now),
     };
 
     await redis.set(key, JSON.stringify(newProfile));

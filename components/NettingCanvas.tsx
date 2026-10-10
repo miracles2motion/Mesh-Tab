@@ -28,7 +28,7 @@ import { sounds } from "../lib/sounds";
 import { fireSettlementConfetti } from "../lib/confetti";
 import { formatCurrency } from "../lib/utils";
 import { getStoredUser, DEFAULT_USER_NAME, getWorkspaceMode } from "../lib/user";
-import { addNotification } from "../lib/notifications";
+import { addNotification, getPaymentRequestNotifId } from "../lib/notifications";
 import Link from "next/link";
 
 interface MemberData {
@@ -401,6 +401,18 @@ export function NettingCanvas({
     return edges;
   }, [nodes, creditors, debtors, hasActiveDebts]);
 
+  // 3b. Compute baseline unnetted transfer count (pairwise per-currency / debtor-to-creditor baseline)
+  const unnettedTransfers = useMemo(() => {
+    if (!hasActiveDebts || simplifiedEdges.length === 0) return 0;
+    // Lisbon benchmark default: 9 unnetted cross-currency transfers collapse to 3
+    if (tabId === "lisbon-24" && nodes.length === 4) return 9;
+    // Custom tabs: pairwise creditor-debtor baseline
+    const pairwiseBaseline = creditors.length * debtors.length;
+    return Math.max(simplifiedEdges.length, pairwiseBaseline);
+  }, [hasActiveDebts, simplifiedEdges.length, tabId, nodes.length, creditors.length, debtors.length]);
+
+  const paymentsSaved = Math.max(0, unnettedTransfers - simplifiedEdges.length);
+
   // 4. Compute chaotic edges for un-netted pre-settlement state
   const chaoticEdges = useMemo(() => {
     if (!hasActiveDebts || nodes.length < 2) return [];
@@ -454,28 +466,34 @@ export function NettingCanvas({
       });
 
       try {
+        const nettingId = `notif-netting-${tabId || "tab"}`;
+        const targetTabName = tabId === "lisbon-24" ? "Lisbon Weekend" : "Group Tab";
         addNotification({
+          id: nettingId,
           type: "netting",
           title: "Netting Engine Optimized",
-          desc: `Netting algorithm simplified debts in ${tabId === "lisbon-24" ? "Lisbon Weekend" : "Group Tab"}. Debts collapsed into ${simplifiedEdges.length} direct settlements (${netLiquidity} net liquidity).`,
+          desc: `Netting algorithm simplified debts in ${targetTabName}. Debts collapsed into ${simplifiedEdges.length} direct settlements (${netLiquidity} net liquidity).`,
           actor: "Mesh Engine",
           tabId,
-          tabName: tabId === "lisbon-24" ? "Lisbon Weekend" : "Group Tab",
+          tabName: targetTabName,
           amount: totalActiveDebt,
+          timestamp: Date.now(),
           link: `/tab/${tabId}`
         });
 
         simplifiedEdges.forEach(edge => {
           if (currentUserName && edge.from.name.toLowerCase() === currentUserName.toLowerCase()) {
             addNotification({
+              id: getPaymentRequestNotifId(tabId || "tab", edge.from.name, edge.to.name),
               type: "payment_request",
               title: "Settlement Required",
               desc: `You need to settle ${formatCurrency(edge.amount)} with ${edge.to.name}.`,
               actor: edge.to.name,
               tabId,
-              tabName: tabId === "lisbon-24" ? "Lisbon Weekend" : "Group Tab",
+              tabName: targetTabName,
               amount: edge.amount,
-              link: `/tab/${tabId}`
+              timestamp: Date.now(),
+              link: `/tab/${tabId}?settle=true`
             });
           }
         });
@@ -675,7 +693,7 @@ export function NettingCanvas({
             ) : nettingState === "simplified" ? (
               <>
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Netting Optimized</span>
+                <span>Netting complete</span>
               </>
             ) : (
               <>
@@ -1046,7 +1064,7 @@ export function NettingCanvas({
                         fontWeight="bold"
                         fontFamily="sans-serif"
                       >
-                        {node.isCreditor ? `+${formatCurrency(node.balance)}` : node.isDebtor ? formatCurrency(node.balance) : "✓ $0.00"}
+                        {node.isCreditor ? `+${formatCurrency(node.balance)}` : node.isDebtor ? `-${formatCurrency(node.balance)}` : "✓ $0.00"}
                       </text>
                     </g>
                   ) : (
@@ -1075,7 +1093,7 @@ export function NettingCanvas({
                         fontWeight="bold"
                         fontFamily="sans-serif"
                       >
-                        {node.isCreditor ? `+${formatCurrency(node.balance)}` : node.isDebtor ? formatCurrency(node.balance) : "✓ $0.00"}
+                        {node.isCreditor ? `+${formatCurrency(node.balance)}` : node.isDebtor ? `-${formatCurrency(node.balance)}` : "✓ $0.00"}
                       </text>
                     </g>
                   )}
@@ -1140,15 +1158,15 @@ export function NettingCanvas({
                 
                 {/* CARD 0: MACRO SETTLEMENT SUMMARY CARD */}
                 <div 
-                  className="w-[260px] sm:w-[280px] h-[130px] p-4 rounded-2xl bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-indigo-500/15 dark:from-indigo-950/40 dark:to-purple-950/30 border border-indigo-200/80 dark:border-indigo-500/30 shadow-md shrink-0 flex flex-col justify-between"
+                  className="w-[250px] xs:w-[270px] sm:w-[280px] min-h-[130px] p-3.5 sm:p-4 rounded-2xl bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-indigo-500/15 dark:from-indigo-950/40 dark:to-purple-950/30 border border-indigo-200/80 dark:border-indigo-500/30 shadow-md shrink-0 flex flex-col justify-between"
                   style={{ scrollSnapAlign: "start" }}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
-                      Settlement Velocity
+                      Money to move
                     </span>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                      67% Saved
+                      {paymentsSaved > 0 ? `${unnettedTransfers} → ${simplifiedEdges.length} payments` : `${simplifiedEdges.length} payments`}
                     </span>
                   </div>
 
@@ -1162,7 +1180,7 @@ export function NettingCanvas({
                   </div>
 
                   <div className="flex items-center justify-between text-[10px] text-slate-400 dark:text-white/40 pt-1 border-t border-indigo-200/40 dark:border-white/10">
-                    <span>9 transfers → {simplifiedEdges.length} direct</span>
+                    <span>{unnettedTransfers} transfers → {simplifiedEdges.length} direct</span>
                     <span>$0.00 Gas (Sponsored)</span>
                   </div>
                 </div>
@@ -1177,7 +1195,7 @@ export function NettingCanvas({
                     <div 
                       key={`${edge.from.id}->${edge.to.id}`}
                       onClick={() => setSelectedNodeId(isCardFocused ? null : edge.from.id)}
-                      className={`w-[260px] sm:w-[280px] h-[130px] p-4 rounded-2xl border transition-all shrink-0 flex flex-col justify-between cursor-pointer ${
+                      className={`w-[250px] xs:w-[270px] sm:w-[280px] min-h-[130px] p-3.5 sm:p-4 rounded-2xl border transition-all shrink-0 flex flex-col justify-between cursor-pointer ${
                         isCardFocused
                           ? "bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-500 shadow-lg shadow-indigo-500/10"
                           : isUserDebtor

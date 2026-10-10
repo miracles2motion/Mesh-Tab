@@ -36,7 +36,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const [offlineStatusDetermined, setOfflineStatusDetermined] = useState(false);
 
   const isDemo = mode !== "testnet";
-  const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+  const isJoinRoute = Boolean(pathname && (pathname.includes("/join") || pathname.endsWith("/join")));
+  const isPublicRoute = PUBLIC_ROUTES.includes(pathname) || isJoinRoute;
 
   useEffect(() => {
     if (typeof window === "undefined") return;

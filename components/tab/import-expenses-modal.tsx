@@ -5,7 +5,7 @@ import { Upload, FileSpreadsheet, Sparkles, Check, AlertCircle, Trash2, ArrowRig
 import { Modal } from "../ui/modal";
 import { Button } from "../ui/button";
 import { formatCurrency } from "../../lib/utils";
-import { ExpenseCategory, getStoredTabMembers, saveStoredTabMembers, saveStoredExpense, type TabMember } from "../../lib/user";
+import { ExpenseCategory, getStoredTabMembers, saveStoredTabMembers, saveStoredExpense, type TabMember, useWorkspaceMode } from "../../lib/user";
 import { sounds } from "../../lib/sounds";
 import { fireSettlementConfetti } from "../../lib/confetti";
 import { toast } from "sonner";
@@ -54,6 +54,7 @@ export function ImportExpensesModal({
   tabName,
   currentUserName
 }: ImportExpensesModalProps) {
+  const { mode: workspaceMode } = useWorkspaceMode();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pasteText, setPasteText] = useState("");
   const [parsedExpenses, setParsedExpenses] = useState<ParsedExpense[]>([]);
@@ -284,13 +285,15 @@ Airport Van Logistics, 120.00, Sarah`;
               <label className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-white/60">
                 Paste Rows (Description, Amount, Payer)
               </label>
-              <button
-                type="button"
-                onClick={handleLoadSampleData}
-                className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
-              >
-                <Sparkles className="w-3 h-3" /> Load Sample Lisbon Trip
-              </button>
+              {workspaceMode === "sample" && (
+                <button
+                  type="button"
+                  onClick={handleLoadSampleData}
+                  className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <Sparkles className="w-3 h-3" /> Load Sample Lisbon Trip
+                </button>
+              )}
             </div>
             <textarea
               rows={4}

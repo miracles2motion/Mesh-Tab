@@ -8,6 +8,7 @@ import { sounds } from "../../lib/sounds";
 import { SUPPORTED_CURRENCIES } from "../../lib/pyth";
 import { getWorkspaceMode } from "../../lib/user";
 import { storageKey, addDeletedTabTombstone } from "../../lib/storage-keys";
+import { queueOutboxOp } from "../../lib/outbox";
 interface TabSettingsDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -101,8 +102,8 @@ export function TabSettingsDrawer({ isOpen, onClose, tabId, tabName, tabCurrency
     
     // Clear expenses and member data for this tab
     try {
-      const expenseKeys = [`meshTab_expenses_${tabId}`, `meshTab_clean_expenses_${tabId}`, `meshTab_testnet_expenses_${tabId}`];
-      const memberKeys = [`meshTab_members_${tabId}`, `meshTab_clean_members_${tabId}`, `meshTab_testnet_members_${tabId}`];
+      const expenseKeys = [`meshTab_sample_expenses_${tabId}`, `meshTab_expenses_${tabId}`, `meshTab_clean_expenses_${tabId}`, `meshTab_testnet_expenses_${tabId}`];
+      const memberKeys = [`meshTab_sample_members_${tabId}`, `meshTab_members_${tabId}`, `meshTab_clean_members_${tabId}`, `meshTab_testnet_members_${tabId}`];
       [...expenseKeys, ...memberKeys].forEach(k => localStorage.removeItem(k));
       window.dispatchEvent(new Event("meshTab-expenses-update"));
       window.dispatchEvent(new Event("meshTab-members-update"));
@@ -128,21 +129,19 @@ export function TabSettingsDrawer({ isOpen, onClose, tabId, tabName, tabCurrency
         }
       });
       // Also clear tab-specific data
-      const expenseKeys = [`meshTab_expenses_${tabId}`, `meshTab_clean_expenses_${tabId}`, `meshTab_testnet_expenses_${tabId}`];
-      const memberKeys = [`meshTab_members_${tabId}`, `meshTab_clean_members_${tabId}`, `meshTab_testnet_members_${tabId}`];
+      const expenseKeys = [`meshTab_sample_expenses_${tabId}`, `meshTab_expenses_${tabId}`, `meshTab_clean_expenses_${tabId}`, `meshTab_testnet_expenses_${tabId}`];
+      const memberKeys = [`meshTab_sample_members_${tabId}`, `meshTab_members_${tabId}`, `meshTab_clean_members_${tabId}`, `meshTab_testnet_members_${tabId}`];
       [...expenseKeys, ...memberKeys].forEach(k => localStorage.removeItem(k));
       
       const mode = getWorkspaceMode();
       if (mode === "testnet") {
         addDeletedTabTombstone(tabId);
         const wallet = localStorage.getItem("meshTab_walletAddress") || "";
-        import("../../lib/outbox").then(({ queueOutboxOp }) => {
-          queueOutboxOp({
-            type: "deleteTab",
-            tabId,
-            ownerWallet: wallet,
-            payload: {}
-          });
+        queueOutboxOp({
+          type: "deleteTab",
+          tabId,
+          ownerWallet: wallet,
+          payload: {}
         });
       }
       

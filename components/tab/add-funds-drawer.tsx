@@ -101,7 +101,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
   // Total Net Available Balance across all tabs (funds available to spend right now)
   const currentNetBalance = availableCents;
   const newProjectedBalance = currentNetBalance + depositCents;
-  const isAlreadyAllocated = isTestnet && (hasClaimed || testnetBalance >= 10000);
+  const isAlreadyAllocated = isTestnet && (hasClaimed || testnetBalance >= 100000);
 
   const handleChipClick = (centsToAdd: number) => {
     sounds.playClick();
@@ -205,14 +205,14 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
 
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 text-xs font-semibold mb-3">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Monad Testnet • 1-Time Allocation</span>
+                <span>Monad Testnet • Faucet Ceiling</span>
               </div>
 
               <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                Allocation Active
+                Faucet Ceiling Reached
               </h3>
               <p className="text-slate-500 dark:text-white/60 text-sm mb-6 leading-relaxed">
-                Your wallet has already received the official <strong className="text-slate-900 dark:text-white font-semibold">$10,000.00 Agora AUSD Allocation</strong> on Monad Testnet.
+                Your wallet holds the maximum testnet allocation of <strong className="text-slate-900 dark:text-white font-semibold">$100,000.00 Agora AUSD</strong>.
               </p>
 
               {/* Status details card */}
@@ -264,11 +264,11 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
                   <ArrowDownLeft className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
                 </div>
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                  {isTestnet ? "Testnet Welcome Allocation" : "Add Funds"}
+                  {isTestnet ? "Official Agora Faucet Drip" : "Add Funds"}
                 </h2>
                 <p className="text-slate-500 dark:text-white/60 text-sm max-w-sm mx-auto">
                   {isTestnet 
-                    ? "Claim your $10,000.00 official Agora AUSD testnet allocation to test shared tabs."
+                    ? "Claim $10,000.00 Agora AUSD from the official testnet faucet (1 claim per 60s, up to $100k ceiling)."
                     : "Instant account funding with zero fees, powered by Privy on-ramps."}
                 </p>
               </div>

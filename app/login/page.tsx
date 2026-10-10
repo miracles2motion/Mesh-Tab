@@ -54,8 +54,8 @@ function LoginContent() {
     }
     let hasProfile = typeof window !== "undefined" && Boolean(localStorage.getItem("meshTab_displayName"));
     
-    // Redis Sync: If they are not a new user but have no local profile (cleared site data)
-    if (!hasProfile && !isNewUser && user?.wallet?.address) {
+    // Redis Sync: If user has a wallet and no local profile (e.g. logging in on a new device)
+    if (!hasProfile && user?.wallet?.address) {
       setIsVerifying(true);
       try {
         const res = await fetch(`/api/user/profile?wallet=${user.wallet.address}`);
@@ -63,7 +63,11 @@ function LoginContent() {
           const data = await res.json();
           if (data && data.name) {
             localStorage.setItem("meshTab_displayName", data.name.trim());
-            localStorage.setItem("meshTab_avatarColorIndex", String(data.avatarColorIndex));
+            localStorage.setItem("meshTab_avatarColorIndex", String(data.avatarColorIndex ?? 0));
+            if (data.buddySettings) {
+              localStorage.setItem("meshTab_buddySettings", JSON.stringify(data.buddySettings));
+              window.dispatchEvent(new Event("meshTab-buddy-update"));
+            }
             window.dispatchEvent(new Event("meshTab-profile-update"));
             hasProfile = true;
           }
@@ -75,14 +79,15 @@ function LoginContent() {
       }
     }
 
-    if (!hasProfile || isNewUser) {
-      // If no profile, they must onboard into the live Web3 app
-      router.replace("/onboarding?fresh=true&intent=testnet");
+    if (!hasProfile) {
+      // If truly no profile exists, they must onboard
+      const inviteQuery = isInvite && inviteTab ? `&invite=true&tab=${inviteTab}` : "";
+      router.replace(`/onboarding?fresh=true&intent=testnet${inviteQuery}`);
     } else {
-      // Successful login always drops them into the live Web3 app
+      // Existing user has profile restored, drop straight into testnet app
       setWorkspaceMode("testnet");
       
-      if (isInvite) {
+      if (isInvite && inviteTab) {
         router.replace(`/tab/${inviteTab}?invite=true`);
       } else {
         router.replace("/home");

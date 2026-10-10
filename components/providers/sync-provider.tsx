@@ -29,11 +29,12 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         // [OVERSEER MANDATE - Baseline 16]: Push first, then pull
         await flushOutbox(getAccessToken, walletAddress, mode);
         
-        // Pull tabs from server
+        // Pull tabs from server with cache: no-store
         const token = await getAccessToken();
         if (token) {
           const res = await fetch(`/api/tab/user?mode=${mode}`, {
-            headers: { "Authorization": `Bearer ${token}` }
+            headers: { "Authorization": `Bearer ${token}` },
+            cache: "no-store"
           });
           if (res.ok) {
             const data = await res.json();
@@ -42,6 +43,8 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
             }
           }
         }
+      } catch (err) {
+        console.warn("Sync provider error:", err);
       } finally {
         isSyncingRef.current = false;
       }
@@ -50,14 +53,21 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     // Run initially
     runSync();
 
-    // Re-run when outbox updates
-    const handleOutboxUpdate = () => runSync();
+    // Re-run when outbox updates (debounced to prevent tight CPU thrashing)
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const handleOutboxUpdate = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        runSync();
+      }, 500);
+    };
     window.addEventListener("meshtab:outbox:updated", handleOutboxUpdate);
 
     // Safety retry loop (every 60s)
     const intervalId = setInterval(runSync, 60000);
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       window.removeEventListener("meshtab:outbox:updated", handleOutboxUpdate);
       clearInterval(intervalId);
     };

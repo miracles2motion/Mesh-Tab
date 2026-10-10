@@ -17,8 +17,21 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     const tabKey = `meshtab:${mode}:tab:${id}`;
 
+    const tabRaw = await redis.get(tabKey);
+    let tabData: any = null;
+    try {
+      tabData = typeof tabRaw === "string" ? JSON.parse(tabRaw) : tabRaw;
+    } catch {}
+
     const isMember = await redis.sismember(`${tabKey}:authorized_users`, walletAddress);
-    if (!isMember) {
+    const isCreator = Boolean(
+      tabData && (
+        tabData.creatorId === walletAddress || 
+        (tabData.creatorWallet && tabData.creatorWallet.toLowerCase() === walletAddress.toLowerCase())
+      )
+    );
+
+    if (!isMember && !isCreator) {
       return NextResponse.json({ success: false, error: "FORBIDDEN" }, { status: 403 });
     }
 

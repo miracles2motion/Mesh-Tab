@@ -13,6 +13,7 @@ import { saveNewTab, getStoredUser, DEFAULT_USER_NAME, getWorkspaceMode, saveSto
 import { SUPPORTED_CURRENCIES } from "../../../lib/pyth";
 import { useWallets, usePrivy } from "@privy-io/react-auth";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
+import { queueOutboxOp } from "@/lib/outbox";
 
 async function generateSecureSuffix(address: string) {
   const timestamp = Date.now().toString();
@@ -56,20 +57,18 @@ export default function CreateTab() {
             ? wallets[0].address 
             : (typeof window !== "undefined" ? localStorage.getItem("meshTab_walletAddress") : undefined);
 
-        import("@/lib/outbox").then(({ queueOutboxOp }) => {
-          queueOutboxOp({
-            type: "createTab",
+        queueOutboxOp({
+          type: "createTab",
+          tabId: newTabId,
+          ownerWallet: userAddress,
+          payload: {
             tabId: newTabId,
-            ownerWallet: userAddress,
-            payload: {
-              tabId: newTabId,
-              tabName: tabName.trim(),
-              creatorName: currentUserName,
-              currency,
-              timestamp: Date.now(),
-              creatorWallet: resolvedWallet && /^0x[a-fA-F0-9]{40}$/.test(resolvedWallet) ? resolvedWallet : undefined
-            }
-          });
+            tabName: tabName.trim(),
+            creatorName: currentUserName,
+            currency,
+            timestamp: Date.now(),
+            creatorWallet: resolvedWallet && /^0x[a-fA-F0-9]{40}$/.test(resolvedWallet) ? resolvedWallet : undefined
+          }
         });
       }
     } catch (e) {

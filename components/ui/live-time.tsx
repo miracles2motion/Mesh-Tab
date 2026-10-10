@@ -8,7 +8,7 @@ import { clsx } from "clsx";
 
 interface LiveTimeProps {
   ts?: number | string;
-  kind?: "created" | "joined" | "expense" | "edited" | "settled" | "member";
+  kind?: "created" | "joined" | "expense" | "edited" | "settled" | "member" | "deleted_expense";
   variant?: "activity" | "compact" | "full";
   className?: string;
   fallback?: string; // Fallback text when ts is undefined
@@ -77,6 +77,7 @@ export function LiveTime({
       case "joined": prefix = "Joined · "; break;
       case "expense": prefix = "Expense added · "; break;
       case "edited": prefix = "Edited · "; break;
+      case "deleted_expense": prefix = "Expense deleted · "; break;
       case "settled": prefix = "Settled · "; break;
       case "member": prefix = "Member added · "; break;
     }

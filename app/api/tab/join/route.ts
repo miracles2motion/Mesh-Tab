@@ -72,6 +72,15 @@ export async function POST(req: NextRequest) {
        }
        return NextResponse.json({ success: true, message: "Already a member", tabId });
     }
+
+    // [OVERSEER MANDATE - Member Capacity]: Check 20-member cap to guarantee instant sub-second netting velocity
+    const currentMemberCount = await redis.hlen(`${fullTabKey}:members`);
+    if (currentMemberCount >= 20) {
+      return NextResponse.json({
+        success: false,
+        error: "This tab has reached the maximum capacity of 20 members. To ensure instant settlement speed, additional members cannot join."
+      }, { status: 400 });
+    }
     
     const multi = redis.multi();
     // [OVERSEER MANDATE - Baseline 33]: Native Data Types (raw float string)

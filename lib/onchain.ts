@@ -7,6 +7,11 @@ import { monadTestnet } from "./chains";
 import { isEffectivelyOnline } from "./network";
 import { useQuery } from "@tanstack/react-query";
 
+const monadPublicClient = createPublicClient({
+  chain: monadTestnet,
+  transport: http(process.env.NEXT_PUBLIC_MONAD_RPC_URL || "https://testnet-rpc.monad.xyz")
+});
+
 export function useRealAusdBalance(workspaceMode: string) {
   const { client } = useSmartWallets();
   const walletAddress = client?.account?.address;
@@ -35,12 +40,7 @@ export function useRealAusdBalance(workspaceMode: string) {
         return { balance: 0, cents: 0, at: Date.now(), isStale: true };
       }
 
-      const publicClient = createPublicClient({
-        chain: monadTestnet,
-        transport: http(process.env.NEXT_PUBLIC_MONAD_RPC_URL || "https://testnet-rpc.monad.xyz")
-      });
-
-      const rawBalance = await publicClient.readContract({
+      const rawBalance = await monadPublicClient.readContract({
         address: (process.env.NEXT_PUBLIC_AGORA_AUSD_ADDRESS as `0x${string}`) || "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC",
         abi: erc20Abi,
         functionName: "balanceOf",
@@ -91,18 +91,14 @@ export function useClaimAgoraFunds(workspaceMode: string) {
     queryKey: ["hasClaimedAgoraFunds", workspaceMode, walletAddress],
     queryFn: async () => {
       if (workspaceMode !== "testnet" || !walletAddress) return false;
-      const publicClient = createPublicClient({
-        chain: monadTestnet,
-        transport: http(process.env.NEXT_PUBLIC_MONAD_RPC_URL || "https://testnet-rpc.monad.xyz")
-      });
-      const rawBal = await publicClient.readContract({
+      const rawBal = await monadPublicClient.readContract({
         address: (process.env.NEXT_PUBLIC_AGORA_AUSD_ADDRESS as `0x${string}`) || "0xa9012a055bd4e0eDfF8Ce09f960291C09D5322dC",
         abi: erc20Abi,
         functionName: "balanceOf",
         args: [walletAddress as `0x${string}`],
       });
       const balance = parseFloat(formatUnits(rawBal as bigint, 6));
-      return balance >= 10000;
+      return balance >= 100000; // Agora Faucet allows up to 100,000 AUSD max ceiling
     },
     staleTime: 10000,
     enabled: workspaceMode === "testnet" && !!walletAddress,
@@ -115,6 +111,21 @@ export function useClaimAgoraFunds(workspaceMode: string) {
     
     if (workspaceMode !== "testnet") {
       return { success: false, error: "Smart contract writes are only permitted in Testnet mode." };
+    }
+
+    // Check client-side 60s cooldown failsafe
+    if (typeof window !== "undefined") {
+      const lastClaimStr = localStorage.getItem("meshTab_testnet_lastFaucetClaim");
+      if (lastClaimStr) {
+        const elapsedSec = Math.floor((Date.now() - parseInt(lastClaimStr, 10)) / 1000);
+        if (elapsedSec < 60) {
+          const remainingSec = 60 - elapsedSec;
+          return {
+            success: false,
+            error: `Please wait ${remainingSec}s before claiming again. Agora Faucet limit is 1 claim per 60 seconds.`
+          };
+        }
+      }
     }
 
     try {
@@ -145,14 +156,23 @@ export function useClaimAgoraFunds(workspaceMode: string) {
       });
       await publicClient.waitForTransactionReceipt({ hash: txHash });
 
+      if (typeof window !== "undefined") {
+        localStorage.setItem("meshTab_testnet_lastFaucetClaim", Date.now().toString());
+      }
+
       await checkHasClaimed();
       return { success: true };
     } catch (err: any) {
-      const userMessage = err?.message?.includes("Unsupported chain")
-        ? "Network connection issue. Please try again in a moment."
-        : err?.message?.includes("Exceeds max")
-        ? "Your wallet already holds the maximum permitted AUSD balance."
-        : "Something went wrong requesting funds from Agora Faucet. Please try again.";
+      const errStr = (err?.message || err?.toString() || "").toLowerCase();
+      let userMessage = "Something went wrong requesting funds from Agora Faucet. Please try again.";
+
+      if (errStr.includes("unsupported chain")) {
+        userMessage = "Network connection issue. Please try again in a moment.";
+      } else if (errStr.includes("exceeds max") || errStr.includes("ceiling") || errStr.includes("max balance") || errStr.includes("100000")) {
+        userMessage = "Your wallet has reached the $100,000 AUSD testnet ceiling.";
+      } else if (errStr.includes("cooldown") || errStr.includes("wait") || errStr.includes("recent") || errStr.includes("rate") || errStr.includes("60")) {
+        userMessage = "Please wait 60 seconds before claiming again from Agora Faucet (1 claim per 60 seconds).";
+      }
       return { success: false, error: userMessage };
     } finally {
       setIsClaiming(false);

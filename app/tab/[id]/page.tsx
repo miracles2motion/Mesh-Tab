@@ -159,17 +159,8 @@ function DashboardContent() {
 
   useEffect(() => {
     if (searchParams.get("invite") === "true") {
-      const handleJoin = async () => {
-        setTxState("authenticating");
-        await new Promise(r => setTimeout(r, 1500));
-        setTxState("processing");
-        await new Promise(r => setTimeout(r, 2000));
-        setTxState("success");
-        await new Promise(r => setTimeout(r, 1000));
-        setTxState("idle");
-        router.replace(`/tab/${params?.id}`);
-      };
-      handleJoin();
+      // Clean URL invite query param cleanly without artificial delay theater
+      router.replace(`/tab/${params?.id}`);
     }
   }, [searchParams, params?.id, router]);
 
@@ -210,11 +201,15 @@ function DashboardContent() {
     rows.push(["--- ITEMIZED EXPENSES & TRANSACTIONS ---"]);
     rows.push(["Expense ID", "Timestamp", "Description", "Paid By", "Amount (AUSD)"]);
     expenses.forEach(exp => {
+      const rawId = String(exp.id || "");
+      // Prevent spreadsheet software from auto-coercing long numeric timestamps into scientific notation (e.g. 1.79159E+12)
+      const formattedId = /^\d+$/.test(rawId) ? `EXP-${rawId}` : rawId;
+
       rows.push([
-        exp.id,
-        exp.createdAt ? new Date(exp.createdAt).toLocaleString() : (exp.time || "Recent"),
+        `"${formattedId.replace(/"/g, '""')}"`,
+        `"${(exp.createdAt ? new Date(exp.createdAt).toLocaleString() : (exp.time || "Recent")).replace(/"/g, '""')}"`,
         `"${(exp.desc || "").replace(/"/g, '""')}"`,
-        exp.payer,
+        `"${(exp.payer || "").replace(/"/g, '""')}"`,
         (exp.amount / 100).toFixed(2),
       ]);
     });

@@ -4,7 +4,7 @@ import { use } from "react";
 import { ExpenseDetails } from "@/components/tab/expense-details-modal";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { GlobalNav } from "@/components/ui/global-nav";
 
 export default function ExpenseDetailsFallbackPage({ 
@@ -14,6 +14,8 @@ export default function ExpenseDetailsFallbackPage({
 }) {
   const resolvedParams = use(params);
   const routeParams = useParams();
+  const router = useRouter();
+  const currentTabId = (routeParams.id as string) || resolvedParams.id || "lisbon-24";
 
   return (
     <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300 flex flex-col">
@@ -24,7 +26,7 @@ export default function ExpenseDetailsFallbackPage({
           <div className="flex items-center gap-4">
             <Link 
               replace
-              href={`/tab/${routeParams.id || resolvedParams.id}`} 
+              href={`/tab/${currentTabId}`} 
               className="w-10 h-10 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-white/10 transition-colors shadow-sm text-slate-700 dark:text-white/80 shrink-0"
               title="Back to Tab"
             >
@@ -41,7 +43,11 @@ export default function ExpenseDetailsFallbackPage({
       </div>
       
       <main className="flex-1 w-full max-w-5xl mx-auto py-8 flex flex-col">
-        <ExpenseDetails expenseId={resolvedParams.expenseId} tabId={resolvedParams.id || "lisbon-24"} />
+        <ExpenseDetails 
+          expenseId={resolvedParams.expenseId} 
+          tabId={currentTabId} 
+          onClose={() => router.replace(`/tab/${currentTabId}`)}
+        />
       </main>
     </div>
   );

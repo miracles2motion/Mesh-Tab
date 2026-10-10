@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { X, Receipt, Clock, User, ArrowRight, Trash2, AlertTriangle, Loader2, Edit2, Check } from "lucide-react";
 import { formatCurrency } from "../../lib/utils";
 import { useUserProfile, getWorkspaceMode, getStoredTabMembers, getStoredExpenses, StoredExpense, deleteStoredExpense, updateStoredExpenseDescription } from "../../lib/user";
@@ -17,6 +18,7 @@ interface ExpenseDetailsProps {
 }
 
 export function ExpenseDetails({ onClose, expenseId, tabId }: ExpenseDetailsProps) {
+  const router = useRouter();
   const profile = useUserProfile();
   const currentUserName = profile.name || "David";
   const mode = getWorkspaceMode();
@@ -37,6 +39,29 @@ export function ExpenseDetails({ onClose, expenseId, tabId }: ExpenseDetailsProp
   const isMock1 = isLisbon && expenseId === "1";
   const isMock2 = isLisbon && expenseId === "2";
   const isMock3 = isLisbon && expenseId === "3";
+
+  if (typeof window !== "undefined" && !isLisbon && !foundCustomExpense) {
+    return (
+      <div className="p-8 flex flex-col items-center justify-center min-h-[320px] text-center space-y-4 bg-white dark:bg-[#0a0a0a]">
+        <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center text-2xl">
+          🧾
+        </div>
+        <div>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Expense Not Found</h2>
+          <p className="text-xs text-slate-500 dark:text-white/60 mt-1 max-w-sm">
+            This expense has already been removed from the ledger or synchronized.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => (onClose ? onClose() : router.replace(`/tab/${tabId}`))}
+          className="px-4 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-black text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer shadow-sm"
+        >
+          Return to Tab
+        </button>
+      </div>
+    );
+  }
 
   const desc = foundCustomExpense?.desc || (isMock1 ? "Villa booking" : isMock2 ? "Dinners & wine" : isMock3 ? "Excursions" : "Shared Group Expense");
   const amount = foundCustomExpense?.amount || (isMock1 ? 60000 : isMock2 ? 26000 : isMock3 ? 22000 : 0);
@@ -119,7 +144,11 @@ export function ExpenseDetails({ onClose, expenseId, tabId }: ExpenseDetailsProp
       description: "Ledger balances updated and synchronized across all devices."
     });
     
-    if (onClose) onClose();
+    if (onClose) {
+      onClose();
+    } else {
+      router.replace(`/tab/${tabId}`);
+    }
   };
 
   return (

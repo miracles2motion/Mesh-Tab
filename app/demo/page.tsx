@@ -140,7 +140,7 @@ function DemoContent() {
                 </div>
                 <div className="flex items-start gap-2.5 text-xs text-slate-700 dark:text-white/80">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                  <span><strong>Atomic Settlement & Receipt:</strong> Test one-tap AUSD settlement with Monad block height confirmation.</span>
+                  <span><strong>One-Tap Settlement & Receipt:</strong> Test one-tap AUSD settlement with Monad block height confirmation.</span>
                 </div>
                 <div className="flex items-start gap-2.5 text-xs text-slate-700 dark:text-white/80">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
