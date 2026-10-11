@@ -25,7 +25,7 @@ export const LANDING_CONTENT = {
     text: "Engineered on Monad with Ecosystem Infrastructure",
     partners: [
       { name: "Monad", src: "/logos/monad.svg" },
-      { name: "Privy", src: "/logos/privy-logo-dark.png" },
+      { name: "Privy", src: "/logos/privy-logo-dark.svg" },
       { name: "Agora", src: "/logos/agora.svg" },
       { name: "Pimlico", src: "/logos/pimlico.svg" }
     ],
