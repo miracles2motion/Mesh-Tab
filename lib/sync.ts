@@ -123,6 +123,7 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
                 }
                 if (!act || !act.id) return;
                 if (act.actor && act.actor.toLowerCase() === currentName) return;
+                if (act.targetUser && act.targetUser.toLowerCase() !== currentName && act.targetUser.toLowerCase() !== "all") return;
 
                 addNotification({
                   id: act.id,

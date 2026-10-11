@@ -22,56 +22,64 @@ interface RosterCarouselProps {
   isLoading?: boolean;
   onSelectMember?: (member: RosterMember) => void;
   onRequestPayment?: (debtorName: string, amount: number) => void;
+  onPing?: (targetUser?: string) => Promise<void>;
 }
 
 export function RosterCarousel({ 
   members, 
   grossVolume, 
   currentUserName, 
-  creatorName,
+  creatorName, 
   isLoading = false,
   onSelectMember,
-  onRequestPayment
+  onRequestPayment,
+  onPing
 }: RosterCarouselProps) {
   const [isAllPinged, setIsAllPinged] = useState(false);
   const [pingedSingle, setPingedSingle] = useState<Record<string, boolean>>({});
 
-  // Filter members who still owe money (debtors who have not settled)
-  const unsettledDebtors = members.filter(
-    m => (m.balance ?? 0) < 0 && m.type !== "settled"
+  // Check if current user is a debtor
+  const currentUserMember = members.find(
+    m => m.name.toLowerCase() === (currentUserName || "").toLowerCase()
   );
+  const isCurrentUserDebtor = (currentUserMember?.balance ?? 0) < 0 && currentUserMember?.type !== "settled";
 
-  // If current user is logged in, prioritize pinging other debtors; if user is not in the debtor list, ping all debtors
-  const otherUnsettledDebtors = unsettledDebtors.filter(
-    m => m.name.toLowerCase() !== (currentUserName || "").toLowerCase()
+  // Only other members who owe money can be pinged — NEVER include current user
+  const debtorsToPing = members.filter(
+    m => (m.balance ?? 0) < 0 && 
+         m.type !== "settled" && 
+         m.name.toLowerCase() !== (currentUserName || "").toLowerCase()
   );
+  
+  const isAllSettled = members.length > 0 && members.every(m => m.balance === 0 || m.type === "settled");
 
-  const debtorsToPing = otherUnsettledDebtors.length > 0 ? otherUnsettledDebtors : unsettledDebtors;
-  const totalUnsettledAmount = debtorsToPing.reduce((sum, d) => sum + Math.abs(d.balance ?? 0), 0);
-
-  const handlePingAll = () => {
+  const handlePingAll = async () => {
     if (debtorsToPing.length === 0 || isAllPinged) return;
     
     sounds.playPing();
     setIsAllPinged(true);
 
-    const namesList = debtorsToPing.map(d => d.name).join(debtorsToPing.length === 2 ? " & " : ", ");
-    toast.success(`Ping Sent to ${namesList}!`, {
-      description: `Payment notification dispatched to settle outstanding ${formatCurrency(totalUnsettledAmount)}.`
-    });
+    if (onPing) {
+      await onPing("all");
+    } else {
+      const namesList = debtorsToPing.map(d => d.name).join(debtorsToPing.length === 2 ? " & " : ", ");
+      toast.success(`Ping Sent to ${namesList}!`);
+    }
 
     setTimeout(() => {
       setIsAllPinged(false);
     }, 2800);
   };
 
-  const handlePingSingle = (name: string, amount: number) => {
+  const handlePingSingle = async (name: string, amount: number) => {
     sounds.playPing();
     setPingedSingle(prev => ({ ...prev, [name]: true }));
 
-    toast.success(`Pinged ${name}!`, {
-      description: `Reminder sent to settle ${formatCurrency(Math.abs(amount))}.`
-    });
+    if (onPing) {
+      await onPing(name);
+    } else {
+      toast.success(`Pinged ${name}!`);
+    }
 
     setTimeout(() => {
       setPingedSingle(prev => ({ ...prev, [name]: false }));
@@ -95,7 +103,7 @@ export function RosterCarousel({
           {/* Ping Button / Status Pill */}
           {isLoading ? (
             <span className="w-20 h-5 rounded-full bg-slate-200 dark:bg-white/10 animate-pulse shrink-0 inline-block" />
-          ) : debtorsToPing.length > 0 ? (
+          ) : !isCurrentUserDebtor && debtorsToPing.length > 0 ? (
             <button
               onClick={handlePingAll}
               disabled={isAllPinged}
@@ -115,16 +123,16 @@ export function RosterCarousel({
                 <>
                   <BellRing className="w-3.5 h-3.5 animate-pulse" />
                   <span>
-                    Ping {debtorsToPing.length > 1 ? `Unsettled (${debtorsToPing.length})` : debtorsToPing[0].name}
+                    {debtorsToPing.length > 1 ? `Ping All (${debtorsToPing.length})` : `Ping ${debtorsToPing[0].name}`}
                   </span>
                 </>
               )}
             </button>
-          ) : (
+          ) : isAllSettled ? (
             <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
               <Check className="w-3 h-3 stroke-[2.5]" /> All Settled
             </span>
-          )}
+          ) : null}
         </div>
       </div>
       
@@ -198,15 +206,15 @@ export function RosterCarousel({
                   <div className="w-6 h-6 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0" title="Creditor (Paid for group)">
                     <ArrowUpRight className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   </div>
+                ) : isUser ? (
+                  <div className="w-6 h-6 rounded-full bg-rose-500/10 flex items-center justify-center shrink-0" title="Your share to settle">
+                    <span className="text-[9px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-tighter">Owe</span>
+                  </div>
                 ) : (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (onRequestPayment) {
-                        onRequestPayment(member.name, Math.abs(member.balance));
-                      } else {
-                        handlePingSingle(member.name, member.balance);
-                      }
+                      handlePingSingle(member.name, member.balance);
                     }}
                     className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all hover:scale-110 active:scale-95 cursor-pointer ${
                       pingedSingle[member.name]

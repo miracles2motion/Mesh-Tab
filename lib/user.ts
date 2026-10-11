@@ -642,6 +642,9 @@ export function mergePulledTabs(serverTabs: any[], walletAddress: string) {
         try {
           const act = typeof actRaw === "string" ? JSON.parse(actRaw) : actRaw;
           if (act && act.actor && act.actor.toLowerCase() !== currentName.toLowerCase()) {
+            if (act.targetUser && act.targetUser.toLowerCase() !== currentName.toLowerCase() && act.targetUser.toLowerCase() !== "all") {
+              return;
+            }
             addNotification({
               id: act.id,
               type: act.type || "tab_created",

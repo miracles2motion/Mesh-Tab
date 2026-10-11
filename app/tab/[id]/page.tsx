@@ -150,6 +150,52 @@ function DashboardContent() {
     fireSettlementConfetti();
     toast.success("Debt Settled", { description: `Your payment of $${(debtAmount / 100).toFixed(2)} was confirmed.` });
   };
+
+  const handleSendReminders = async (targetUser?: string) => {
+    sounds.playPing();
+    if (workspaceMode !== "testnet") {
+      sounds.playSuccessChime();
+      toast.success(targetUser && targetUser !== "all" ? `Ping Sent to ${targetUser}!` : "Reminders Sent!", {
+        description: `Simulated reminder sent to debtors on "${currentTab.name}".`
+      });
+      return;
+    }
+
+    try {
+      const token = await getAccessToken().catch(() => null);
+      const res = await fetch(`/api/tab/${rawTabId}/remind`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": token ? `Bearer ${token}` : ""
+        },
+        body: JSON.stringify({
+          mode: workspaceMode,
+          targetUser: targetUser || "all",
+          senderName: currentUser
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        sounds.playSuccessChime();
+        if (targetUser && targetUser !== "all") {
+          toast.success(`Ping Sent to ${targetUser}!`, {
+            description: `Payment reminder dispatched for "${currentTab.name}".`
+          });
+        } else {
+          toast.success("Reminders Sent!", {
+            description: `Notified all members with outstanding balances on "${currentTab.name}".`
+          });
+        }
+      } else {
+        toast.error("Could not send reminder", {
+          description: data.error || "Please try again in a moment."
+        });
+      }
+    } catch {
+      toast.error("Failed to send reminder");
+    }
+  };
   const [mounted, setMounted] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -397,12 +443,7 @@ function DashboardContent() {
             isLoading={isTabLoading}
             onSettle={() => setIsSettlementOpen(true)}
             onCashOut={() => setIsCashOutOpen(true)}
-            onRemind={() => {
-              sounds.playClick();
-              toast.success("Reminders Sent!", {
-                description: "Nudged all debtors in the group via push notification."
-              });
-            }}
+            onRemind={() => handleSendReminders("all")}
           />
 
           {/* Category Analytics Widget */}
@@ -424,6 +465,7 @@ function DashboardContent() {
             isLoading={isTabLoading}
             onSelectMember={(member) => setSelectedMember(member)}
             onRequestPayment={(debtorName, amount) => setPaymentRequest({ debtorName, amount })}
+            onPing={handleSendReminders}
           />
           <FeedList expenses={expenses} currentUserName={currentUser} isLoading={isTabLoading} />
         </div>
