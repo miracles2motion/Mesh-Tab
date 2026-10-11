@@ -33,13 +33,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const start = page * limit;
     const end = start + limit - 1;
     
-    // Batch fetch members, wallets, legacy expenses, new expense IDs, and tab metadata in one pipeline
+    // Batch fetch members, wallets, legacy expenses, new expense IDs, tab metadata, and activity in one pipeline
     const pipeline = redis.pipeline();
     pipeline.lrange(`${tabKey}:expenses`, start, end); // Legacy list
     pipeline.zrange(`${tabKey}:expenses_zset`, start, end, { rev: true }); // New zset
     pipeline.hgetall(`${tabKey}:members`);
     pipeline.hgetall(`${tabKey}:member_wallets`);
     pipeline.get(tabKey); // Tab metadata (creator, currency, etc.)
+    pipeline.lrange(`${tabKey}:activity`, 0, 19); // Recent tab activity & notifications
     const results = await pipeline.exec();
     
     const legacyExpensesRaw = results[0] as unknown[];
@@ -47,6 +48,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const membersMap = results[2] as Record<string, string>;
     const memberWalletsMap = (results[3] || {}) as Record<string, string>;
     const tabMetaRaw = results[4];
+    const activityRaw = (results[5] || []) as unknown[];
     let tabMeta: any = null;
     try {
       tabMeta = typeof tabMetaRaw === 'string' ? JSON.parse(tabMetaRaw) : tabMetaRaw;
@@ -115,6 +117,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       deletedIds,
       members,
       creator: creatorName,
+      activity: activityRaw,
       page, 
       hasMore: (parsedLegacy.length === limit) || (parsedNew.length === limit)
     });

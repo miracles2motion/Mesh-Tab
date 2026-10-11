@@ -116,22 +116,36 @@ export function PimlicoLogo({ className = "h-5 w-auto", ...props }: LogoProps) {
   );
 }
 
-export function PrivyLogo({ className = "h-5 w-auto" }: { className?: string }) {
+export function PrivyLogo({ className = "h-5 w-auto", ...props }: LogoProps) {
   return (
-    <div className={`relative inline-flex items-center justify-center ${className}`}>
-      {/* Light Mode Logo (hidden in dark mode) */}
-      <img 
-        src="/logos/privy-logo-light.png" 
-        alt="Privy logo" 
-        className="w-auto h-full object-contain block dark:hidden"
-      />
-      {/* Dark Mode Logo (hidden in light mode) */}
-      <img 
-        src="/logos/privy-logo-dark.png" 
-        alt="Privy logo" 
-        className="w-auto h-full object-contain hidden dark:block"
-      />
-    </div>
+    <svg
+      viewBox="0 0 115 28"
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      role="img"
+      aria-label="Privy"
+      {...props}
+    >
+      {/* Privy Two-Pillar Emblem */}
+      <rect x="0" y="3" width="7.5" height="22" rx="3.75" />
+      <path d="M13 3C13 1.343 14.343 0 16 0H23C27.418 0 31 3.582 31 8V11C31 15.418 27.418 19 23 19H16C14.343 19 13 17.657 13 16V3Z" />
+      
+      {/* Wordmark: privy */}
+      <g transform="translate(39, 4)">
+        {/* p */}
+        <path d="M0 3.5C0 2.4 0.9 1.5 2 1.5H3.5V4.2C4.3 2.5 6.1 1.3 8.3 1.3C12.1 1.3 14.8 4.3 14.8 8.5C14.8 12.7 12.1 15.7 8.3 15.7C6.1 15.7 4.3 14.5 3.5 12.8V18.5C3.5 19.6 2.6 20.5 1.5 20.5C0.4 20.5 0 19.6 0 18.5V3.5ZM3.5 8.5C3.5 11.1 5.2 12.9 7.6 12.9C10 12.9 11.7 11.1 11.7 8.5C11.7 5.9 10 4.1 7.6 4.1C5.2 4.1 3.5 5.9 3.5 8.5Z" />
+        {/* r */}
+        <path d="M18.5 3.5C18.5 2.4 19.4 1.5 20.5 1.5H21.8V4.6C22.6 2.7 24.3 1.5 26.3 1.5C27 1.5 27.5 1.7 27.8 1.9C28.2 2.1 28.4 2.7 28.2 3.2C27.9 3.7 27.3 4 26.7 4C24.7 4 23.3 5.6 23.3 7.9V13.5C23.3 14.6 22.4 15.5 21.3 15.5C20.2 15.5 18.5 14.6 18.5 13.5V3.5Z" />
+        {/* i */}
+        <circle cx="33.5" cy="0" r="1.6" />
+        <path d="M31.8 3.5C31.8 2.4 32.7 1.5 33.8 1.5C34.9 1.5 35.5 2.4 35.5 3.5V13.5C35.5 14.6 34.6 15.5 33.5 15.5C32.4 15.5 31.8 14.6 31.8 13.5V3.5Z" />
+        {/* v */}
+        <path d="M38.8 2.2C39.2 1.2 40.3 0.8 41.3 1.2C41.8 1.4 42.1 1.8 42.3 2.3L46.2 12.3L50.1 2.3C50.5 1.3 51.6 0.8 52.6 1.2C53.6 1.6 54.1 2.7 53.7 3.7L48.8 14.7C48.4 15.6 47.4 16.1 46.4 16.1C45.4 16.1 44.4 15.6 44 14.7L39.1 3.7C38.8 3.2 38.7 2.7 38.8 2.2Z" />
+        {/* y */}
+        <path d="M56.8 2.2C57.2 1.2 58.3 0.8 59.3 1.2C59.8 1.4 60.1 1.8 60.3 2.3L64 11.8L67.7 2.3C68.1 1.3 69.2 0.8 70.2 1.2C71.2 1.6 71.7 2.7 71.3 3.7L66.3 15.8C65.5 17.8 63.6 19.2 61.4 19.2C60.5 19.2 59.6 19 59 18.6C58.3 18.1 58.1 17.2 58.6 16.5C59.1 15.8 60 15.6 60.7 16C61.1 16.2 61.6 16.3 62 16.3C63.2 16.3 64.2 15.6 64.6 14.5L64.9 13.7L60.5 2.7C60.2 2.2 60.1 1.7 60.2 1.2" />
+      </g>
+    </svg>
   );
 }
 

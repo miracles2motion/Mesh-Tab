@@ -14,9 +14,9 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Prioritize the Smart Wallet address if available
-    const walletAddress = client?.account?.address || user?.wallet?.address;
+    const walletAddress = client?.account?.address || user?.wallet?.address || (typeof window !== "undefined" ? localStorage.getItem("meshTab_walletAddress") : null) || "";
 
-    if (!ready || !authenticated || !walletAddress || mode !== "testnet") return;
+    if (!ready || !authenticated || mode !== "testnet") return;
 
     if (typeof window !== "undefined" && walletAddress) {
       localStorage.setItem("meshTab_walletAddress", walletAddress);

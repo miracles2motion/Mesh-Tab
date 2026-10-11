@@ -7,13 +7,20 @@ const redis = Redis.fromEnv();
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const wallet = searchParams.get('wallet');
+  const userId = searchParams.get('userId');
 
-  if (!wallet) {
-    return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
+  if (!wallet && !userId) {
+    return NextResponse.json({ error: 'Wallet address or userId required' }, { status: 400 });
   }
 
   try {
-    const raw: any = await redis.get(`user:${wallet.toLowerCase()}`);
+    let raw: any = null;
+    if (wallet) {
+      raw = await redis.get(`user:${wallet.toLowerCase()}`);
+    }
+    if (!raw && userId) {
+      raw = await redis.get(`user:${userId}`);
+    }
     let profile: any = null;
     if (raw) {
       profile = typeof raw === 'string' ? JSON.parse(raw) : raw;
@@ -37,12 +44,18 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { wallet, name, avatarColorIndex, oldName, buddySettings } = body;
 
-    if (!wallet) {
-      return NextResponse.json({ error: 'Wallet address required' }, { status: 400 });
+    if (!wallet && !userId) {
+      return NextResponse.json({ error: 'Wallet address or userId required' }, { status: 400 });
     }
 
-    const key = `user:${wallet.toLowerCase()}`;
-    const rawExisting: any = await redis.get(key);
+    const key = wallet ? `user:${wallet.toLowerCase()}` : `user:${userId}`;
+    let rawExisting: any = null;
+    if (wallet) {
+      rawExisting = await redis.get(`user:${wallet.toLowerCase()}`);
+    }
+    if (!rawExisting && userId) {
+      rawExisting = await redis.get(`user:${userId}`);
+    }
     let existingProfile: any = null;
     if (rawExisting) {
       existingProfile = typeof rawExisting === 'string' ? JSON.parse(rawExisting) : rawExisting;
@@ -78,7 +91,12 @@ export async function POST(request: Request) {
       lastUpdated: name && existingProfile && existingProfile.name !== name.trim() ? now : (existingProfile?.lastUpdated || now),
     };
 
-    await redis.set(key, JSON.stringify(newProfile));
+    if (wallet) {
+      await redis.set(`user:${wallet.toLowerCase()}`, JSON.stringify(newProfile));
+    }
+    if (userId) {
+      await redis.set(`user:${userId}`, JSON.stringify({ ...newProfile, wallet: wallet || "" }));
+    }
 
     // Cascade member balance and identity migration in testnet tabs
     if (oldName && oldName.trim() && oldName.trim().toLowerCase() !== name.trim().toLowerCase()) {

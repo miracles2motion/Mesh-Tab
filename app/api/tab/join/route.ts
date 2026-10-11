@@ -66,10 +66,12 @@ export async function POST(req: NextRequest) {
     // Check if already a member
     const isMember = await redis.sismember(`${fullTabKey}:authorized_users`, userId);
     if (isMember) {
-       // [OVERSEER MANDATE - Baseline 12]: Idempotent refresh of member wallet mapping
+       // [OVERSEER MANDATE - Baseline 12]: Idempotent refresh of member wallet mapping and profile
        if (walletAddress) {
          await redis.hset(`${fullTabKey}:member_wallets`, { [name]: walletAddress });
+         await redis.set(`user:${walletAddress.toLowerCase()}`, JSON.stringify({ name, avatarColorIndex: 0, lastUpdated: Date.now() }));
        }
+       await redis.set(`user:${userId}`, JSON.stringify({ name, wallet: walletAddress || "", avatarColorIndex: 0, lastUpdated: Date.now() }));
        return NextResponse.json({ success: true, message: "Already a member", tabId });
     }
 
@@ -81,6 +83,14 @@ export async function POST(req: NextRequest) {
         error: "This tab has reached the maximum capacity of 20 members. To ensure instant settlement speed, additional members cannot join."
       }, { status: 400 });
     }
+
+    // Read tab metadata for authentic notification naming
+    const tabRaw = await redis.get(fullTabKey);
+    let tabData: any = null;
+    try {
+      tabData = typeof tabRaw === "string" ? JSON.parse(tabRaw) : tabRaw;
+    } catch {}
+    const tabName = tabData?.name || "Group Space";
     
     const multi = redis.multi();
     // [OVERSEER MANDATE - Baseline 33]: Native Data Types (raw float string)
@@ -89,8 +99,28 @@ export async function POST(req: NextRequest) {
     if (walletAddress) {
       multi.hset(`${fullTabKey}:member_wallets`, { [name]: walletAddress });
       multi.expire(`${fullTabKey}:member_wallets`, 2592000);
+      multi.set(`user:${walletAddress.toLowerCase()}`, JSON.stringify({ name, avatarColorIndex: 0, lastUpdated: Date.now() }));
     }
+    // Also save profile indexed by Privy DID so lookup never fails
+    multi.set(`user:${userId}`, JSON.stringify({ name, wallet: walletAddress || "", avatarColorIndex: 0, lastUpdated: Date.now() }));
+
     multi.sadd(`${fullTabKey}:authorized_users`, userId);
+
+    // Record verified peer join activity in Redis for all tab members
+    const joinActivity = JSON.stringify({
+      id: `notif-join-${tabId}-${name.toLowerCase().replace(/\s+/g, "_")}`,
+      type: "tab_created",
+      title: "New Member Joined",
+      desc: `${name} joined "${tabName}" via passkey.`,
+      actor: name,
+      tabId,
+      tabName,
+      timestamp: Date.now(),
+      link: `/tab/${tabId}`
+    });
+    multi.lpush(`${fullTabKey}:activity`, joinActivity);
+    multi.ltrim(`${fullTabKey}:activity`, 0, 49);
+    multi.expire(`${fullTabKey}:activity`, 2592000);
     
     // [OVERSEER MANDATE - Baseline 34]: Storage Pruning (TTL refresh)
     multi.expire(`${fullTabKey}:members`, 2592000); // 30 days

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { addNotification, resetNotificationsToMode, getExpenseNotifId, getSettlementNotifId, removeNotification } from "./notifications";
+import { addNotification, resetNotificationsToMode, getExpenseNotifId, getMemberJoinNotifId, getSettlementNotifId, removeNotification } from "./notifications";
 import { isEffectivelyOnline } from "./network";
 import { usePrivy } from "@privy-io/react-auth";
 import { storageKey, safeSetItem, getDeletedTabIds } from "./storage-keys";
@@ -456,17 +456,31 @@ export function saveNewTab(tab: TabSummary) {
   window.dispatchEvent(new Event("meshTab-tabs-update"));
 
   try {
-    addNotification({
-      id: `notif-tab-${tab.id}`,
-      type: "tab_created",
-      title: "Group Tab Created",
-      desc: `You created "${tab.name}". Ready to share group costs!`,
-      actor: "You",
-      tabId: tab.id,
-      tabName: tab.name,
-      timestamp: tab.createdAt || Date.now(),
-      link: `/tab/${tab.id}`
-    });
+    if (tab.role === "Creator") {
+      addNotification({
+        id: `notif-tab-${tab.id}`,
+        type: "tab_created",
+        title: "Group Tab Created",
+        desc: `You created "${tab.name}". Ready to share group costs!`,
+        actor: "You",
+        tabId: tab.id,
+        tabName: tab.name,
+        timestamp: tab.createdAt || Date.now(),
+        link: `/tab/${tab.id}`
+      });
+    } else {
+      addNotification({
+        id: `notif-tab-join-${tab.id}`,
+        type: "tab_created",
+        title: "Joined Group Tab",
+        desc: `You joined "${tab.name}". Ready to split and settle group expenses!`,
+        actor: "You",
+        tabId: tab.id,
+        tabName: tab.name,
+        timestamp: Date.now(),
+        link: `/tab/${tab.id}`
+      });
+    }
   } catch (e) {}
 }
 
@@ -589,8 +603,59 @@ export function mergePulledTabs(serverTabs: any[], walletAddress: string) {
           avatarColorIndex: Math.floor(Math.random() * 5)
         };
       });
+      // Derive peer join notifications: notify existing members when a new peer joins
+      try {
+        const localMembers = getStoredTabMembers(st.id);
+        if (localMembers.length > 0 && Array.isArray(formattedMembers)) {
+          formattedMembers.forEach(fm => {
+            const fmName = (fm.name || "").toLowerCase();
+            const tabCreator = (st.creator || "").toLowerCase();
+            if (
+              fmName &&
+              fmName !== currentName.toLowerCase() &&
+              fmName !== tabCreator &&
+              fm.role !== "admin" &&
+              !localMembers.some(lm => lm.name.toLowerCase() === fmName)
+            ) {
+              addNotification({
+                id: getMemberJoinNotifId(st.id, fm.name),
+                type: "tab_created",
+                title: "New Member Joined",
+                desc: `${fm.name} joined "${st.name}" via passkey.`,
+                actor: fm.name,
+                tabId: st.id,
+                tabName: st.name,
+                link: `/tab/${st.id}`
+              });
+            }
+          });
+        }
+      } catch (e) {}
+
       const membersKey = storageKey("members", mode, st.id);
       localStorage.setItem(membersKey, JSON.stringify(formattedMembers));
+    }
+
+    // Merge server activity events (e.g. peer joins, settlements) into notifications
+    if (st.activity && Array.isArray(st.activity)) {
+      st.activity.forEach((actRaw: any) => {
+        try {
+          const act = typeof actRaw === "string" ? JSON.parse(actRaw) : actRaw;
+          if (act && act.actor && act.actor.toLowerCase() !== currentName.toLowerCase()) {
+            addNotification({
+              id: act.id,
+              type: act.type || "tab_created",
+              title: act.title,
+              desc: act.desc,
+              actor: act.actor,
+              tabId: act.tabId,
+              tabName: act.tabName,
+              timestamp: act.timestamp || Date.now(),
+              link: act.link
+            });
+          }
+        } catch {}
+      });
     }
   });
 

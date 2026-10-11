@@ -35,15 +35,14 @@ export async function GET(req: NextRequest) {
     pipeline.mget(...tabKeys);
     tabIds.forEach(id => {
        pipeline.hgetall(`meshtab:${mode}:tab:${id}:members`);
+       pipeline.hgetall(`meshtab:${mode}:tab:${id}:member_wallets`);
+       pipeline.lrange(`meshtab:${mode}:tab:${id}:activity`, 0, 10);
     });
     
     const results = await pipeline.exec();
     
     // results[0] is the result of mget -> array of strings/nulls
     const rawTabs = results[0] as (string | null)[];
-    
-    // results[1..N] are the results of hgetall -> Record<string, string>
-    const memberHashes = results.slice(1) as Record<string, string>[];
 
     const tabs = [];
     
@@ -58,14 +57,16 @@ export async function GET(req: NextRequest) {
       try {
         const tabData = typeof rawTab === "string" ? JSON.parse(rawTab) : rawTab;
         
-        // Members hash is { "0x123": "10.00", "0x456": "-5.50" }
         // [OVERSEER MANDATE - Baseline 33]: Native Data Types parsing
-        const membersMap = memberHashes[i] || {};
+        const membersMap = (results[1 + i * 3] || {}) as Record<string, string>;
+        const memberWallets = (results[1 + i * 3 + 1] || {}) as Record<string, string>;
+        const activityRaw = (results[1 + i * 3 + 2] || []) as unknown[];
         
-        // Parse float balances
-        const members = Object.keys(membersMap).map(address => ({
-          address,
-          balance: parseFloat(String(membersMap[address] ?? "0"))
+        // Parse float balances and attach member wallet addresses
+        const members = Object.keys(membersMap).map(name => ({
+          name,
+          balance: parseFloat(String(membersMap[name] ?? "0")),
+          walletAddress: memberWallets[name] || undefined
         }));
         
         // Calculate total balance of the tab (sum of positive balances)
@@ -81,7 +82,8 @@ export async function GET(req: NextRequest) {
           members,
           totalBalance,
           isCreator,
-          role: isCreator ? "Creator" : "Member"
+          role: isCreator ? "Creator" : "Member",
+          activity: activityRaw
         });
       } catch (err) {
         console.error("Failed to parse tab JSON", err);

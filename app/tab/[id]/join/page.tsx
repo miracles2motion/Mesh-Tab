@@ -120,7 +120,43 @@ export default function JoinTabPage() {
     setIsJoining(true);
     setStep("auth");
 
-    const effectiveWallet = client?.account?.address || overrideUser?.wallet?.address || user?.wallet?.address;
+    let effectiveWallet = client?.account?.address || overrideUser?.wallet?.address || user?.wallet?.address;
+
+    // Check linked accounts if not directly on user.wallet
+    if (!effectiveWallet) {
+      const accounts = (overrideUser?.linkedAccounts || user?.linkedAccounts) as any[] | undefined;
+      if (Array.isArray(accounts)) {
+        const w = accounts.find(a => a.type === "wallet" && a.address);
+        if (w?.address) effectiveWallet = w.address;
+      }
+    }
+
+    // If Privy embedded wallet is still being provisioned, give it up to 2.5 seconds to settle
+    if (!effectiveWallet) {
+      for (let i = 0; i < 12; i++) {
+        await new Promise(r => setTimeout(r, 200));
+        const cand = client?.account?.address || user?.wallet?.address;
+        if (cand) {
+          effectiveWallet = cand;
+          break;
+        }
+        const accounts = user?.linkedAccounts as any[] | undefined;
+        if (Array.isArray(accounts)) {
+          const w = accounts.find(a => a.type === "wallet" && a.address);
+          if (w?.address) {
+            effectiveWallet = w.address;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!effectiveWallet && typeof window !== "undefined") {
+      const stored = localStorage.getItem("meshTab_walletAddress");
+      if (stored && /^0x[a-fA-F0-9]{40}$/.test(stored)) {
+        effectiveWallet = stored;
+      }
+    }
 
     let token = "";
     try {
@@ -131,7 +167,7 @@ export default function JoinTabPage() {
     setWorkspaceMode("testnet");
 
     // Save profile locally and sync to Redis
-    saveStoredUser(targetName, 0, effectiveWallet, token || undefined);
+    await saveStoredUser(targetName, 0, effectiveWallet, token || undefined);
 
     let isAlreadyMemberOnServer = false;
     if (isEffectivelyOnline() && mode === "testnet") {

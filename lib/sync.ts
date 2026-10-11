@@ -52,6 +52,13 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [syncError, setSyncError] = useState(false);
+  const hasHydratedMembersRef = useRef(false);
+  const hasHydratedExpensesRef = useRef(false);
+
+  useEffect(() => {
+    hasHydratedMembersRef.current = false;
+    hasHydratedExpensesRef.current = false;
+  }, [tabId]);
 
   useEffect(() => {
     if (!tabId || tabId === "new") return;
@@ -91,9 +98,37 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
           errorCount = 0;
           setSyncError(false);
           const data = await res.json();
-          const { members, expenses, deletedIds, creator } = data;
+          const { members, expenses, deletedIds, creator, activity } = data;
           
           let stateUpdated = false;
+
+          // Ingest server-side activity (peer joins, settlements)
+          if (activity && Array.isArray(activity)) {
+            try {
+              const profile = getStoredUser();
+              const currentName = profile.name ? profile.name.toLowerCase() : "";
+              activity.forEach((actRaw: any) => {
+                let act = actRaw;
+                if (typeof act === "string") {
+                  try { act = JSON.parse(act); } catch { return; }
+                }
+                if (!act || !act.id) return;
+                if (act.actor && act.actor.toLowerCase() === currentName) return;
+
+                addNotification({
+                  id: act.id,
+                  type: act.type || "tab_created",
+                  title: act.title,
+                  desc: act.desc,
+                  actor: act.actor,
+                  tabId: act.tabId || tabId,
+                  tabName: act.tabName,
+                  timestamp: act.timestamp || Date.now(),
+                  link: act.link || `/tab/${tabId}`
+                });
+              });
+            } catch (e) {}
+          }
 
           // Smart Deep Merge for Members
           if (members && Array.isArray(members) && members.length > 0) {
@@ -134,7 +169,7 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
               }
 
                 // Derive peer join notifications if not the first hydration
-                if (localMembers.length > 0) {
+                if (hasHydratedMembersRef.current && localMembers.length > 0) {
                   try {
                     const profile = getStoredUser();
                     const currentName = profile.name ? profile.name.toLowerCase() : "";
@@ -142,7 +177,10 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
                     const tabName = tabs.find(t => t.id === tabId)?.name || "Group Space";
 
                     updatedMembers.forEach(m => {
-                      if (m.name.toLowerCase() !== currentName && !localMembers.some(lm => lm.name.toLowerCase() === m.name.toLowerCase())) {
+                      const mName = m.name.toLowerCase();
+                      const isCreator = Boolean(creator && mName === creator.toLowerCase());
+                      const isSelf = mName === currentName;
+                      if (!isSelf && !isCreator && m.role !== "admin" && !localMembers.some(lm => lm.name.toLowerCase() === mName)) {
                         addNotification({
                           id: getMemberJoinNotifId(tabId, m.name),
                           type: "tab_created",
@@ -157,6 +195,7 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
                     });
                   } catch (e) {}
                 }
+                hasHydratedMembersRef.current = true;
 
                 // Update user balance in stored tab summaries for home dashboard
                 try {
@@ -173,6 +212,21 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
                     });
                     safeSetItem(key, JSON.stringify(nextTabs));
                     window.dispatchEvent(new Event("meshTab-tabs-update"));
+
+                    // Self-heal wallet address in Redis if missing on server
+                    const localWallet = typeof window !== "undefined" ? (localStorage.getItem("meshTab_walletAddress") || "") : "";
+                    if (localWallet && !userMember.walletAddress) {
+                      fetch("/api/tab/join", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          tabId,
+                          name: profile.name,
+                          walletAddress: localWallet,
+                          mode
+                        })
+                      }).catch(() => {});
+                    }
                   }
                 } catch (e) {}
               }
@@ -236,7 +290,7 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
               stateUpdated = true;
 
               // Derive peer expense and settlement notifications if not first hydration
-              if (localExpenses.length > 0) {
+              if (hasHydratedExpensesRef.current && localExpenses.length > 0) {
                 try {
                   const profile = getStoredUser();
                   const currentName = profile.name ? profile.name.toLowerCase() : "";
@@ -301,6 +355,7 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
                   });
                 } catch (e) {}
               }
+              hasHydratedExpensesRef.current = true;
             }
           }
 
