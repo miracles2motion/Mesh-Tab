@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Copy, Users, Check, QrCode, Crown, ShieldAlert, AlertCircle, Info, Trash2, Sparkles, UserPlus } from "lucide-react";
+import { Copy, Users, Check, QrCode, Crown, ShieldAlert, AlertCircle, Info, Trash2, Sparkles, UserPlus, User } from "lucide-react";
 import { Button } from "../ui/button";
 import { QRCodeSVG } from "qrcode.react";
 import { formatCurrency } from "../../lib/utils";
@@ -434,14 +434,13 @@ export function ManageMembers({
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-slate-900 dark:text-white font-bold text-sm">{member.name}</span>
-                        {member.name.toLowerCase() === activeUser.toLowerCase() && (
-                          <span className="px-1.5 py-0.5 rounded-md bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 text-[10px] font-extrabold border border-indigo-500/20">
-                            You
-                          </span>
-                        )}
-                        {isAdmin && (
+                        {isAdmin ? (
                           <span className="px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-[10px] font-bold text-amber-700 dark:text-amber-300 flex items-center gap-1">
                             <Crown className="w-2.5 h-2.5" /> {member.name.toLowerCase() === activeUser.toLowerCase() ? "Creator (You)" : "Host / Admin"}
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 text-[10px] font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                            <User className="w-2.5 h-2.5 text-slate-400" /> {member.name.toLowerCase() === activeUser.toLowerCase() ? "Member (You)" : "Member"}
                           </span>
                         )}
                       </div>

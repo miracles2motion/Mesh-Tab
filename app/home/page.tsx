@@ -649,7 +649,7 @@ export default function GlobalHub() {
                       <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap inline-flex items-center gap-1 shrink-0 ${
                         tab.role === "Creator" 
                           ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-500/20" 
-                          : "bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-white/60 border border-slate-200/60 dark:border-white/5"
+                          : "bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-white/10"
                       }`}>
                         {tab.role === "Creator" ? (
                           <>
@@ -657,7 +657,10 @@ export default function GlobalHub() {
                             <span>Creator (You)</span>
                           </>
                         ) : (
-                          <span>Member (Host: {tab.creator || "Organizer"})</span>
+                          <>
+                            <User className="w-2.5 h-2.5 text-slate-500 dark:text-slate-400" />
+                            <span>Member (You)</span>
+                          </>
                         )}
                       </span>
                     </div>
