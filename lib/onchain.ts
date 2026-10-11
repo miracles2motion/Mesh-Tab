@@ -6,6 +6,7 @@ import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
 import { monadTestnet } from "./chains";
 import { isEffectivelyOnline } from "./network";
 import { useQuery } from "@tanstack/react-query";
+import { addClaimRecord } from "./claims";
 
 const monadPublicClient = createPublicClient({
   chain: monadTestnet,
@@ -104,7 +105,7 @@ export function useClaimAgoraFunds(workspaceMode: string) {
     enabled: workspaceMode === "testnet" && !!walletAddress,
   });
 
-  const claimBonus = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+  const claimBonus = useCallback(async (): Promise<{ success: boolean; error?: string; txHash?: string }> => {
     if (!client) {
       return { success: false, error: "Please log in first to claim." };
     }
@@ -158,10 +159,18 @@ export function useClaimAgoraFunds(workspaceMode: string) {
 
       if (typeof window !== "undefined") {
         localStorage.setItem("meshTab_testnet_lastFaucetClaim", Date.now().toString());
+        addClaimRecord({
+          txHash,
+          amount: 10000,
+          currency: "Agora AUSD",
+          network: "Monad Testnet",
+          timestamp: Date.now(),
+          walletAddress: walletAddress || undefined
+        }, workspaceMode);
       }
 
       await checkHasClaimed();
-      return { success: true };
+      return { success: true, txHash };
     } catch (err: any) {
       const errStr = (err?.message || err?.toString() || "").toLowerCase();
       let userMessage = "Something went wrong requesting funds from Agora Faucet. Please try again.";
