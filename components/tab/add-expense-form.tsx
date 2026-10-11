@@ -5,18 +5,14 @@ import { Button } from "../ui/button";
 import { TransactionOverlay, TransactionState } from "../ui/transaction-overlay";
 import Image from "next/image";
 import { PythLogo, PimlicoLogo } from "../ui/partner-logo";
-import { Check, ChevronDown, Sparkles, Camera, Mic, Zap, Loader2, Upload, FileText, SplitSquareHorizontal, AlertCircle, Globe, CloudUpload, CreditCard, ChevronRight, Coins, Plus, Snowflake } from "lucide-react";
+import { Check, ChevronDown, Sparkles, Camera, Mic, Zap, Loader2, Upload, FileText, SplitSquareHorizontal, AlertCircle, Globe, CloudUpload, ChevronRight, Plus } from "lucide-react";
 
-import { useUserProfile, saveStoredExpense, useWorkspaceMode, ExpenseCategory, deductCashBalance } from "../../lib/user";
+import { useUserProfile, saveStoredExpense, useWorkspaceMode, ExpenseCategory } from "../../lib/user";
 import { storageKey } from "../../lib/storage-keys";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { SUPPORTED_CURRENCIES, usePythRate } from "../../lib/pyth";
 import { useConnectivity } from "../../components/providers/connectivity-provider";
-import { VirtualCardDrawer } from "./virtual-card-drawer";
-import { AddFundsDrawer } from "./add-funds-drawer";
-import { getVirtualCard, saveVirtualCard, VirtualCard } from "../../lib/card";
-import { useAvailableBalance } from "../../lib/balance";
 import { formatCurrency } from "../../lib/utils";
 import confetti from "canvas-confetti";
 
@@ -57,24 +53,6 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
   const [isRecording, setIsRecording] = useState(false);
   const [showDraft, setShowDraft] = useState(false);
   const [receiptImageName, setReceiptImageName] = useState<string | null>(null);
-  const [isCardDrawerOpen, setIsCardDrawerOpen] = useState(false);
-  const [isAddFundsOpen, setIsAddFundsOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "cash">("cash");
-
-  const { availableCents } = useAvailableBalance(activeUser);
-  const [virtualCard, setVirtualCard] = useState<VirtualCard>(() => getVirtualCard(workspaceMode, activeUser));
-
-  useEffect(() => {
-    const sync = () => setVirtualCard(getVirtualCard(workspaceMode, activeUser));
-    sync();
-    window.addEventListener("meshTab-card-update", sync);
-    window.addEventListener("meshTab-workspace-update", sync);
-    return () => {
-      window.removeEventListener("meshTab-card-update", sync);
-      window.removeEventListener("meshTab-workspace-update", sync);
-    };
-  }, [workspaceMode, activeUser]);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [currency, setCurrency] = useState<string>(defaultCurrency || "USD");
@@ -117,14 +95,6 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
   // Compute conversion & integer cents in USD using live or cached Pyth rate
   const rawNumericAmount = parseFloat(amount) || 0;
   const totalBillCents = Math.round(rawNumericAmount * activeRate * 100);
-
-  // Real-time Visa Card balance & validation checks
-  const isCard = paymentMethod === "card";
-  const isCardInsufficient = isCard && totalBillCents > 0 && totalBillCents > availableCents;
-  const shortageCents = isCardInsufficient ? totalBillCents - availableCents : 0;
-  const isCardFrozen = isCard && virtualCard.isFrozen;
-  const isCardNotIssued = isCard && !virtualCard.isIssued;
-  const isDailyLimitExceeded = isCard && virtualCard.dailyLimitCents > 0 && ((virtualCard.spentTodayCents || 0) + totalBillCents > virtualCard.dailyLimitCents);
 
   const assignedExactCents = Object.entries(exactAmounts).reduce((acc, [member, val]) => {
     if (!splitBetween.includes(member)) return acc;
@@ -490,44 +460,6 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
       }
     }
 
-    // Card Balance & Authorization Guard (if paying with personal Visa card)
-    if (paymentMethod === "card") {
-      if (!virtualCard.isIssued) {
-        toast.error("Card Not Issued", {
-          description: "Please issue and activate your personal Visa card first.",
-        });
-        setIsCardDrawerOpen(true);
-        return;
-      }
-      if (virtualCard.isFrozen) {
-        toast.error("Card Frozen", {
-          description: "Please unfreeze your virtual card in card settings to authorize.",
-        });
-        setIsCardDrawerOpen(true);
-        return;
-      }
-      if (availableCents < totalBillCents) {
-        toast.error("Insufficient Available Balance", {
-          description: `Available card balance (${formatCurrency(availableCents)}) cannot cover $${(totalBillCents / 100).toFixed(2)}.`,
-        });
-        setIsAddFundsOpen(true);
-        return;
-      }
-      if (virtualCard.dailyLimitCents > 0 && ((virtualCard.spentTodayCents || 0) + totalBillCents > virtualCard.dailyLimitCents)) {
-        toast.error("Daily Limit Exceeded", {
-          description: `Transaction exceeds your daily limit of ${formatCurrency(virtualCard.dailyLimitCents)}.`,
-        });
-        setIsCardDrawerOpen(true);
-        return;
-      }
-      if (workspaceMode !== "testnet") {
-        deductCashBalance(totalBillCents);
-      }
-      virtualCard.spentTodayCents = (virtualCard.spentTodayCents || 0) + totalBillCents;
-      virtualCard.lastSpendAt = Date.now();
-      saveVirtualCard(workspaceMode, virtualCard);
-    }
-
     // 1. Mock Passkey Prompt (Browser Native equivalent)
     setTxState("authenticating");
     await new Promise(r => setTimeout(r, 1200));
@@ -541,7 +473,7 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
       id: String(Date.now()),
       payer: paidBy,
       amount: totalBillCents,
-      desc: paymentMethod === "card" ? `${desc.trim()} (Visa Card)` : desc.trim(),
+      desc: desc.trim(),
       createdAt: Date.now(),
       splitType: splitType === 'percentage' || splitType === 'shares' ? 'exact' : splitType,
       splits: splitsMap,
@@ -553,19 +485,12 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
     // 4. Success
     setTxState("success");
     sounds.playSuccessChime();
-    if (paymentMethod === "card") {
-      try {
-        confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
-      } catch {}
-    }
-    toast.success(
-      paymentMethod === "card" ? "💳 Paid via Personal Visa Card!" : "Expense Logged to Ledger",
-      {
-        description: paymentMethod === "card"
-          ? `$${(totalBillCents / 100).toFixed(2)} debited from available cash and split with ${splitBetween.length} members.`
-          : `${currency !== "USD" ? `${activeCurrencyInfo.symbol}${amount} (≈ $${(totalBillCents / 100).toFixed(2)} USD)` : `$${amount}`} logged for "${desc.trim()}". ${splitType === 'exact' ? 'Exact split recorded.' : 'Split equally.'}`
-      }
-    );
+    try {
+      confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+    } catch {}
+    toast.success("Expense Logged to Ledger", {
+      description: `${currency !== "USD" ? `${activeCurrencyInfo.symbol}${amount} (≈ $${(totalBillCents / 100).toFixed(2)} USD)` : `$${amount}`} logged for "${desc.trim()}". ${splitType === 'exact' ? 'Exact split recorded.' : 'Split equally.'}`
+    });
     await new Promise(r => setTimeout(r, 1000));
     
     setTxState("idle");
@@ -602,43 +527,6 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
               />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Virtual Card Fast-Tap Option */}
-                <div 
-                  onClick={() => {
-                    sounds.playClick();
-                    if (!virtualCard.isIssued) {
-                      setIsCardDrawerOpen(true);
-                    } else {
-                      setPaymentMethod("card");
-                      // Unified form handles card payment seamlessly
-                      toast.info("Personal Visa Card Selected", {
-                        description: `Available balance: ${formatCurrency(availableCents)}. Fill in amount and details to split.`
-                      });
-                    }
-                  }}
-                  className={`p-3.5 border-2 border-dashed rounded-2xl flex items-center gap-3.5 cursor-pointer transition-all hover:scale-[1.01] sm:col-span-2 ${
-                    paymentMethod === "card"
-                      ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10"
-                      : "border-indigo-200 dark:border-indigo-500/20 hover:border-indigo-500 bg-indigo-50/50 dark:bg-indigo-500/5"
-                  }`}
-                >
-                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-300 shrink-0">
-                    <CreditCard className="w-5 h-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-1.5 truncate">
-                      Pay with Personal Visa Card
-                      <span className="text-[9px] bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-bold px-1.5 py-0.5 rounded-full">Privy × Stripe</span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 dark:text-white/50 mt-0.5 truncate">
-                      {virtualCard.isIssued 
-                        ? `Tap to pay in person with Visa (${formatCurrency(availableCents)} available)`
-                        : "Tap to issue your free virtual card in 2 steps"}
-                    </p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-indigo-400 shrink-0" />
-                </div>
-
                 {/* Receipt Upload Card */}
                 <div 
                   onClick={handleTriggerUpload}
@@ -915,13 +803,13 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
           </div>
           <div className="space-y-6">
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Paid By Dropdown */}
             <div className="space-y-2 relative">
               <label className="text-sm font-semibold text-slate-700 dark:text-white/80 ml-1">Paid By</label>
               <div 
                 onClick={() => setShowPaidByDropdown(!showPaidByDropdown)}
-                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-3 text-slate-900 dark:text-white flex items-center justify-between cursor-pointer hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+                className="w-full h-[48px] bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl px-4 text-slate-900 dark:text-white flex items-center justify-between cursor-pointer hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
               >
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-full bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 flex items-center justify-center text-xs font-bold">
@@ -950,204 +838,19 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
               )}
             </div>
 
-            {/* Paid With Payment Method Selector */}
+            {/* Split Method */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between ml-1">
-                <label className="text-sm font-semibold text-slate-700 dark:text-white/80">Paid With</label>
-                {paymentMethod === "card" && (
-                  <div className="flex items-center gap-1.5">
-                    {isCardInsufficient ? (
-                      <span className="text-[10px] text-rose-600 dark:text-rose-400 font-mono font-bold flex items-center gap-1 bg-rose-50 dark:bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-200 dark:border-rose-500/20 animate-pulse">
-                        <AlertCircle className="w-3 h-3 text-rose-500" />
-                        <span>Short by {formatCurrency(shortageCents)}</span>
-                      </span>
-                    ) : isDailyLimitExceeded ? (
-                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-mono font-bold flex items-center gap-1 bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-500/20">
-                        <span>Limit Exceeded</span>
-                      </span>
-                    ) : isCardFrozen ? (
-                      <span className="text-[10px] text-sky-600 dark:text-sky-400 font-mono font-bold flex items-center gap-1 bg-sky-50 dark:bg-sky-500/10 px-2 py-0.5 rounded-full border border-sky-200 dark:border-sky-500/20">
-                        <span>Card Frozen</span>
-                      </span>
-                    ) : !virtualCard.isIssued ? (
-                      <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-mono font-bold flex items-center gap-1 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-500/20">
-                        <span>Not Issued</span>
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono font-bold flex items-center gap-1">
-                        <Check className="w-3 h-3 text-emerald-500" />
-                        <span>{formatCurrency(availableCents)} Avail</span>
-                      </span>
-                    )}
-
-                    {isCardInsufficient && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          sounds.playClick();
-                          setIsAddFundsOpen(true);
-                        }}
-                        className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 underline underline-offset-2 cursor-pointer flex items-center gap-0.5"
-                      >
-                        <Plus className="w-3 h-3" /> Add Funds
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="flex p-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl h-[48px] items-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    sounds.playClick();
-                    if (!virtualCard.isIssued) {
-                      setIsCardDrawerOpen(true);
-                    } else {
-                      setPaymentMethod("card");
-                    }
-                  }}
-                  className={`flex-1 h-full rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    paymentMethod === "card"
-                      ? isCardInsufficient
-                        ? "bg-rose-600 text-white shadow-sm"
-                        : "bg-indigo-600 text-white shadow-sm"
-                      : "text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
-                  }`}
-                  title={virtualCard.isIssued ? `Personal Visa Card (${formatCurrency(availableCents)} Available)` : "Issue Personal Visa Card"}
-                >
-                  <CreditCard className="w-3.5 h-3.5" />
-                  <span>Visa Card</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    sounds.playClick();
-                    setPaymentMethod("cash");
-                  }}
-                  className={`flex-1 h-full rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    paymentMethod === "cash"
-                      ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-sm"
-                      : "text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white"
-                  }`}
-                >
-                  <Coins className="w-3.5 h-3.5" />
-                  <span>Cash</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Real-Time Insufficient Card Balance Alert Banner */}
-            {isCardInsufficient && (
-              <div className="col-span-2 p-3.5 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-rose-800 dark:text-rose-300 animate-in fade-in slide-in-from-top-2 duration-200 shadow-sm">
-                <div className="flex items-start gap-2.5">
-                  <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
-                  <div className="space-y-0.5">
-                    <div className="font-bold flex items-center gap-2">
-                      <span>Insufficient Card Balance</span>
-                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-800 dark:text-rose-200 font-bold">
-                        {formatCurrency(availableCents)} available
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-rose-700 dark:text-rose-300 opacity-90">
-                      This charge is {formatCurrency(totalBillCents)}. Add at least {formatCurrency(shortageCents)} to authorize this Visa card charge.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      sounds.playClick();
-                      setPaymentMethod("cash");
-                    }}
-                    className="px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white rounded-xl transition-colors cursor-pointer"
-                  >
-                    Switch to Cash
-                  </button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => {
-                      sounds.playClick();
-                      setIsAddFundsOpen(true);
-                    }}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-8 px-3 rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Add Funds
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Daily Spend Limit Exceeded Banner */}
-            {isDailyLimitExceeded && (
-              <div className="col-span-2 p-3.5 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-2xl flex items-center justify-between gap-3 text-xs text-amber-800 dark:text-amber-300 animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="flex items-center gap-2.5">
-                  <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
-                  <div>
-                    <span className="font-bold">Daily Card Limit Exceeded:</span>
-                    <span className="ml-1 opacity-90">
-                      Limit is {formatCurrency(virtualCard.dailyLimitCents)}. You have already spent {formatCurrency(virtualCard.spentTodayCents || 0)} today.
-                    </span>
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => setIsCardDrawerOpen(true)}
-                  className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs h-8 px-3 rounded-xl cursor-pointer"
-                >
-                  Adjust Limit
-                </Button>
-              </div>
-            )}
-
-            {/* Frozen Card Banner */}
-            {isCard && isCardFrozen && (
-              <div className="col-span-2 p-3.5 bg-sky-50 dark:bg-sky-500/10 border border-sky-200 dark:border-sky-500/30 rounded-2xl flex items-center justify-between gap-3 text-xs text-sky-800 dark:text-sky-300 animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="flex items-center gap-2.5">
-                  <Snowflake className="w-4 h-4 text-sky-500 shrink-0" />
-                  <span>Your Visa card is currently frozen. Unfreeze it in card settings to authorize.</span>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => setIsCardDrawerOpen(true)}
-                  className="bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs h-8 px-3 rounded-xl cursor-pointer"
-                >
-                  Unfreeze Card
-                </Button>
-              </div>
-            )}
-
-            {/* Unissued Card Banner */}
-            {isCard && !virtualCard.isIssued && (
-              <div className="col-span-2 p-3.5 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 rounded-2xl flex items-center justify-between gap-3 text-xs text-indigo-800 dark:text-indigo-300 animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="flex items-center gap-2.5">
-                  <CreditCard className="w-4 h-4 text-indigo-500 shrink-0" />
-                  <span>Personal Visa card not issued yet. Issue your free card in seconds to pay.</span>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => setIsCardDrawerOpen(true)}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-8 px-3 rounded-xl cursor-pointer"
-                >
-                  Issue Card
-                </Button>
-              </div>
-            )}
-
-            {/* Split Type */}
-            <div className="space-y-2 col-span-2">
               <label className="text-sm font-semibold text-slate-700 dark:text-white/80 ml-1">Split Method</label>
-              <div className="flex p-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl h-[44px]">
+              <div className="flex p-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl h-[48px] items-center">
                 {(['equal', 'exact', 'percentage', 'shares'] as const).map(mode => (
                   <button 
                     key={mode}
                     type="button" 
-                    onClick={() => setSplitType(mode)}
-                    className={`flex-1 rounded-xl font-semibold text-[11px] transition-colors cursor-pointer ${splitType === mode ? 'bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white'}`}
+                    onClick={() => {
+                      sounds.playClick();
+                      setSplitType(mode);
+                    }}
+                    className={`flex-1 h-full rounded-xl font-semibold text-[11px] transition-colors cursor-pointer ${splitType === mode ? 'bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-sm font-bold' : 'text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white'}`}
                   >
                     {mode === 'equal' ? '= Equal' : mode === 'exact' ? '$ Exact' : mode === 'percentage' ? '% Pct' : '⊞ Shares'}
                   </button>
@@ -1366,79 +1069,19 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
         </div>
 
         <div className="mt-4 pt-6 border-t border-slate-200 dark:border-white/10 flex-shrink-0 lg:col-span-2">
-          {isCardInsufficient ? (
-            <Button 
-              type="button" 
-              variant="primary" 
-              size="lg" 
-              onClick={() => {
-                sounds.playClick();
-                setIsAddFundsOpen(true);
-              }}
-              className="w-full relative overflow-hidden bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-rose-600/20"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Insufficient Card Balance — Add {formatCurrency(shortageCents)} to Pay</span>
-            </Button>
-          ) : isDailyLimitExceeded ? (
-            <Button 
-              type="button" 
-              variant="primary" 
-              size="lg" 
-              onClick={() => {
-                sounds.playClick();
-                setIsCardDrawerOpen(true);
-              }}
-              className="w-full relative overflow-hidden bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-amber-600/20"
-            >
-              <AlertCircle className="w-5 h-5" />
-              <span>Daily Spending Limit Exceeded — Adjust Limit</span>
-            </Button>
-          ) : isCard && isCardFrozen ? (
-            <Button 
-              type="button" 
-              variant="primary" 
-              size="lg" 
-              onClick={() => {
-                sounds.playClick();
-                setIsCardDrawerOpen(true);
-              }}
-              className="w-full relative overflow-hidden bg-sky-600 hover:bg-sky-700 active:scale-95 text-white font-bold cursor-pointer flex items-center justify-center gap-2 shadow-lg"
-            >
-              <Snowflake className="w-5 h-5" />
-              <span>Card Frozen — Unfreeze in Settings to Pay</span>
-            </Button>
-          ) : isCard && !virtualCard.isIssued ? (
-            <Button 
-              type="button" 
-              variant="primary" 
-              size="lg" 
-              onClick={() => {
-                sounds.playClick();
-                setIsCardDrawerOpen(true);
-              }}
-              className="w-full relative overflow-hidden bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20"
-            >
-              <CreditCard className="w-5 h-5" />
-              <span>Issue Personal Visa Card to Pay</span>
-            </Button>
-          ) : (
-            <Button 
-              type="submit" 
-              variant="primary" 
-              size="lg" 
-              className="w-full relative overflow-hidden"
-              disabled={txState !== "idle" || !isExactValid}
-            >
-              {splitType === "exact" && remainingCents !== 0
-                ? remainingCents > 0
-                  ? `Allocate Remaining $${(remainingCents / 100).toFixed(2)}`
-                  : `Exceeds Total by $${(Math.abs(remainingCents) / 100).toFixed(2)}`
-                : paymentMethod === "card" && totalBillCents > 0
-                  ? `Pay $${(totalBillCents / 100).toFixed(2)} with Personal Visa Card`
-                  : "Log Expense"}
-            </Button>
-          )}
+          <Button 
+            type="submit" 
+            variant="primary" 
+            size="lg" 
+            className="w-full relative overflow-hidden cursor-pointer"
+            disabled={txState !== "idle" || !isExactValid}
+          >
+            {splitType === "exact" && remainingCents !== 0
+              ? remainingCents > 0
+                ? `Allocate Remaining $${(remainingCents / 100).toFixed(2)}`
+                : `Exceeds Total by $${(Math.abs(remainingCents) / 100).toFixed(2)}`
+              : "Log Expense"}
+          </Button>
           
           <div className="mt-4 flex items-center justify-between text-slate-500 dark:text-white/50 text-xs font-medium px-1">
             <div className="flex items-center gap-1.5">
@@ -1456,31 +1099,6 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
           </div>
         </div>
       </form>
-
-      {/* Shared Virtual Visa Card Drawer */}
-      <VirtualCardDrawer 
-        isOpen={isCardDrawerOpen} 
-        onClose={() => {
-          setIsCardDrawerOpen(false);
-          onSuccess?.();
-        }}
-        tabId={tabId}
-        tabName={tabId === "lisbon-24" ? "Lisbon Weekend" : undefined}
-      />
-
-      {/* Add Funds Drawer for Live Balance Top Up */}
-      <AddFundsDrawer 
-        isOpen={isAddFundsOpen}
-        suggestedAmountCents={shortageCents > 0 ? shortageCents : undefined}
-        reason="Cover Visa Card Shortage"
-        onClose={() => setIsAddFundsOpen(false)}
-        onSuccess={() => {
-          setIsAddFundsOpen(false);
-          toast.success("Card Balance Topped Up!", {
-            description: "Your available card balance has been refreshed and is ready to pay."
-          });
-        }}
-      />
     </>
   );
 }
