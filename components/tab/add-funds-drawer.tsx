@@ -15,7 +15,8 @@ import {
   Plus, 
   ChevronRight,
   Sparkles,
-  ArrowDownLeft
+  ArrowDownLeft,
+  Check
 } from "lucide-react";
 import { 
   MonadLogo, 
@@ -37,6 +38,7 @@ import { formatCurrency } from "@/lib/utils";
 import { sounds } from "@/lib/sounds";
 import { fireFaucetConfetti } from "@/lib/confetti";
 import { toast } from "sonner";
+import { authenticateWithBiometrics } from "@/lib/biometrics";
 
 interface AddFundsDrawerProps {
   isOpen: boolean;
@@ -47,6 +49,33 @@ interface AddFundsDrawerProps {
 }
 
 type DepositMethod = "card" | "bank" | "gpay";
+
+const STEPPER_STAGES = [
+  {
+    title: "Verifying Device Biometrics",
+    desc: "Scanning Face ID / Touch ID Enclave...",
+    devTitle: "Authenticating WebAuthn Keypair",
+    devDesc: "Passkey credential cryptographic assertion..."
+  },
+  {
+    title: "Connecting to Instant Rails",
+    desc: "Establishing secure FedNow banking channel...",
+    devTitle: "Sponsoring Gas via Paymaster",
+    devDesc: "Pimlico ERC-4337 UserOp paymaster sponsorship..."
+  },
+  {
+    title: "Authorizing Instant Deposit",
+    desc: "Transfer clearing and settlement verification...",
+    devTitle: "Broadcasting to Monad Testnet",
+    devDesc: "Minting Agora AUSD via contract 0xd236c18D..."
+  },
+  {
+    title: "Deposit Ready in Account",
+    desc: "Balance updated and available immediately.",
+    devTitle: "Block Finalized (800ms)",
+    devDesc: "Sub-second Monad finality achieved • Tx confirmed."
+  }
+];
 
 const QUICK_CHIPS = [
   { label: "+$25", value: 2500 },
@@ -75,6 +104,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
   const [selectedMethod, setSelectedMethod] = useState<DepositMethod>("card");
   const [currentStep, setCurrentStep] = useState<"select" | "details" | "success">("select");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingStage, setProcessingStage] = useState(0);
   const [lastDepositedCents, setLastDepositedCents] = useState(isTestnet ? 1000000 : 10000);
   const [mounted, setMounted] = useState(false);
 
@@ -87,6 +117,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
     if (isOpen) {
       setCurrentStep("select");
       setIsProcessing(false);
+      setProcessingStage(0);
       if (isTestnet) {
         setAmountStr("10000.00");
         checkHasClaimed();
@@ -130,53 +161,78 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
       return;
     }
 
-    setIsProcessing(true);
-    sounds.playClick();
-
-    if (isTestnet) {
-      const { success, error } = await claimBonus();
-      if (!success) {
-        setIsProcessing(false);
-        toast.error("Deposit Failed", { description: error || "Could not complete testnet deposit." });
-        return;
-      }
-      refetchTestnetBalance();
-    } else {
-      // 1.5s simulated loading for Demo mode
-      await new Promise((r) => setTimeout(r, 1500));
-      // Symmetrically mutate both demo balance stores
-      addSettledPayout(depositCents);
-      topUpVirtualBalance(depositCents);
+    // Step 1: Prompt native device biometrics (Face ID / Touch ID / Enclave)
+    const authRes = await authenticateWithBiometrics("Authorize Instant Deposit");
+    if (authRes.canceled) {
+      toast.info("Deposit Canceled", { description: "Biometric authentication was canceled." });
+      return;
     }
 
-    // Audio & celebratory feedback
-    sounds.playCoinClink();
-    fireFaucetConfetti();
+    setIsProcessing(true);
+    setProcessingStage(1);
+    sounds.playClick();
 
-    const methodLabel = 
-      selectedMethod === "card" ? "Visa Platinum Debit" :
-      selectedMethod === "bank" ? "Chase Checking (FedNow)" : 
-      "Google Pay";
+    const t1 = setTimeout(() => setProcessingStage(2), 650);
+    const t2 = setTimeout(() => setProcessingStage(3), 1400);
 
-    // In-app activity notification
     try {
-      addNotification({
-        type: "faucet",
-        title: isTestnet ? "Testnet Deposit Received" : "Deposit Received",
-        desc: `Added ${formatCurrency(depositCents)} via ${methodLabel}.`,
-        actor: "You",
-        amount: depositCents,
-        link: "/home"
+      if (isTestnet) {
+        const { success, error } = await claimBonus();
+        if (!success) {
+          clearTimeout(t1);
+          clearTimeout(t2);
+          setIsProcessing(false);
+          setProcessingStage(0);
+          toast.error("Deposit Failed", { description: error || "Could not complete deposit." });
+          return;
+        }
+        refetchTestnetBalance();
+      } else {
+        // Realistic multi-stage simulated timing
+        await new Promise((r) => setTimeout(r, 2100));
+        addSettledPayout(depositCents);
+        topUpVirtualBalance(depositCents);
+      }
+
+      setProcessingStage(4);
+      await new Promise((r) => setTimeout(r, 450));
+
+      // Audio & celebratory feedback
+      sounds.playCoinClink();
+      fireFaucetConfetti();
+
+      const methodLabel = 
+        selectedMethod === "card" ? "Visa Platinum Debit" :
+        selectedMethod === "bank" ? "Chase Checking (FedNow)" : 
+        "Google Pay";
+
+      // In-app activity notification
+      try {
+        addNotification({
+          type: "faucet",
+          title: isDeveloperMode && isTestnet ? "Testnet Deposit Received" : "Deposit Received",
+          desc: `Added ${formatCurrency(depositCents)} via ${methodLabel}.`,
+          actor: "You",
+          amount: depositCents,
+          link: "/home"
+        });
+      } catch {}
+
+      toast.success("Deposit Successful!", {
+        description: `Added ${formatCurrency(depositCents)} to your account balance.`
       });
-    } catch {}
 
-    toast.success("Deposit Successful!", {
-      description: `Added ${formatCurrency(depositCents)} to your account balance.`
-    });
-
-    setLastDepositedCents(depositCents);
-    setIsProcessing(false);
-    setCurrentStep("success");
+      setLastDepositedCents(depositCents);
+      setIsProcessing(false);
+      setProcessingStage(0);
+      setCurrentStep("success");
+    } catch (err: any) {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      setIsProcessing(false);
+      setProcessingStage(0);
+      toast.error("Deposit Failed", { description: err?.message || "An unexpected error occurred." });
+    }
   };
 
   const handleClose = () => {
@@ -192,8 +248,80 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
     <Sheet isOpen={isOpen} onClose={handleClose} size="4xl">
       <div className="p-6 md:p-8 flex flex-col items-center bg-white dark:bg-[#0a0a0a] text-slate-900 dark:text-white">
         <AnimatePresence mode="wait">
-          {/* ALLOCATION ALREADY ACTIVE (TESTNET 1-TIME LIMIT ENFORCED) */}
-          {isAlreadyAllocated && currentStep !== "success" ? (
+          {/* MULTI-STAGE PROCESSING STEPPER VIEW */}
+          {isProcessing ? (
+            <motion.div
+              key="processing-stepper-view"
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.2 }}
+              className="py-6 flex flex-col items-center max-w-sm mx-auto text-center w-full"
+            >
+              {/* Animated processing spinner */}
+              <div className="relative mb-5">
+                <div className="w-16 h-16 rounded-full bg-indigo-500/10 dark:bg-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                  <Zap className="w-8 h-8 animate-pulse" />
+                </div>
+                <div className="absolute inset-0 rounded-full border-2 border-indigo-600/20 border-t-indigo-600 animate-spin" />
+              </div>
+
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1.5">
+                {isDeveloperMode ? "Executing Web3 Settlement" : "Processing Instant Deposit"}
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-white/60 mb-6">
+                {isDeveloperMode 
+                  ? "Routing UserOp through Pimlico Paymaster to Monad Testnet..." 
+                  : `Securing ${formatCurrency(depositCents)} deposit via instant payment rails...`}
+              </p>
+
+              {/* 4-Stage Visual Stepper */}
+              <div className="w-full space-y-2.5 text-left mb-6">
+                {STEPPER_STAGES.map((stg, idx) => {
+                  const stageNum = idx + 1;
+                  const isDone = processingStage > stageNum;
+                  const isCurrent = processingStage === stageNum;
+
+                  return (
+                    <div 
+                      key={idx}
+                      className={`p-3 rounded-2xl border flex items-center gap-3 transition-all ${
+                        isDone 
+                          ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-700 dark:text-emerald-300"
+                          : isCurrent
+                          ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-700 dark:text-indigo-300 shadow-xs"
+                          : "bg-slate-50 dark:bg-white/5 border-slate-200/50 dark:border-white/5 text-slate-400 opacity-60"
+                      }`}
+                    >
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                        isDone 
+                          ? "bg-emerald-500 text-white" 
+                          : isCurrent 
+                          ? "bg-indigo-600 text-white animate-pulse" 
+                          : "bg-slate-200 dark:bg-white/10 text-slate-500"
+                      }`}>
+                        {isDone ? <Check className="w-3.5 h-3.5" /> : stageNum}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold leading-none truncate">
+                          {isDeveloperMode ? stg.devTitle : stg.title}
+                        </p>
+                        <p className="text-[10px] text-slate-500 dark:text-white/50 mt-1 truncate">
+                          {isDeveloperMode ? stg.devDesc : stg.desc}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Trust Badge */}
+              <div className="text-[11px] text-slate-400 dark:text-white/40 flex items-center gap-1.5 justify-center">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                <span>{isDeveloperMode ? "Monad × Agora × Pimlico • 0% Gas" : "Encrypted Bank Rails • 0% Platform Fee"}</span>
+              </div>
+            </motion.div>
+          ) : isAlreadyAllocated && currentStep !== "success" ? (
             <motion.div
               key="allocation-active-view"
               initial={{ opacity: 0, scale: 0.96 }}
@@ -208,14 +336,18 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
 
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 text-xs font-semibold mb-3">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Monad Testnet • Faucet Ceiling</span>
+                <span>{isDeveloperMode ? "Monad Testnet • Faucet Ceiling" : "Account Deposit Limit"}</span>
               </div>
 
               <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                Faucet Ceiling Reached
+                {isDeveloperMode ? "Faucet Ceiling Reached" : "Deposit Limit Reached"}
               </h3>
               <p className="text-slate-500 dark:text-white/60 text-sm mb-6 leading-relaxed">
-                Your wallet holds the maximum testnet allocation of <strong className="text-slate-900 dark:text-white font-semibold">$100,000.00 Agora AUSD</strong>.
+                {isDeveloperMode ? (
+                  <>Your wallet holds the maximum testnet allocation of <strong className="text-slate-900 dark:text-white font-semibold">$100,000.00 Agora AUSD</strong>.</>
+                ) : (
+                  <>Your account holds the maximum allocation of <strong className="text-slate-900 dark:text-white font-semibold">$100,000.00</strong>.</>
+                )}
               </p>
 
               {/* Status details card */}
@@ -228,15 +360,21 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
                 </div>
                 <div className="flex justify-between items-center text-slate-600 dark:text-white/70">
                   <span>Settlement Asset:</span>
-                  <span className="font-semibold text-slate-900 dark:text-white">Agora AUSD (Digital USD)</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">
+                    {isDeveloperMode ? "Agora AUSD (Digital USD)" : "US Dollars ($)"}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center text-slate-600 dark:text-white/70">
                   <span>Network:</span>
-                  <span className="font-semibold text-purple-600 dark:text-purple-400">Monad High-Speed Network</span>
+                  <span className="font-semibold text-purple-600 dark:text-purple-400">
+                    {isDeveloperMode ? "Monad High-Speed Network" : "Instant Payment Rails"}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center text-slate-600 dark:text-white/70">
-                  <span>Network Fee:</span>
-                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">100% Free (Sponsored)</span>
+                  <span>Transfer Fee:</span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                    {isDeveloperMode ? "100% Free (Sponsored)" : "$0.00 (Zero Fees)"}
+                  </span>
                 </div>
               </div>
 
@@ -360,7 +498,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
                   {/* Dynamic Balance Preview Card */}
                   <div className="p-4 rounded-2xl bg-indigo-50/60 dark:bg-indigo-500/10 border border-indigo-200/60 dark:border-indigo-500/20 text-xs space-y-2">
                     <div className="flex justify-between items-center text-slate-600 dark:text-white/70">
-                      <span>{isTestnet ? "Current Available Monad AUSD:" : "Current Net Available Balance:"}</span>
+                      <span>{isDeveloperMode && isTestnet ? "Current Available Monad AUSD:" : "Current Net Available Balance:"}</span>
                       <span className="font-semibold text-slate-800 dark:text-white font-mono">
                         {formatCurrency(currentNetBalance)}
                       </span>
@@ -384,7 +522,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
                   {/* Zero Fee Guarantee */}
                   <div className="flex items-center gap-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 p-3 rounded-xl border border-emerald-200 dark:border-emerald-500/20">
                     <Sparkles className="w-4 h-4 shrink-0" />
-                    <span>0% Deposit Fee • Sponsored by Pimlico Paymaster</span>
+                    <span>{isDeveloperMode ? "0% Deposit Fee • Sponsored by Pimlico Paymaster" : "0% Deposit Fee • Zero Network Charges"}</span>
                   </div>
                 </div>
 
@@ -415,7 +553,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
                             </span>
                           </div>
                           <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5">
-                            Visa / Mastercard via Privy
+                            {isDeveloperMode ? "Visa / Mastercard via Privy" : "Visa / Mastercard (Instant)"}
                           </p>
                         </div>
                       </div>
@@ -442,7 +580,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
                             </span>
                           </div>
                           <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5">
-                            Bank transfer via Bridge ACH
+                            {isDeveloperMode ? "Bank transfer via Bridge ACH" : "Instant ACH Bank Transfer"}
                           </p>
                         </div>
                       </div>
@@ -481,16 +619,25 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
 
               {/* Partner Footer */}
               <div className="mt-8 pt-6 border-t border-slate-100 dark:border-white/5 flex flex-wrap items-center justify-center gap-3 text-slate-400 dark:text-white/40 text-xs font-medium">
-                <span>Infrastructure powered by</span>
-                <div className="flex items-center gap-2.5 opacity-80 hover:opacity-100 transition-opacity text-slate-700 dark:text-white/80">
-                  <MonadLogo className="h-3.5 w-auto" />
-                  <span className="text-slate-300 dark:text-white/20">×</span>
-                  <AgoraLogo className="h-3.5 w-auto" />
-                  <span className="text-slate-300 dark:text-white/20">×</span>
-                  <PrivyLogo className="h-3 w-auto" />
-                  <span className="text-slate-300 dark:text-white/20">×</span>
-                  <PimlicoLogo className="h-3 w-auto" />
-                </div>
+                {isDeveloperMode ? (
+                  <>
+                    <span>Infrastructure powered by</span>
+                    <div className="flex items-center gap-2.5 opacity-80 hover:opacity-100 transition-opacity text-slate-700 dark:text-white/80">
+                      <MonadLogo className="h-3.5 w-auto" />
+                      <span className="text-slate-300 dark:text-white/20">×</span>
+                      <AgoraLogo className="h-3.5 w-auto" />
+                      <span className="text-slate-300 dark:text-white/20">×</span>
+                      <PrivyLogo className="h-3 w-auto" />
+                      <span className="text-slate-300 dark:text-white/20">×</span>
+                      <PimlicoLogo className="h-3 w-auto" />
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-2 text-slate-500 dark:text-white/50">
+                    <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                    <span>Bank-grade 256-bit encryption • 100% Zero-fee deposits</span>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
@@ -519,7 +666,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
                   Confirm Deposit
                 </h3>
                 <p className="text-slate-500 dark:text-white/60 text-xs">
-                  Review your demo funding details before confirming.
+                  Review your funding details before confirming.
                 </p>
               </div>
 
@@ -549,7 +696,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
                     </div>
                     <div className="mt-3 pt-2 text-[10px] text-indigo-200 flex items-center gap-1.5">
                       <Lock className="w-3 h-3" />
-                      <span>Demo Card Pre-Filled by Privy • Read Only</span>
+                      <span>Verified Debit Card • Read Only</span>
                     </div>
                   </div>
                 )}
@@ -579,7 +726,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
                     </div>
                     <div className="pt-2 text-[10px] text-slate-400 flex items-center gap-1.5">
                       <Lock className="w-3 h-3" />
-                      <span>Verified Bank Account via Bridge • Read Only</span>
+                      <span>{isDeveloperMode ? "Verified Bank Account via Bridge • Read Only" : "Verified Bank Account • Read Only"}</span>
                     </div>
                   </div>
                 )}
@@ -609,7 +756,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
                     </div>
                     <div className="pt-2 text-[10px] text-slate-400 flex items-center gap-1.5">
                       <Lock className="w-3 h-3" />
-                      <span>Fast Device Wallet • Read Only</span>
+                      <span>{isDeveloperMode ? "Fast Device Wallet • Read Only" : "Fast Device Checkout • Read Only"}</span>
                     </div>
                   </div>
                 )}
@@ -628,7 +775,9 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500 dark:text-white/50">Settlement Asset:</span>
-                    <span className="font-semibold text-slate-800 dark:text-white">Agora AUSD (1:1 USD)</span>
+                    <span className="font-semibold text-slate-800 dark:text-white">
+                      {isDeveloperMode ? "Agora AUSD (1:1 USD)" : "US Dollars ($)"}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500 dark:text-white/50">Estimated Arrival:</span>
@@ -652,7 +801,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
                   {isCooldownActive
                     ? (isDeveloperMode ? `Agora Cooldown: ${secondsRemaining}s remaining` : `Next deposit ready in ${secondsRemaining}s`)
                     : isProcessing 
-                    ? (isTestnet ? (isDeveloperMode ? "Securing allocation via Monad & Pimlico..." : "Securing instant deposit...") : "Securing deposit via Privy...") 
+                    ? (isDeveloperMode ? "Broadcasting to Monad Testnet..." : "Securing instant deposit...") 
                     : (isTestnet ? (isDeveloperMode ? "Confirm $10,000.00 Agora AUSD Allocation" : "Confirm $10,000.00 Instant Deposit") : `Confirm ${formatCurrency(depositCents)} Deposit`)}
                 </Button>
               </div>

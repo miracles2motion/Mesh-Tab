@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { fireSettlementConfetti } from "../../lib/confetti";
 import { addNotification } from "../../lib/notifications";
 import { TransactionOverlay, TransactionState } from "../ui/transaction-overlay";
+import { authenticateWithBiometrics } from "../../lib/biometrics";
 
 interface CashOutDrawerProps {
   isOpen: boolean;
@@ -42,14 +43,18 @@ export function CashOutDrawer({
   const [withdrawnAmount, setWithdrawnAmount] = useState(0);
 
   const handleCashOut = async () => {
+    // Biometric passkey authentication
+    const authRes = await authenticateWithBiometrics("Authorize Bank Withdrawal");
+    if (authRes.canceled) {
+      toast.info("Withdrawal Canceled", { description: "Biometric authentication was canceled." });
+      return;
+    }
+
     setIsProcessing(true);
     setWithdrawnAmount(withdrawableAmount);
     
-    // Passkey Authentication Flow
-    setTxState("authenticating");
-    await new Promise((r) => setTimeout(r, 1200));
     setTxState("processing");
-    await new Promise((r) => setTimeout(r, 1500));
+    await new Promise((r) => setTimeout(r, 1200));
     
     if (workspaceMode === "testnet") {
       setTxState("idle");
@@ -378,7 +383,9 @@ export function CashOutDrawer({
               </div>
               <div className="flex justify-between">
                 <span>Settlement Asset</span>
-                <span className="font-semibold text-slate-800 dark:text-white">Agora AUSD</span>
+                <span className="font-semibold text-slate-800 dark:text-white">
+                  {isDeveloperMode ? "Agora AUSD" : "Digital USD (Instant)"}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span>Estimated Arrival</span>

@@ -25,6 +25,7 @@ import { GlobalNav } from "../../components/ui/global-nav";
 import { LiveTime } from "@/components/ui/live-time";
 import { ReceiptView } from "../../components/ReceiptView";
 import { getStoredClaimHistory } from "../../lib/claims";
+import { Modal } from "../../components/ui/modal";
 
 import { useWallets, usePrivy } from "@privy-io/react-auth";
 import { AuthGuard } from "../../components/providers/auth-guard";
@@ -159,6 +160,7 @@ export default function GlobalHub() {
     type?: "settlement" | "topup";
   } | null>(null);
   const [activityFilter, setActivityFilter] = useState<"all" | "settlement" | "topup">("all");
+  const [showAllActivityModal, setShowAllActivityModal] = useState(false);
 
   const recentActivities = useMemo(() => {
     if (!mounted) return [];
@@ -175,15 +177,15 @@ export default function GlobalHub() {
 
     // Faucet claims from local storage
     const claims = getStoredClaimHistory(client?.account?.address || user?.wallet?.address || undefined, workspaceMode);
-    claims.slice(0, 5).forEach((c, idx) => {
+    claims.slice(0, 10).forEach((c, idx) => {
       items.push({
         id: c.id || `claim-${idx}`,
-        title: isDeveloperMode ? `+${formatCurrency(c.amount * 100)} Agora AUSD` : `+${formatCurrency(c.amount * 100)} Demo Top-Up`,
+        title: isDeveloperMode ? `+${formatCurrency(c.amount * 100)} Agora AUSD` : `+${formatCurrency(c.amount * 100)} Top-Up`,
         type: "topup",
         amount: c.amount * 100,
         timestamp: c.timestamp,
         txHash: c.txHash,
-        recipient: "Demo Balance Reserve",
+        recipient: isDeveloperMode ? "Agora Testnet Reserve" : "Account Top-Up",
         status: "Confirmed"
       });
     });
@@ -641,93 +643,7 @@ export default function GlobalHub() {
           <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-500/10 dark:bg-indigo-500/30 blur-[80px] rounded-full pointer-events-none" />
         </div>
 
-        {/* Recent Activity Ledger Card */}
-        <div className="bg-white dark:bg-[#111] border border-slate-200/90 dark:border-white/10 rounded-3xl p-6 shadow-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-                <Activity className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">Recent Activity</h3>
-                <p className="text-[11px] text-slate-500 dark:text-white/50">
-                  {isDeveloperMode ? "Cryptographic ledger transactions & settlements" : "Your recent settlements and balance receipts"}
-                </p>
-              </div>
-            </div>
 
-            {/* Filter Pills */}
-            <div className="flex p-0.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs self-start sm:self-auto">
-              <button
-                onClick={() => setActivityFilter("all")}
-                className={`px-2.5 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${activityFilter === "all" ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-xs" : "text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"}`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setActivityFilter("settlement")}
-                className={`px-2.5 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${activityFilter === "settlement" ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-xs" : "text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"}`}
-              >
-                Settlements
-              </button>
-              <button
-                onClick={() => setActivityFilter("topup")}
-                className={`px-2.5 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${activityFilter === "topup" ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-xs" : "text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"}`}
-              >
-                Top-Ups
-              </button>
-            </div>
-          </div>
-
-          {filteredActivities.length === 0 ? (
-            <div className="py-8 px-4 rounded-2xl border border-dashed border-slate-200 dark:border-white/10 text-center text-xs text-slate-400 dark:text-white/40">
-              No recent payments yet. Add funds or settle a tab to see receipts here.
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {filteredActivities.map((act) => (
-                <div
-                  key={act.id}
-                  onClick={() => {
-                    sounds.playClick();
-                    setSelectedReceipt({
-                      amount: act.amount,
-                      recipient: act.recipient,
-                      txHash: act.txHash,
-                      type: act.type === "topup" ? "topup" : "settlement"
-                    });
-                  }}
-                  className="p-3.5 rounded-2xl border border-slate-100 dark:border-white/5 hover:border-indigo-500/30 hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-all flex items-center justify-between cursor-pointer group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                      act.type === "topup"
-                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                        : "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
-                    }`}>
-                      {act.type === "topup" ? <ArrowDownLeft className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                        {act.title}
-                      </div>
-                      <div className="text-[10px] text-slate-400 dark:text-white/40 flex items-center gap-1.5 mt-0.5">
-                        <LiveTime ts={act.timestamp} variant="compact" />
-                        <span>•</span>
-                        <span>{act.status}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                    <span>View Receipt</span>
-                    <span>→</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
 
         {/* Active Tabs with Search & Filter Chips */}
         <div>
@@ -886,6 +802,108 @@ export default function GlobalHub() {
           </div>
         </div>
 
+        {/* Recent Activity Ledger Card (Placed Below Active Tabs, Capped to 3 Items) */}
+        <div className="bg-white dark:bg-[#111] border border-slate-200/90 dark:border-white/10 rounded-3xl p-6 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                <Activity className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Recent Activity</h3>
+                <p className="text-[11px] text-slate-500 dark:text-white/50">
+                  {isDeveloperMode ? "Cryptographic ledger transactions & settlements" : "Your recent settlements and balance receipts"}
+                </p>
+              </div>
+            </div>
+
+            {/* Filter Pills */}
+            <div className="flex p-0.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs self-start sm:self-auto">
+              <button
+                onClick={() => setActivityFilter("all")}
+                className={`px-2.5 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${activityFilter === "all" ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-xs" : "text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"}`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setActivityFilter("settlement")}
+                className={`px-2.5 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${activityFilter === "settlement" ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-xs" : "text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"}`}
+              >
+                Settlements
+              </button>
+              <button
+                onClick={() => setActivityFilter("topup")}
+                className={`px-2.5 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${activityFilter === "topup" ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-xs" : "text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"}`}
+              >
+                Top-Ups
+              </button>
+            </div>
+          </div>
+
+          {filteredActivities.length === 0 ? (
+            <div className="py-8 px-4 rounded-2xl border border-dashed border-slate-200 dark:border-white/10 text-center text-xs text-slate-400 dark:text-white/40">
+              No recent payments yet. Add funds or settle a tab to see receipts here.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filteredActivities.slice(0, 3).map((act) => (
+                <div
+                  key={act.id}
+                  onClick={() => {
+                    sounds.playClick();
+                    setSelectedReceipt({
+                      amount: act.amount,
+                      recipient: act.recipient,
+                      txHash: act.txHash,
+                      type: act.type === "topup" ? "topup" : "settlement"
+                    });
+                  }}
+                  className="p-3.5 rounded-2xl border border-slate-100 dark:border-white/5 hover:border-indigo-500/30 hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-all flex items-center justify-between cursor-pointer group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                      act.type === "topup"
+                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                        : "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+                    }`}>
+                      {act.type === "topup" ? <ArrowDownLeft className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                        {act.title}
+                      </div>
+                      <div className="text-[10px] text-slate-400 dark:text-white/40 flex items-center gap-1.5 mt-0.5">
+                        <LiveTime ts={act.timestamp} variant="compact" />
+                        <span>•</span>
+                        <span>{act.status}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    <span>View Receipt</span>
+                    <span>→</span>
+                  </div>
+                </div>
+              ))}
+
+              {/* View All Button if more than 3 activities */}
+              {filteredActivities.length > 3 && (
+                <button
+                  onClick={() => {
+                    sounds.playClick();
+                    setShowAllActivityModal(true);
+                  }}
+                  className="w-full mt-3 py-3 rounded-2xl border border-dashed border-slate-200 dark:border-white/10 hover:border-indigo-500/30 hover:bg-slate-50 dark:hover:bg-white/[0.02] text-xs font-semibold text-slate-500 hover:text-indigo-600 dark:text-white/60 dark:hover:text-indigo-400 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <span>View All Activity ({filteredActivities.length})</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Desktop floating dock was moved */}
       </main>
 
@@ -984,6 +1002,98 @@ export default function GlobalHub() {
         txHash={selectedReceipt?.txHash}
         type={selectedReceipt?.type}
       />
+
+      {/* All Activity History Modal */}
+      {showAllActivityModal && (
+        <Modal onClose={() => setShowAllActivityModal(false)} size="xl">
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                  <Activity className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Activity History</h3>
+                  <p className="text-xs text-slate-500 dark:text-white/50">
+                    {filteredActivities.length} total receipts & settlements recorded
+                  </p>
+                </div>
+              </div>
+
+              {/* Filter Pills */}
+              <div className="flex p-0.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs">
+                <button
+                  onClick={() => setActivityFilter("all")}
+                  className={`px-2.5 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${activityFilter === "all" ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-xs" : "text-slate-500 dark:text-white/50"}`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setActivityFilter("settlement")}
+                  className={`px-2.5 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${activityFilter === "settlement" ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-xs" : "text-slate-500 dark:text-white/50"}`}
+                >
+                  Settled
+                </button>
+                <button
+                  onClick={() => setActivityFilter("topup")}
+                  className={`px-2.5 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${activityFilter === "topup" ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-xs" : "text-slate-500 dark:text-white/50"}`}
+                >
+                  Top-Ups
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+              {filteredActivities.length === 0 ? (
+                <div className="py-12 text-center text-xs text-slate-400">
+                  No activity found for this filter.
+                </div>
+              ) : (
+                filteredActivities.map((act) => (
+                  <div
+                    key={act.id}
+                    onClick={() => {
+                      sounds.playClick();
+                      setSelectedReceipt({
+                        amount: act.amount,
+                        recipient: act.recipient,
+                        txHash: act.txHash,
+                        type: act.type === "topup" ? "topup" : "settlement"
+                      });
+                    }}
+                    className="p-3.5 rounded-2xl border border-slate-100 dark:border-white/5 hover:border-indigo-500/30 hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-all flex items-center justify-between cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                        act.type === "topup"
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                          : "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+                      }`}>
+                        {act.type === "topup" ? <ArrowDownLeft className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                          {act.title}
+                        </div>
+                        <div className="text-[10px] text-slate-400 dark:text-white/40 flex items-center gap-1.5 mt-0.5">
+                          <LiveTime ts={act.timestamp} variant="compact" />
+                          <span>•</span>
+                          <span>{act.status}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                      <span>View Receipt</span>
+                      <span>→</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* MeshBuddy Tab Co-Pilot */}
       <MeshBuddy />

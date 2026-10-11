@@ -39,7 +39,10 @@ export function SettlementCertificateModal({
 
   const txHash = "0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0";
   const explorerUrl = `https://testnet.monadvision.com/tx/${txHash}`;
-  const qrTarget = isDeveloperMode ? explorerUrl : `https://meshtab.app/certificate?tab=${tabId}`;
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://meshtab.app";
+  const qrTarget = isDeveloperMode 
+    ? explorerUrl 
+    : `${origin}/receipt?id=4891029&tab=${encodeURIComponent(tabName)}&amt=${grossVolume}&type=settlement`;
 
   const shareText = isDeveloperMode 
     ? `🎉 ${tabName} is 100% Settled on MeshTab!

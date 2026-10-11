@@ -33,9 +33,10 @@ export function ReceiptView({
 
   const txHash = customTxHash || "0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0";
   const explorerUrl = `https://testnet.monadvision.com/tx/${txHash}`;
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://meshtab.app";
   const verificationPayload = isDeveloperMode 
     ? explorerUrl 
-    : `https://meshtab.app/receipt?id=4891029&amt=${displayAmount}&ts=${Date.now()}`;
+    : `${origin}/receipt?id=4891029&amt=${displayAmount}&ts=${Date.now()}`;
 
   const handleShare = () => {
     const text = isDeveloperMode

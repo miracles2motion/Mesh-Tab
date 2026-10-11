@@ -18,6 +18,7 @@ import { erc20Abi, encodeFunctionData, createPublicClient, http, isAddress } fro
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
 import { useRealAusdBalance } from "../../lib/onchain";
 import { monadTestnet } from "../../lib/chains";
+import { authenticateWithBiometrics } from "../../lib/biometrics";
 
 const MeshTabLedgerABI = [
   {
@@ -78,6 +79,12 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
   const handleSettle = async () => {
     if (onConfirmPayment) {
       onConfirmPayment();
+      return;
+    }
+
+    const authRes = await authenticateWithBiometrics("Authorize Settlement Payment");
+    if (authRes.canceled) {
+      toast.info("Payment Canceled", { description: "Biometric authentication was canceled." });
       return;
     }
 

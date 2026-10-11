@@ -176,6 +176,12 @@ export async function saveStoredUser(name: string, colorIndex?: number, walletAd
 
 let profileFetchPromise: Promise<any> | null = null;
 let lastFetchedWallet: string | null = null;
+let hasHydratedForWallet: string | null = null;
+
+export function invalidateProfileCache() {
+  profileFetchPromise = null;
+  lastFetchedWallet = null;
+}
 
 export function useUserProfile() {
   const [profile, setProfile] = useState<UserProfile>(getStoredUser);
@@ -204,7 +210,7 @@ export function useUserProfile() {
     if (authenticated && walletAddress) {
       if (walletAddress !== lastFetchedWallet || !profileFetchPromise) {
         lastFetchedWallet = walletAddress;
-        profileFetchPromise = fetch(`/api/user/profile?wallet=${walletAddress}`)
+        profileFetchPromise = fetch(`/api/user/profile?wallet=${walletAddress}`, { cache: "no-store" })
           .then(res => res.json())
           .catch(err => {
              console.error("Redis sync error:", err);
@@ -237,10 +243,14 @@ export function useUserProfile() {
             }
           }
 
-          if (typeof data.developerMode === "boolean") {
+          // Only hydrate developerMode from server if not already set on this device,
+          // or on the first session hydration for this wallet, so user toggles never get clobbered by stale promises
+          if (typeof data.developerMode === "boolean" && hasHydratedForWallet !== walletAddress) {
+            hasHydratedForWallet = walletAddress;
             const currentDev = localStorage.getItem("meshTab_developerMode");
-            const newDevStr = String(data.developerMode);
-            if (currentDev !== newDevStr) {
+            // If local storage is null or unset, adopt remote setting
+            if (currentDev === null) {
+              const newDevStr = String(data.developerMode);
               localStorage.setItem("meshTab_developerMode", newDevStr);
               localStorage.setItem("meshTab_showAddress", newDevStr);
               window.dispatchEvent(new Event("meshTab-developerMode-change"));
@@ -283,13 +293,12 @@ export function useDeveloperMode() {
 
   const setDeveloperMode = (nextVal: boolean) => {
     setDeveloperModeState(nextVal);
+    invalidateProfileCache();
     if (typeof window !== "undefined") {
       localStorage.setItem("meshTab_developerMode", String(nextVal));
       localStorage.setItem("meshTab_showAddress", String(nextVal));
       window.dispatchEvent(new Event("meshTab-developerMode-change"));
       window.dispatchEvent(new Event("meshTab-settings-update"));
-
-
     }
   };
 

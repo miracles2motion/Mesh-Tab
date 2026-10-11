@@ -26,7 +26,8 @@ import {
   Laptop,
   Lock,
   LogOut,
-  Trash2
+  Trash2,
+  ExternalLink
 } from "lucide-react";
 import { useSecurity } from "../../components/providers/security-provider";
 import { Button } from "../../components/ui/button";
@@ -47,7 +48,7 @@ import { fireFaucetConfetti } from "../../lib/confetti";
 import { AnimatedCounter } from "../../components/ui/animated-counter";
 import { speak, stopSpeech, VoicePersona } from "../../lib/voice";
 import { GlobalNav } from "../../components/ui/global-nav";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { usePrivy, useWallets, useExportWallet } from "@privy-io/react-auth";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
 import { AuthGuard } from "../../components/providers/auth-guard";
 import { clearSessionSnapshot } from "../../lib/session-snapshot";
@@ -57,6 +58,7 @@ function SettingsContent() {
   const searchParams = useSearchParams();
   const fromUrl = searchParams.get("from");
   const { user, linkPasskey, logout, getAccessToken } = usePrivy();
+  const { exportWallet } = useExportWallet();
   const hasPasskey = user?.linkedAccounts?.some(account => account.type === 'passkey') || false;
 
   const profile = useUserProfile();
@@ -856,6 +858,29 @@ function SettingsContent() {
                         </Button>
                       </div>
                       <p className="text-xs text-slate-500 dark:text-white/40 mt-2 font-medium">All ledger transactions and multilateral netting have zero fees and are 100% sponsored by the platform.</p>
+                      
+                      <div className="mt-4 pt-3 border-t border-slate-200 dark:border-white/10 flex flex-wrap gap-2.5">
+                        <Button
+                          onClick={() => {
+                            sounds.playClick();
+                            exportWallet();
+                          }}
+                          variant="secondary"
+                          className="h-10 text-xs font-semibold flex items-center gap-1.5 border border-purple-500/20 bg-purple-500/10 text-purple-700 dark:text-purple-300 hover:bg-purple-500/20 cursor-pointer"
+                        >
+                          <Key className="w-3.5 h-3.5" />
+                          <span>Export Private Key (Privy)</span>
+                        </Button>
+                        <a
+                          href={`https://testnet.monadvision.com/address/${fullAddress}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="h-10 px-3.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-slate-200 dark:border-white/10 bg-white dark:bg-black/40 text-slate-700 dark:text-white/80 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                        >
+                          <span>View on MonadVision</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
                     </div>
                   )}
 

@@ -33,6 +33,7 @@ import { useTabSync } from "../../../lib/sync";
 import { useNotifications } from "../../../lib/notifications";
 import { fireSettlementConfetti } from "../../../lib/confetti";
 import { usePrivy } from "@privy-io/react-auth";
+import { authenticateWithBiometrics } from "../../../lib/biometrics";
 
 function DashboardContent() {
   const params = useParams();
@@ -131,11 +132,15 @@ function DashboardContent() {
   const [paymentTxState, setPaymentTxState] = useState<TransactionState>("idle");
 
   const handlePayment = async () => {
+    const authRes = await authenticateWithBiometrics("Authorize Tab Debt Settlement");
+    if (authRes.canceled) {
+      toast.info("Payment Canceled", { description: "Biometric authentication was canceled." });
+      return;
+    }
+
     setIsPaymentDrawerOpen(false);
-    setPaymentTxState("authenticating");
-    await new Promise(r => setTimeout(r, 1500));
     setPaymentTxState("processing");
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise(r => setTimeout(r, 1200));
     
     // Clear the debt in the local store and deduct from balances symmetrically
     const debtAmount = Math.abs(currentUserData.balance || 0);
@@ -232,12 +237,16 @@ function DashboardContent() {
   }, [searchParams, params?.id, router]);
 
   const handleRunNetting = async () => {
-    setNettingTxState("authenticating");
-    await new Promise(r => setTimeout(r, 1500));
+    const authRes = await authenticateWithBiometrics("Authorize Debt Ring Netting");
+    if (authRes.canceled) {
+      toast.info("Netting Canceled", { description: "Biometric authentication was canceled." });
+      return;
+    }
+
     setNettingTxState("processing");
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise(r => setTimeout(r, 1500));
     setNettingTxState("success");
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise(r => setTimeout(r, 1500));
     setNettingTxState("idle");
   };
 
