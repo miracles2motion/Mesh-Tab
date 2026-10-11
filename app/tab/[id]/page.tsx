@@ -509,7 +509,7 @@ function DashboardContent() {
         onClose={() => setIsPaymentDrawerOpen(false)} 
         onPay={handlePayment}
         debtor={currentUser} 
-        creditor="Alice" 
+        creditor={activeMembers.find(m => m.balance > 0)?.name || "Creditor"} 
         amount={Math.abs(currentUserData.balance || 50)} 
       />
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { redis } from "@/lib/redis";
 import { getUserIdFromToken } from "@/lib/auth";
+import { normalizeBackendMode } from "@/lib/mode";
 
 // [OVERSEER MANDATE - Baseline 20]: Next.js Route Caching.
 export const dynamic = 'force-dynamic';
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: "UNAUTHORIZED" }, { status: 401 });
     }
 
-    const mode = req.nextUrl.searchParams.get("mode") || "clean";
+    const mode = normalizeBackendMode(req.nextUrl.searchParams.get("mode"));
 
     const tabIds = await redis.smembers(`meshtab:${mode}:user:${walletAddress}:tabs`);
     console.log(`[SYNC DEBUG] User ${walletAddress} requested tabs for mode ${mode}. Found ${tabIds?.length || 0} tabs.`);

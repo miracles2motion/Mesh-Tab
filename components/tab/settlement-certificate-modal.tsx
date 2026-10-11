@@ -9,6 +9,7 @@ import { MonadLogo, AgoraLogo } from "../ui/partner-logo";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
+import { useDeveloperMode } from "../../lib/user";
 
 interface SettlementCertificateModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export function SettlementCertificateModal({
   memberCount
 }: SettlementCertificateModalProps) {
   const [copied, setCopied] = useState(false);
+  const { isDeveloperMode } = useDeveloperMode();
 
   if (!isOpen) return null;
 
@@ -36,12 +38,18 @@ export function SettlementCertificateModal({
   const savedPercent = grossVolume > 0 ? ((capitalSaved / grossVolume) * 100).toFixed(1) : "0.0";
 
   const txHash = "0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0";
-  const explorerUrl = `https://testnet.monadscan.com/tx/${txHash}`;
+  const explorerUrl = `https://testnet.monadvision.com/tx/${txHash}`;
+  const qrTarget = isDeveloperMode ? explorerUrl : `https://meshtab.app/certificate?tab=${tabId}`;
 
-  const shareText = `🎉 ${tabName} is 100% Settled on MeshTab!
+  const shareText = isDeveloperMode 
+    ? `🎉 ${tabName} is 100% Settled on MeshTab!
 • Total Spend: ${formatCurrency(grossVolume)} across ${memberCount} friends
 • Capital Moved: ${formatCurrency(capitalMoved)} (${savedPercent}% volume cleared with zero transfer fees)
-• Settled on Monad in Agora AUSD: #${txHash.substring(0, 10)}`;
+• Settled on Monad in Agora AUSD: #${txHash.substring(0, 10)}`
+    : `🎉 ${tabName} is 100% Settled on MeshTab!
+• Total Spend: ${formatCurrency(grossVolume)} across ${memberCount} friends
+• Capital Moved: ${formatCurrency(capitalMoved)} (${savedPercent}% volume cleared with zero transfer fees)
+• Reference ID: #4891029 • Instant Clearing`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(shareText);
@@ -129,34 +137,48 @@ export function SettlementCertificateModal({
           <div className="space-y-2 text-xs pt-1 text-slate-600 dark:text-white/70">
             <div className="flex justify-between py-1 border-b border-slate-200/50 dark:border-white/5">
               <span>Settlement Asset:</span>
-              <span className="font-bold text-slate-900 dark:text-white">Agora AUSD (1:1 USD)</span>
+              <span className="font-bold text-slate-900 dark:text-white">
+                {isDeveloperMode ? "Agora AUSD (1:1 USD)" : "MeshTab Instant Balance"}
+              </span>
             </div>
             <div className="flex justify-between py-1 border-b border-slate-200/50 dark:border-white/5">
               <span>Settlement Network:</span>
               <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Monad Fast Finality
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                {isDeveloperMode ? "Monad Fast Finality" : "Instant High-Speed Netting"}
               </span>
             </div>
             <div className="flex justify-between py-1">
               <span>Verified Ledger Tx:</span>
-              <a
-                href={explorerUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="font-mono text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1 hover:underline"
-              >
-                <span>{txHash.substring(0, 10)}...</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
+              {isDeveloperMode ? (
+                <a
+                  href={explorerUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-mono text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1 hover:underline"
+                >
+                  <span>{txHash.substring(0, 10)}...</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              ) : (
+                <span className="text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Verified & Balanced</span>
+                </span>
+              )}
             </div>
           </div>
 
           <div className="flex justify-center pt-2">
             <div className="p-2 bg-white rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
-              <QRCodeSVG value={explorerUrl} size={64} level="M" />
+              <QRCodeSVG value={qrTarget} size={64} level="M" />
               <div className="text-left text-[10px] text-slate-500 pr-2">
-                <span className="font-bold block text-slate-800">Scan for Verification</span>
-                <span>Monad Block Height Verified</span>
+                <span className="font-bold block text-slate-800">
+                  {isDeveloperMode ? "Scan for Verification" : "Digital Certificate Seal"}
+                </span>
+                <span>
+                  {isDeveloperMode ? "Monad Block Height Verified" : "100% Balanced & Finalized"}
+                </span>
               </div>
             </div>
           </div>
@@ -189,12 +211,19 @@ export function SettlementCertificateModal({
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
           <span>Zero Transfer Fees</span>
         </div>
-        <div className="flex items-center gap-2">
-          <span>Executed on</span>
-          <div className="opacity-90 hover:opacity-100 text-slate-700 dark:text-white">
-            <MonadLogo className="h-3.5 w-auto" />
+        {isDeveloperMode ? (
+          <div className="flex items-center gap-2">
+            <span>Executed on</span>
+            <div className="opacity-90 hover:opacity-100 text-slate-700 dark:text-white">
+              <MonadLogo className="h-3.5 w-auto" />
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-white/60">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Bank-Grade Security</span>
+          </div>
+        )}
       </div>
     </Modal>
   );

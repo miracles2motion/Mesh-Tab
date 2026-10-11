@@ -3,6 +3,7 @@ import { z } from "zod";
 import { redis } from "@/lib/redis";
 import { getUserIdFromToken } from "@/lib/auth";
 import { LUA_ADD_EXPENSE } from "@/lib/redis-scripts";
+import { backendModeSchema } from "@/lib/mode";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ const settleDebtSchema = z.object({
     name: z.string().max(50),
     amount: z.number().positive()
   })),
-  mode: z.enum(["clean", "demo", "testnet"]).default("clean"),
+  mode: backendModeSchema,
   description: z.string().max(100).default("Settled balance in AUSD (Monad)"),
   txHash: z.string().optional(),
   timestamp: z.number().optional()

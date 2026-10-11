@@ -3,9 +3,10 @@ import { z } from "zod";
 import { redis } from "@/lib/redis";
 import { getUserIdFromToken } from "@/lib/auth";
 import { LUA_REMOVE_MEMBER } from "@/lib/redis-scripts";
+import { backendModeSchema } from "@/lib/mode";
 
 const memberSchema = z.object({
-  mode: z.enum(["clean", "demo", "testnet"]).default("clean"),
+  mode: backendModeSchema,
   action: z.enum(["add", "remove"]),
   name: z.string().max(50),
   walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional()

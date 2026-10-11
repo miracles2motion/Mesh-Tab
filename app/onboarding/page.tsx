@@ -73,6 +73,16 @@ function OnboardingContent() {
             localStorage.setItem("meshTab_buddySettings", JSON.stringify(data.buddySettings));
             window.dispatchEvent(new Event("meshTab-buddy-update"));
           }
+          if (data.developerMode !== undefined) {
+            localStorage.setItem("meshTab_developerMode", String(data.developerMode));
+            localStorage.setItem("meshTab_showAddress", String(data.developerMode));
+            window.dispatchEvent(new Event("meshTab-developerMode-change"));
+            window.dispatchEvent(new Event("meshTab-settings-update"));
+          }
+          if (data.theme) {
+            localStorage.setItem("meshTab_theme", data.theme);
+            window.dispatchEvent(new Event("meshTab-theme-change"));
+          }
           window.dispatchEvent(new Event("meshTab-profile-update"));
 
           setWorkspaceMode(intent === "testnet" ? "testnet" : "sample");

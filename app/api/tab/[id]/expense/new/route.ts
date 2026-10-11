@@ -3,6 +3,8 @@ import { z } from "zod";
 import { redis } from "@/lib/redis";
 import { getUserIdFromToken } from "@/lib/auth";
 import { LUA_ADD_EXPENSE } from "@/lib/redis-scripts";
+import { backendModeSchema } from "@/lib/mode";
+
 const createExpenseSchema = z.object({
   expenseId: z.string().max(100),
   description: z.string().max(100),
@@ -10,7 +12,7 @@ const createExpenseSchema = z.object({
   originalCurrency: z.string().length(3).default("USD"),
   finalAmountUsd: z.number(),
   timestamp: z.number(),
-  mode: z.enum(["clean", "demo", "testnet"]).default("clean"),
+  mode: backendModeSchema,
   payers: z.array(z.object({
     name: z.string().max(50),
     amount: z.number()

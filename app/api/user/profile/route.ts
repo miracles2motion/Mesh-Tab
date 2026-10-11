@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { wallet, name, avatarColorIndex, oldName, buddySettings } = body;
+    const { wallet, name, avatarColorIndex, oldName, buddySettings, developerMode, theme } = body;
 
     if (!wallet && !userId) {
       return NextResponse.json({ error: 'Wallet address or userId required' }, { status: 400 });
@@ -87,7 +87,9 @@ export async function POST(request: Request) {
     const newProfile = {
       name: profileName,
       avatarColorIndex: typeof avatarColorIndex === 'number' ? avatarColorIndex : (existingProfile?.avatarColorIndex ?? 0),
+      developerMode: typeof developerMode === 'boolean' ? developerMode : (existingProfile?.developerMode ?? false),
       buddySettings: buddySettings !== undefined ? buddySettings : (existingProfile?.buddySettings || undefined),
+      theme: theme !== undefined ? theme : (existingProfile?.theme || "dark"),
       lastUpdated: name && existingProfile && existingProfile.name !== name.trim() ? now : (existingProfile?.lastUpdated || now),
     };
 

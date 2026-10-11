@@ -33,6 +33,7 @@ import {
 import { 
   useUserProfile, 
   useWorkspaceMode, 
+  useDeveloperMode,
 } from "@/lib/user";
 import { useAvailableBalance } from "@/lib/balance";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
@@ -57,6 +58,7 @@ export function VirtualCardDrawer({
 }: VirtualCardDrawerProps) {
   const profile = useUserProfile();
   const { mode: workspaceMode } = useWorkspaceMode();
+  const { isDeveloperMode } = useDeveloperMode();
   const isTestnet = workspaceMode === "testnet";
 
   const { client } = useSmartWallets();
@@ -356,7 +358,7 @@ export function VirtualCardDrawer({
                     </div>
                     <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
                       <Lock className="w-4 h-4 text-indigo-500 shrink-0" />
-                      <span><strong>Zero Card Fees:</strong> Minting and maintenance covered on Monad rails.</span>
+                      <span><strong>Zero Card Fees:</strong> {isDeveloperMode ? "Minting and maintenance covered on Monad rails." : "Zero annual fees, zero maintenance markups."}</span>
                     </div>
                   </div>
 
@@ -368,7 +370,7 @@ export function VirtualCardDrawer({
                   >
                     <Fingerprint className="w-5 h-5" />
                     {isTestnet
-                      ? "Authenticate Passkey & Issue Card (Free)"
+                      ? (isDeveloperMode ? "Authenticate Passkey & Issue Card (Free)" : "Authorize Biometrics & Issue Card (Free)")
                       : "Issue Personal Visa Card (Free)"}
                   </Button>
                 </div>
@@ -408,7 +410,7 @@ export function VirtualCardDrawer({
                   </div>
 
                   <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-semibold text-white/90">
-                    <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                     <span>Personal Card</span>
                   </div>
                 </div>
@@ -427,7 +429,7 @@ export function VirtualCardDrawer({
                     <p className="font-bold tracking-wide text-white truncate max-w-[170px] uppercase">
                       {card.cardholderName || profile.name}
                     </p>
-                    {isTestnet && client?.account?.address && (
+                    {isDeveloperMode && isTestnet && client?.account?.address && (
                       <p className="text-[9px] font-mono text-indigo-300/80 mt-0.5">
                         Smart: {client.account.address.slice(0, 6)}...{client.account.address.slice(-4)}
                       </p>
@@ -447,7 +449,7 @@ export function VirtualCardDrawer({
                 {/* Partner Attribution Footer */}
                 <div className="relative z-10 mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between">
                   <span className="text-[10px] font-semibold tracking-wider text-white/70">
-                    ● privy × stripe
+                    {isDeveloperMode ? "● privy × stripe" : "● visa direct"}
                   </span>
                   <span className="text-xs italic font-black tracking-widest text-indigo-200">
                     VISA

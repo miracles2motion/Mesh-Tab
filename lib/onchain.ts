@@ -1,7 +1,7 @@
 "use client";
 
 import { createPublicClient, http, formatUnits, erc20Abi, encodeFunctionData } from "viem";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
 import { monadTestnet } from "./chains";
 import { isEffectivelyOnline } from "./network";
@@ -146,10 +146,14 @@ export function useClaimAgoraFunds(workspaceMode: string) {
         args: [walletAddress as `0x${string}`]
       });
 
+      const isDev = typeof window !== "undefined" && localStorage.getItem("meshTab_developerMode") === "true";
       const txHash = await client.sendTransaction({
         to: (process.env.NEXT_PUBLIC_AGORA_FAUCET_ADDRESS as `0x${string}`) || "0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C",
         data,
-      });
+        uiOptions: {
+          showWalletUIs: isDev
+        }
+      } as any);
       
       const publicClient = createPublicClient({
         chain: monadTestnet,
@@ -159,6 +163,7 @@ export function useClaimAgoraFunds(workspaceMode: string) {
 
       if (typeof window !== "undefined") {
         localStorage.setItem("meshTab_testnet_lastFaucetClaim", Date.now().toString());
+        window.dispatchEvent(new Event("meshTab-faucet-claim"));
         addClaimRecord({
           txHash,
           amount: 10000,
@@ -193,3 +198,56 @@ export function useClaimAgoraFunds(workspaceMode: string) {
 
 // Backward-compatible alias for existing imports
 export const useClaimWelcomeBonus = useClaimAgoraFunds;
+
+/**
+ * Modeless 60-second cooldown hook.
+ * Calculates remaining seconds from Agora Faucet's 60s rate-limit timestamp,
+ * updating every second and dispatching unlock events when cooldown finishes.
+ */
+export function useFaucetCooldown() {
+  const [secondsRemaining, setSecondsRemaining] = useState(0);
+
+  useEffect(() => {
+    const calculateSeconds = () => {
+      if (typeof window === "undefined") return 0;
+      const lastClaimStr = localStorage.getItem("meshTab_testnet_lastFaucetClaim");
+      if (!lastClaimStr) return 0;
+      const elapsed = Math.floor((Date.now() - parseInt(lastClaimStr, 10)) / 1000);
+      return Math.max(0, 60 - elapsed);
+    };
+
+    setSecondsRemaining(calculateSeconds());
+
+    const interval = setInterval(() => {
+      const remaining = calculateSeconds();
+      setSecondsRemaining(remaining);
+      if (remaining === 0) {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("meshTab-faucet-unlocked"));
+        }
+      }
+    }, 1000);
+
+    const onClaim = () => {
+      setSecondsRemaining(calculateSeconds());
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("meshTab-faucet-claim", onClaim);
+      window.addEventListener("storage", onClaim);
+    }
+
+    return () => {
+      clearInterval(interval);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("meshTab-faucet-claim", onClaim);
+        window.removeEventListener("storage", onClaim);
+      }
+    };
+  }, []);
+
+  return {
+    isCooldownActive: secondsRemaining > 0,
+    secondsRemaining
+  };
+}

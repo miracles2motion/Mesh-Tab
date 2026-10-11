@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { Sparkles, Fingerprint, ArrowRight, ArrowLeft, UserPlus, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import { getStoredTabMembers, saveStoredTabMembers, type TabMember, saveNewTab, saveStoredUser, getWorkspaceMode, setWorkspaceMode, getStoredTabs, getStoredUser } from "../../../../lib/user";
+import { getStoredTabMembers, saveStoredTabMembers, type TabMember, saveNewTab, saveStoredUser, getWorkspaceMode, setWorkspaceMode, getStoredTabs, getStoredUser, useDeveloperMode } from "../../../../lib/user";
 import { isEffectivelyOnline } from "../../../../lib/network";
 import { usePrivy, useLogin } from "@privy-io/react-auth";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
@@ -19,6 +19,7 @@ export default function JoinTabPage() {
   const paramName = searchParams?.get("n");
   const tabName = paramName || tabId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   const router = useRouter();
+  const { isDeveloperMode } = useDeveloperMode();
   const { ready, getAccessToken, authenticated, user, login } = usePrivy();
   const { client } = useSmartWallets();
   const smartWalletAddress = client?.account?.address || user?.wallet?.address;
@@ -191,8 +192,10 @@ export default function JoinTabPage() {
           setStep("name");
 
           if (res.status === 404 || errData.error === "NOT_FOUND") {
-            toast.error("Tab Not Found on Testnet", { 
-              description: "This tab does not exist on Monad Testnet. Demo tabs are stored only on their local device." 
+            toast.error(isDeveloperMode ? "Tab Not Found on Testnet" : "Tab Not Found", { 
+              description: isDeveloperMode 
+                ? "This tab does not exist on Monad Testnet. Demo tabs are stored only on their local device." 
+                : "This tab does not exist on the server. Please verify the link or invite code."
             });
             try {
               sessionStorage.removeItem("mesh_pending_join");
@@ -213,7 +216,11 @@ export default function JoinTabPage() {
         console.error("Failed to push join to server:", e);
         setIsJoining(false);
         setStep("name");
-        toast.error("Network Error", { description: "Could not reach Monad Testnet server. Please check your connection." });
+        toast.error("Network Error", { 
+          description: isDeveloperMode 
+            ? "Could not reach Monad Testnet server. Please check your connection." 
+            : "Could not connect to server. Please check your internet connection."
+        });
         return;
       }
     }
@@ -327,7 +334,9 @@ export default function JoinTabPage() {
           <div>
             <h1 className="text-2xl font-black text-slate-900 dark:text-white">Join {tabName}</h1>
             <p className="text-sm text-slate-500 dark:text-white/60 mt-2">
-              You've been invited to join the split on Monad Testnet. Enter your name to access the ledger.
+              {isDeveloperMode 
+                ? "You've been invited to join the split on Monad Testnet. Enter your name to access the ledger."
+                : "You've been invited to join the split on MeshTab. Enter your name to access the tab."}
             </p>
           </div>
 

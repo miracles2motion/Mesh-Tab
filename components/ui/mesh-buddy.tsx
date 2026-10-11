@@ -36,7 +36,8 @@ import {
   getStoredTabs,
   TabMember,
   StoredExpense,
-  AVATAR_COLORS
+  AVATAR_COLORS,
+  useDeveloperMode
 } from "../../lib/user";
 import { formatCurrency } from "../../lib/utils";
 import { useClaimWelcomeBonus } from "../../lib/onchain";
@@ -107,6 +108,7 @@ export function MeshBuddy() {
   const { settings: buddySettings, updateSettings } = useBuddySettings();
   const { mode: workspaceMode, setMode: setWorkspaceMode, resetLisbonDemo } = useWorkspaceMode();
   const { balance: virtualBalance, topUp } = useVirtualBalance();
+  const { isDeveloperMode } = useDeveloperMode();
   const { tabs: storedTabs } = useStoredTabs();
   const { claimBonus, isClaiming: isTestnetClaiming } = useClaimWelcomeBonus(workspaceMode);
   const [isLocalClaiming, setIsLocalClaiming] = useState(false);
@@ -829,8 +831,32 @@ export function MeshBuddy() {
         { label: "📚 Open Knowledge Base", action: () => setDrawerTab("kb") },
         { label: "🚰 Top Up $500 AUSD", action: handleClaimFaucet },
       ];
+    } else if (/(how (do|does) payment(s)? work|how to pay|how do i pay|how payments work)/i.test(q)) {
+      spokenPunchline = isDeveloperMode 
+        ? "MeshTab executes batch UserOps on Monad with sub-second finality."
+        : "Payments clear instantly with zero bank fees and Face ID confirmation.";
+      replyText = isDeveloperMode
+        ? `MeshTab runs on Monad's 10,000 TPS parallel execution engine with ERC-4337 smart contract accounts! 🚀 Tab expenses are converted to Agora AUSD using Pyth Network mid-market oracle prices. Multilateral netting executes off-chain, and debt settlements batch into atomic UserOperations sponsored by Pimlico paymasters with ~800ms sub-second finality.`
+        : `Payments on MeshTab clear instantly with zero bank fees! ⚡ When friends settle up, multilateral debt netting collapses circular debts into minimal payments. You authorize transfers in one tap using Touch ID or Face ID hardware biometrics, and settled funds land directly in your smart balance ready to cash out.`;
+      actionItems = [
+        { label: "🌀 How Netting Works", action: () => handleAskQuestion("how does netting work") },
+        { label: "🏦 How to Cash Out", action: () => handleAskQuestion("how do i cash out?") },
+      ];
+    } else if (/(is (my )?balance safe|is (my )?money safe|is it safe|security|how safe is (my )?money)/i.test(q)) {
+      spokenPunchline = isDeveloperMode
+        ? "Your funds are secured by non-custodial smart contracts on Monad."
+        : "Your balance is protected by device hardware passkeys and encryption.";
+      replyText = isDeveloperMode
+        ? `Your balance is held in a non-custodial ERC-4337 smart contract account on Monad. 🛡️ Keys are held within your device's hardware Secure Enclave (WebAuthn biometric passkeys). All transactions are gaslessly sponsored via Pimlico paymasters, and reserves are backed 1:1 by institutional-grade Agora AUSD.`
+        : `Your balance is protected by bank-grade hardware passkeys! 🔒 Payments require your device's Touch ID or Face ID biometric enclave. Funds are held in a non-custodial smart balance with zero platform markups and 100% sponsored clearing.`;
+      actionItems = [
+        { label: "🔑 Account Security", action: () => router.push(pathname ? `/settings?from=${encodeURIComponent(pathname)}` : "/settings") },
+        { label: "📚 Open Knowledge Base", action: () => setDrawerTab("kb") },
+      ];
     } else if (/why monad|what is monad|parallel evm|10000 tps|tps|blockchain/i.test(q)) {
-      replyText = `MeshTab runs on an ultra-fast modern transaction network! 🚀 Traditional payment apps process things one-by-one and can lag or lock up during busy weekends. Our payment engine processes thousands of transactions per second with instant 400ms blocks and ~800ms consensus finality.\n\nThat means 20 people on a group trip can log drinks, split dinners, and confirm payments at the exact same instant without waiting or transfer delays!`;
+      replyText = isDeveloperMode
+        ? `MeshTab runs on Monad's parallel EVM execution engine! 🚀 It delivers 10,000 TPS, superscalar pipelining, and MonadBFT with 400ms block times and ~800ms consensus finality. Group expenses, Pyth price feeds, and batch netting settle atomically with zero friction.`
+        : `MeshTab runs on an ultra-fast modern transaction network! 🚀 Traditional payment apps process things one-by-one and can lag or lock up during busy weekends. Our payment engine processes thousands of transactions per second with instant 400ms blocks and ~800ms consensus finality.\n\nThat means 20 people on a group trip can log drinks, split dinners, and confirm payments at the exact same instant without waiting or transfer delays!`;
       actionItems = [
         { label: "🏆 Open Pitch Presentation", action: () => router.replace("/home") },
         { label: "🌀 Learn About Netting", action: () => handleAskQuestion("how does netting work") },
@@ -842,7 +868,9 @@ export function MeshBuddy() {
         { label: "👥 Manage Group Members", action: () => router.push(currentTabId ? `/tab/${currentTabId}/members` : "/home") },
       ];
     } else if (/ausd|agora|currency|digital dollar|stablecoin/i.test(q)) {
-      replyText = `AUSD is a digital dollar that is always worth exactly $1.00 USD, backed 1:1 by cash reserves. Your group tab balances stay steady and reliable—$50 owed is always $50. When friends settle up, you can transfer your balance straight to your debit card or bank in seconds!`;
+      replyText = isDeveloperMode
+        ? `AUSD is Agora's institutional-grade digital dollar deployed natively on Monad. Netting debts settle in AUSD ERC-20 tokens, normalized across international currencies in real time using Pyth Network mid-market price feeds, and redeemable 1:1 for fiat USD via Visa Direct.`
+        : `AUSD is a digital dollar that is always worth exactly $1.00 USD, backed 1:1 by cash reserves. Your group tab balances stay steady and reliable—$50 owed is always $50. When friends settle up, you can transfer your balance straight to your debit card or bank in seconds!`;
       actionItems = [
         { label: "🚰 Claim +$500 Test AUSD", action: handleClaimFaucet },
         { label: "🏦 How to Cash Out", action: () => handleAskQuestion("how do i cash out?") },
@@ -958,7 +986,8 @@ export function MeshBuddy() {
         isDemoTab,
         isCustomTab,
         workspaceMode,
-        tabDisplayName
+        tabDisplayName,
+        isDeveloperMode
       });
 
       if (kbMatches.length > 0 && kbMatches[0].score >= 18) {

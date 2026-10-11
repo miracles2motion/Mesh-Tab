@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { redis } from "../../../../lib/redis";
 import { getUserIdFromToken } from "../../../../lib/auth";
+import { normalizeBackendMode } from "@/lib/mode";
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const mode = req.nextUrl.searchParams.get("mode") || "clean";
+    const mode = normalizeBackendMode(req.nextUrl.searchParams.get("mode"));
 
     const authHeader = req.headers.get("Authorization");
     const walletAddress = await getUserIdFromToken(authHeader);

@@ -60,7 +60,7 @@ function SettingsContent() {
   const hasPasskey = user?.linkedAccounts?.some(account => account.type === 'passkey') || false;
 
   const profile = useUserProfile();
-  const { showAddress: showAddressOnDashboard, toggleAddress } = useDeveloperMode();
+  const { isDeveloperMode, toggleDeveloperMode } = useDeveloperMode();
   const { settings: buddySettings, updateSettings: updateBuddySettings } = useBuddySettings();
   const { balance: virtualBalance } = useVirtualBalance();
   const { mode: workspaceMode, setMode: setWorkspaceMode } = useWorkspaceMode();
@@ -838,19 +838,26 @@ function SettingsContent() {
                 </p>
                 
                 <div className="space-y-4">
-                  {/* Wallet Address Card */}
-                  <div className="p-5 bg-slate-50 dark:bg-black/30 rounded-2xl border border-slate-200 dark:border-white/5">
-                    <label className="text-sm font-semibold text-slate-900 dark:text-white mb-2 block">Ledger Account Address</label>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-indigo-600 dark:text-indigo-300 text-sm font-mono truncate select-all shadow-xs">
-                        {fullAddress}
+                  {/* Wallet Address Card (Developer Mode Only) */}
+                  {isDeveloperMode && (
+                    <div className="p-5 bg-slate-50 dark:bg-black/30 rounded-2xl border border-slate-200 dark:border-white/5 animate-in fade-in">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm font-semibold text-slate-900 dark:text-white block">Ledger Account Address</label>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 uppercase tracking-wide">
+                          Developer Only
+                        </span>
                       </div>
-                      <Button onClick={copyAddress} variant="secondary" className="h-11 px-4">
-                        {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-indigo-600 dark:text-indigo-300 text-sm font-mono truncate select-all shadow-xs">
+                          {fullAddress}
+                        </div>
+                        <Button onClick={copyAddress} variant="secondary" className="h-11 px-4 cursor-pointer">
+                          {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-white/40 mt-2 font-medium">All ledger transactions and multilateral netting have zero fees and are 100% sponsored by the platform.</p>
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-white/40 mt-2 font-medium">All ledger transactions and multilateral netting have zero fees and are 100% sponsored by the platform.</p>
-                  </div>
+                  )}
 
                   {/* Security Architecture Card */}
                   <div className="p-5 bg-slate-50 dark:bg-black/30 rounded-2xl border border-slate-200 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -908,18 +915,40 @@ function SettingsContent() {
                     </div>
                   </div>
 
-                  {/* Dashboard Toggle Card */}
-                  <div className="p-5 bg-slate-50 dark:bg-black/30 rounded-2xl border border-slate-200 dark:border-white/5 flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-white">Developer Mode</h3>
-                      <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5">Show ledger address badge in the dashboard header.</p>
+                  {/* Developer & Web3 Mode Card */}
+                  <div className="p-5 bg-slate-50 dark:bg-black/30 rounded-2xl border border-slate-200 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white">Developer & Web3 Mode</h3>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${isDeveloperMode ? "bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30" : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20"}`}>
+                          {isDeveloperMode ? "Web3 / Telemetry Active" : "Consumer Mode (Default)"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-white/50 max-w-lg leading-relaxed">
+                        {isDeveloperMode 
+                          ? "Exposes MonadVision block explorer links, smart account addresses, ERC-4337 UserOp telemetry, and pitch materials." 
+                          : "Hides all blockchain hashes, popups, and technical jargon. Actions execute silently with native biometric authorization and digital receipts."}
+                      </p>
                     </div>
                     <button 
-                      onClick={toggleAddress}
-                      className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${showAddressOnDashboard ? "bg-indigo-600" : "bg-slate-300 dark:bg-white/10"}`}
-                      aria-label="Toggle Developer Mode"
+                      onClick={() => {
+                        sounds.playClick();
+                        toggleDeveloperMode();
+                        const nextState = !isDeveloperMode;
+                        if (nextState) {
+                          toast.success("Developer Mode Enabled", {
+                            description: "Blockchain telemetry, explorer links, and inspector enabled for testing."
+                          });
+                        } else {
+                          toast.success("Consumer Mode Active", {
+                            description: "Clean Web2 fintech interface active. Blockchain jargon silenced."
+                          });
+                        }
+                      }}
+                      className={`w-14 h-7 rounded-full transition-colors relative cursor-pointer shrink-0 ${isDeveloperMode ? "bg-purple-600 shadow-md shadow-purple-500/30" : "bg-slate-300 dark:bg-white/10"}`}
+                      aria-label="Toggle Developer & Web3 Mode"
                     >
-                      <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${showAddressOnDashboard ? "translate-x-7" : "translate-x-1"}`} />
+                      <div className={`w-5 h-5 rounded-full bg-white absolute top-1 transition-transform ${isDeveloperMode ? "translate-x-8" : "translate-x-1"}`} />
                     </button>
                   </div>
                 </div>

@@ -27,10 +27,11 @@ import {
   addSettledPayout, 
   topUpVirtualBalance, 
   useUserProfile,
-  useWorkspaceMode
+  useWorkspaceMode,
+  useDeveloperMode
 } from "@/lib/user";
 import { useAvailableBalance } from "@/lib/balance";
-import { useRealAusdBalance, useClaimWelcomeBonus } from "@/lib/onchain";
+import { useRealAusdBalance, useClaimWelcomeBonus, useFaucetCooldown } from "@/lib/onchain";
 import { addNotification } from "@/lib/notifications";
 import { formatCurrency } from "@/lib/utils";
 import { sounds } from "@/lib/sounds";
@@ -56,6 +57,8 @@ const QUICK_CHIPS = [
 
 export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCents, reason }: AddFundsDrawerProps) {
   const profile = useUserProfile();
+  const { isDeveloperMode } = useDeveloperMode();
+  const { isCooldownActive, secondsRemaining } = useFaucetCooldown();
   const { mode: workspaceMode } = useWorkspaceMode();
   const isTestnet = workspaceMode === "testnet";
   const { totalCents, heldCents, availableCents } = useAvailableBalance(profile.name || "David");
@@ -637,29 +640,43 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
                 <Button
                   onClick={handleConfirmDeposit}
                   isLoading={isProcessing}
+                  disabled={isProcessing || isCooldownActive}
                   variant="primary"
                   size="lg"
-                  className="w-full h-14 font-bold text-base shadow-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-all cursor-pointer"
+                  className={`w-full h-14 font-bold text-base shadow-xl transition-all ${
+                    isCooldownActive
+                      ? "bg-amber-500/80 cursor-not-allowed opacity-90"
+                      : "bg-indigo-600 hover:bg-indigo-700 active:scale-95 cursor-pointer"
+                  }`}
                 >
-                  {isProcessing 
-                    ? (isTestnet ? "Securing allocation via Monad & Pimlico..." : "Securing deposit via Privy...") 
-                    : (isTestnet ? "Confirm $10,000.00 Agora AUSD Allocation" : `Confirm ${formatCurrency(depositCents)} Deposit`)}
+                  {isCooldownActive
+                    ? (isDeveloperMode ? `Agora Cooldown: ${secondsRemaining}s remaining` : `Next deposit ready in ${secondsRemaining}s`)
+                    : isProcessing 
+                    ? (isTestnet ? (isDeveloperMode ? "Securing allocation via Monad & Pimlico..." : "Securing instant deposit...") : "Securing deposit via Privy...") 
+                    : (isTestnet ? (isDeveloperMode ? "Confirm $10,000.00 Agora AUSD Allocation" : "Confirm $10,000.00 Instant Deposit") : `Confirm ${formatCurrency(depositCents)} Deposit`)}
                 </Button>
               </div>
 
               {/* Partner Footer */}
-              <div className="mt-8 pt-6 border-t border-slate-100 dark:border-white/5 flex flex-wrap items-center justify-center gap-3 text-slate-400 dark:text-white/40 text-xs font-medium">
-                <span>Infrastructure powered by</span>
-                <div className="flex items-center gap-2.5 opacity-80 hover:opacity-100 transition-opacity text-slate-700 dark:text-white/80">
-                  <MonadLogo className="h-3.5 w-auto" />
-                  <span className="text-slate-300 dark:text-white/20">×</span>
-                  <AgoraLogo className="h-3.5 w-auto" />
-                  <span className="text-slate-300 dark:text-white/20">×</span>
-                  <PrivyLogo className="h-3 w-auto" />
-                  <span className="text-slate-300 dark:text-white/20">×</span>
-                  <PimlicoLogo className="h-3 w-auto" />
+              {isDeveloperMode ? (
+                <div className="mt-8 pt-6 border-t border-slate-100 dark:border-white/5 flex flex-wrap items-center justify-center gap-3 text-slate-400 dark:text-white/40 text-xs font-medium">
+                  <span>Infrastructure powered by</span>
+                  <div className="flex items-center gap-2.5 opacity-80 hover:opacity-100 transition-opacity text-slate-700 dark:text-white/80">
+                    <MonadLogo className="h-3.5 w-auto" />
+                    <span className="text-slate-300 dark:text-white/20">×</span>
+                    <AgoraLogo className="h-3.5 w-auto" />
+                    <span className="text-slate-300 dark:text-white/20">×</span>
+                    <PrivyLogo className="h-3 w-auto" />
+                    <span className="text-slate-300 dark:text-white/20">×</span>
+                    <PimlicoLogo className="h-3 w-auto" />
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="mt-8 pt-6 border-t border-slate-100 dark:border-white/5 flex items-center justify-center gap-2 text-slate-400 dark:text-white/40 text-[11px] font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Encrypted Bank Rails • Zero Platform Deposit Fees</span>
+                </div>
+              )}
             </motion.div>
           )}
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { redis } from "@/lib/redis";
 import { getUserIdFromToken } from "@/lib/auth";
+import { normalizeBackendMode } from "@/lib/mode";
 
 // [OVERSEER MANDATE - Baseline 20]: Next.js Route Caching
 export const dynamic = 'force-dynamic';
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     const { id } = await params;
-    const mode = req.nextUrl.searchParams.get("mode") || "clean";
+    const mode = normalizeBackendMode(req.nextUrl.searchParams.get("mode"));
     
     // [OVERSEER MANDATE - Baseline 10]: verify they are a member of the tab before returning data
     const tabKey = `meshtab:${mode}:tab:${id}`;
@@ -41,10 +42,29 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       const cleanWallet = callerWallet.toLowerCase();
       if (callerName) {
         await redis.hset(`${tabKey}:member_wallets`, { [callerName]: callerWallet });
-        await redis.set(`user:${cleanWallet}`, JSON.stringify({ name: callerName, avatarColorIndex: 0, lastUpdated: Date.now() }));
+        const rawExisting = await redis.get(`user:${cleanWallet}`);
+        const existing = rawExisting ? (typeof rawExisting === "string" ? JSON.parse(rawExisting) : rawExisting) : {};
+        await redis.set(`user:${cleanWallet}`, JSON.stringify({
+          ...existing,
+          name: callerName || existing.name || "User",
+          avatarColorIndex: existing.avatarColorIndex ?? 0,
+          developerMode: existing.developerMode ?? false,
+          buddySettings: existing.buddySettings || undefined,
+          lastUpdated: existing.lastUpdated || Date.now()
+        }));
         await redis.sadd(`meshtab:${mode}:user:${cleanWallet}:tabs`, id);
       }
-      await redis.set(`user:${walletAddress}`, JSON.stringify({ name: callerName || "", wallet: callerWallet, avatarColorIndex: 0, lastUpdated: Date.now() }));
+      const rawExistingAuth = await redis.get(`user:${walletAddress}`);
+      const existingAuth = rawExistingAuth ? (typeof rawExistingAuth === "string" ? JSON.parse(rawExistingAuth) : rawExistingAuth) : {};
+      await redis.set(`user:${walletAddress}`, JSON.stringify({
+        ...existingAuth,
+        name: callerName || existingAuth.name || "",
+        wallet: callerWallet || existingAuth.wallet,
+        avatarColorIndex: existingAuth.avatarColorIndex ?? 0,
+        developerMode: existingAuth.developerMode ?? false,
+        buddySettings: existingAuth.buddySettings || undefined,
+        lastUpdated: existingAuth.lastUpdated || Date.now()
+      }));
       await redis.sadd(`meshtab:${mode}:user:${walletAddress}:tabs`, id);
     }
 

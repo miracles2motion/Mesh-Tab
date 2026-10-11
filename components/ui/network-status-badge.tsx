@@ -5,9 +5,11 @@ import { WifiOff, Activity, Plane, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { useDeveloperMode } from "@/lib/user";
 
 export function NetworkStatusBadge({ compact = false }: { compact?: boolean }) {
   const { isSimulatedOffline, isEffectivelyOnline, pendingCount, toggleAirplaneMode } = useConnectivity();
+  const { isDeveloperMode } = useDeveloperMode();
   
   const [justReconnected, setJustReconnected] = useState(false);
 
@@ -28,7 +30,9 @@ export function NetworkStatusBadge({ compact = false }: { compact?: boolean }) {
       });
     } else {
       toast("🟢 Back Online", {
-        description: pendingCount > 0 ? `Syncing ${pendingCount} local expense(s) to Monad Sandbox...` : "Connected to Monad Sandbox."
+        description: isDeveloperMode
+          ? (pendingCount > 0 ? `Syncing ${pendingCount} local expense(s) to Monad Sandbox...` : "Connected to Monad Sandbox.")
+          : (pendingCount > 0 ? `✨ Back online: Synced ${pendingCount} expense(s) with your group.` : "✨ Back online: Connected with your group.")
       });
     }
     toggleAirplaneMode();
@@ -77,7 +81,9 @@ export function NetworkStatusBadge({ compact = false }: { compact?: boolean }) {
             <div className="absolute inset-0 rounded-full border border-amber-400/30 dark:border-amber-400/20 animate-pulse" style={{ pointerEvents: 'none' }} />
             <WifiOff className="w-3.5 h-3.5 animate-pulse" />
             <span className={compact ? "hidden sm:inline" : ""}>
-              {pendingCount > 0 ? `Offline • ${pendingCount} in Vault` : "Offline Mesh Active"}
+              {pendingCount > 0 
+                ? (isDeveloperMode ? `Offline • ${pendingCount} in Outbox` : `Offline • ${pendingCount} saved locally`)
+                : (isDeveloperMode ? "Offline • Outbox queuing for Monad" : "Offline Mode • Changes sync when reconnected")}
             </span>
             {compact && pendingCount > 0 && (
                <span className="sm:hidden font-bold ml-1">{pendingCount}</span>

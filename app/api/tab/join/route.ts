@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { redis } from "@/lib/redis";
 import { getUserIdFromToken } from "@/lib/auth";
+import { backendModeSchema } from "@/lib/mode";
 
 const joinTabSchema = z.object({
   joinCode: z.string().max(10).optional(),
   tabId: z.string().max(100).optional(),
   name: z.string().max(50),
-  mode: z.enum(["clean", "demo", "testnet"]).default("clean"),
+  mode: backendModeSchema,
   walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional()
 }).refine(data => Boolean(data.joinCode || data.tabId), {
   message: "Either joinCode or tabId must be provided"
@@ -69,9 +70,28 @@ export async function POST(req: NextRequest) {
        // [OVERSEER MANDATE - Baseline 12]: Idempotent refresh of member wallet mapping and profile
        if (walletAddress) {
          await redis.hset(`${fullTabKey}:member_wallets`, { [name]: walletAddress });
-         await redis.set(`user:${walletAddress.toLowerCase()}`, JSON.stringify({ name, avatarColorIndex: 0, lastUpdated: Date.now() }));
+         const rawExisting = await redis.get(`user:${walletAddress.toLowerCase()}`);
+         const existing = rawExisting ? (typeof rawExisting === "string" ? JSON.parse(rawExisting) : rawExisting) : {};
+         await redis.set(`user:${walletAddress.toLowerCase()}`, JSON.stringify({
+           ...existing,
+           name: name || existing.name || "User",
+           avatarColorIndex: existing.avatarColorIndex ?? 0,
+           developerMode: existing.developerMode ?? false,
+           buddySettings: existing.buddySettings || undefined,
+           lastUpdated: existing.lastUpdated || Date.now()
+         }));
        }
-       await redis.set(`user:${userId}`, JSON.stringify({ name, wallet: walletAddress || "", avatarColorIndex: 0, lastUpdated: Date.now() }));
+       const rawExistingUser = await redis.get(`user:${userId}`);
+       const existingUser = rawExistingUser ? (typeof rawExistingUser === "string" ? JSON.parse(rawExistingUser) : rawExistingUser) : {};
+       await redis.set(`user:${userId}`, JSON.stringify({
+         ...existingUser,
+         name: name || existingUser.name || "User",
+         wallet: walletAddress || existingUser.wallet || "",
+         avatarColorIndex: existingUser.avatarColorIndex ?? 0,
+         developerMode: existingUser.developerMode ?? false,
+         buddySettings: existingUser.buddySettings || undefined,
+         lastUpdated: existingUser.lastUpdated || Date.now()
+       }));
        return NextResponse.json({ success: true, message: "Already a member", tabId });
     }
 
@@ -92,6 +112,16 @@ export async function POST(req: NextRequest) {
     } catch {}
     const tabName = tabData?.name || "Group Space";
     
+    // Read existing profile to merge non-destructively
+    let existingProfileWallet: any = {};
+    if (walletAddress) {
+      const rawW = await redis.get(`user:${walletAddress.toLowerCase()}`);
+      if (rawW) existingProfileWallet = typeof rawW === "string" ? JSON.parse(rawW) : rawW;
+    }
+    let existingProfileUser: any = {};
+    const rawU = await redis.get(`user:${userId}`);
+    if (rawU) existingProfileUser = typeof rawU === "string" ? JSON.parse(rawU) : rawU;
+
     const multi = redis.multi();
     // [OVERSEER MANDATE - Baseline 33]: Native Data Types (raw float string)
     multi.hset(`${fullTabKey}:members`, { [name]: "0.00" });
@@ -99,10 +129,25 @@ export async function POST(req: NextRequest) {
     if (walletAddress) {
       multi.hset(`${fullTabKey}:member_wallets`, { [name]: walletAddress });
       multi.expire(`${fullTabKey}:member_wallets`, 2592000);
-      multi.set(`user:${walletAddress.toLowerCase()}`, JSON.stringify({ name, avatarColorIndex: 0, lastUpdated: Date.now() }));
+      multi.set(`user:${walletAddress.toLowerCase()}`, JSON.stringify({
+        ...existingProfileWallet,
+        name: name || existingProfileWallet.name || "User",
+        avatarColorIndex: existingProfileWallet.avatarColorIndex ?? 0,
+        developerMode: existingProfileWallet.developerMode ?? false,
+        buddySettings: existingProfileWallet.buddySettings || undefined,
+        lastUpdated: existingProfileWallet.lastUpdated || Date.now()
+      }));
     }
     // Also save profile indexed by Privy DID so lookup never fails
-    multi.set(`user:${userId}`, JSON.stringify({ name, wallet: walletAddress || "", avatarColorIndex: 0, lastUpdated: Date.now() }));
+    multi.set(`user:${userId}`, JSON.stringify({
+      ...existingProfileUser,
+      name: name || existingProfileUser.name || "User",
+      wallet: walletAddress || existingProfileUser.wallet || "",
+      avatarColorIndex: existingProfileUser.avatarColorIndex ?? 0,
+      developerMode: existingProfileUser.developerMode ?? false,
+      buddySettings: existingProfileUser.buddySettings || undefined,
+      lastUpdated: existingProfileUser.lastUpdated || Date.now()
+    }));
 
     multi.sadd(`${fullTabKey}:authorized_users`, userId);
 

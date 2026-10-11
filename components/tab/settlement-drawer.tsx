@@ -9,7 +9,7 @@ import { ReceiptView } from "../ReceiptView";
 import { MonadLogo, AgoraLogo, PythLogo } from "../ui/partner-logo";
 import { AddFundsDrawer } from "./add-funds-drawer";
 
-import { useUserProfile, settleTab, useVirtualBalance, deductSettledPayout, useStoredTabMembers, useWorkspaceMode } from "../../lib/user";
+import { useUserProfile, settleTab, useVirtualBalance, deductSettledPayout, useStoredTabMembers, useWorkspaceMode, useDeveloperMode } from "../../lib/user";
 import { toast } from "sonner";
 import { sounds } from "../../lib/sounds";
 import { fireSettlementConfetti, fireFaucetConfetti } from "../../lib/confetti";
@@ -44,6 +44,7 @@ interface SettlementDrawerProps {
 
 export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-24", currentUserName, onConfirmPayment }: SettlementDrawerProps) {
   const profile = useUserProfile();
+  const { isDeveloperMode } = useDeveloperMode();
   const { mode: workspaceMode } = useWorkspaceMode();
   const { client } = useSmartWallets();
   const { balance: testnetBalance, refetch: refetchTestnetBalance } = useRealAusdBalance(workspaceMode);
@@ -132,7 +133,10 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
                 args: [tabId, targetCreditorAddress, amountWei]
               })
             }
-          ]
+          ],
+          uiOptions: {
+            showWalletUIs: isDeveloperMode
+          }
         });
 
         const publicClient = createPublicClient({
@@ -376,16 +380,23 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
           </div>
           
           {/* Partner Branding */}
-        <div className="mt-6 flex items-center justify-center gap-2.5 text-slate-500 dark:text-white/50 text-xs font-medium">
-           <span>Powered by</span>
-           <div className="flex items-center gap-2.5 opacity-80 hover:opacity-100 transition-all text-slate-700 dark:text-white/80">
-             <MonadLogo className="h-3.5 w-auto" />
-             <span className="text-slate-300 dark:text-white/20">×</span>
-             <AgoraLogo className="h-3.5 w-auto" />
-             <span className="text-slate-300 dark:text-white/20">×</span>
-             <PythLogo className="h-3.5 w-auto" />
-           </div>
-        </div>
+          {isDeveloperMode ? (
+            <div className="mt-6 flex items-center justify-center gap-2.5 text-slate-500 dark:text-white/50 text-xs font-medium">
+               <span>Powered by</span>
+               <div className="flex items-center gap-2.5 opacity-80 hover:opacity-100 transition-all text-slate-700 dark:text-white/80">
+                 <MonadLogo className="h-3.5 w-auto" />
+                 <span className="text-slate-300 dark:text-white/20">×</span>
+                 <AgoraLogo className="h-3.5 w-auto" />
+                 <span className="text-slate-300 dark:text-white/20">×</span>
+                 <PythLogo className="h-3.5 w-auto" />
+               </div>
+            </div>
+          ) : (
+            <div className="mt-6 flex items-center justify-center gap-2 text-slate-400 dark:text-white/40 text-[11px] font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Encrypted Instant Settlement • Zero Bank Fees</span>
+            </div>
+          )}
       </div>
       </div>
     </Sheet>

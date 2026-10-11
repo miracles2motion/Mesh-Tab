@@ -7,11 +7,13 @@ import { PrivyProvider } from "@privy-io/react-auth";
 import { SmartWalletsProvider } from "@privy-io/react-auth/smart-wallets";
 import { SecurityProvider } from "./security-provider";
 import { monadTestnet } from "../../lib/chains";
+import { useDeveloperMode } from "../../lib/user";
 
 const queryClient = new QueryClient();
 
 export function Web3Provider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const { isDeveloperMode } = useDeveloperMode();
 
   useEffect(() => {
     // Initial check
@@ -40,6 +42,7 @@ export function Web3Provider({ children }: { children: ReactNode }) {
         defaultChain: monadTestnet,
         supportedChains: [monadTestnet],
         embeddedWallets: {
+          showWalletUIs: isDeveloperMode,
           ethereum: {
             createOnLogin: 'users-without-wallets',
           }

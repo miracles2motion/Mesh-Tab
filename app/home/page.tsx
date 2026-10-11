@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode, Settings, Search, Filter, Crown, CheckCircle2, TrendingDown, TrendingUp, ArrowDownToLine, Coins, Sparkles, Award, Fingerprint, Copy, CreditCard } from "lucide-react";
-import { useState, useEffect } from "react";
+import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode, Settings, Search, Filter, Crown, CheckCircle2, TrendingDown, TrendingUp, ArrowDownToLine, Coins, Sparkles, Award, Fingerprint, Copy, CreditCard, Clock, ArrowDownLeft, Activity } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
 import { TransactionOverlay, TransactionState } from "../../components/ui/transaction-overlay";
 import { formatCurrency, formatDistanceToNow } from "../../lib/utils";
 import { ThemeToggle } from "../../components/theme-toggle";
@@ -23,10 +23,12 @@ import { AnimatedCounter } from "../../components/ui/animated-counter";
 import { NetworkStatusBadge } from "../../components/ui/network-status-badge";
 import { GlobalNav } from "../../components/ui/global-nav";
 import { LiveTime } from "@/components/ui/live-time";
+import { ReceiptView } from "../../components/ReceiptView";
+import { getStoredClaimHistory } from "../../lib/claims";
 
 import { useWallets, usePrivy } from "@privy-io/react-auth";
 import { AuthGuard } from "../../components/providers/auth-guard";
-import { useRealAusdBalance } from "../../lib/onchain";
+import { useRealAusdBalance, useFaucetCooldown } from "../../lib/onchain";
 import { FaucetModal } from "../../components/tab/faucet-modal";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
 import { HomeRootHistoryGuard } from "../../components/providers/home-history-guard";
@@ -66,7 +68,8 @@ export default function GlobalHub() {
   const [copied, setCopied] = useState(false);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
 
-  const { showAddress } = useDeveloperMode();
+  const { showAddress, isDeveloperMode } = useDeveloperMode();
+  const { isCooldownActive, secondsRemaining } = useFaucetCooldown();
   const fullAddress = client?.account?.address;
   
   const activeAddress = isTestnetMode ? fullAddress : "0x7F5A4b2...3b9A";
@@ -148,6 +151,64 @@ export default function GlobalHub() {
   // If they have withdrawable cash, show it (e.g. +230).
   // If they have withdrawn it all, their liquid net is just their active debt (e.g. -270).
   const netBalance = availableCents > 0 ? availableCents : -totalYouOwe;
+
+  const [selectedReceipt, setSelectedReceipt] = useState<{
+    amount: number;
+    recipient?: string;
+    txHash?: string;
+    type?: "settlement" | "topup";
+  } | null>(null);
+  const [activityFilter, setActivityFilter] = useState<"all" | "settlement" | "topup">("all");
+
+  const recentActivities = useMemo(() => {
+    if (!mounted) return [];
+    const items: Array<{
+      id: string;
+      title: string;
+      type: "topup" | "settlement";
+      amount: number;
+      timestamp: number;
+      txHash?: string;
+      recipient?: string;
+      status: string;
+    }> = [];
+
+    // Faucet claims from local storage
+    const claims = getStoredClaimHistory(client?.account?.address || user?.wallet?.address || undefined, workspaceMode);
+    claims.slice(0, 5).forEach((c, idx) => {
+      items.push({
+        id: c.id || `claim-${idx}`,
+        title: isDeveloperMode ? `+${formatCurrency(c.amount * 100)} Agora AUSD` : `+${formatCurrency(c.amount * 100)} Demo Top-Up`,
+        type: "topup",
+        amount: c.amount * 100,
+        timestamp: c.timestamp,
+        txHash: c.txHash,
+        recipient: "Demo Balance Reserve",
+        status: "Confirmed"
+      });
+    });
+
+    // Sample mode settlements or benchmark activity
+    if (workspaceMode === "sample") {
+      items.push({
+        id: "sample-settle-lisbon",
+        title: "-$180.00 • Lisbon Trip Settlement",
+        type: "settlement",
+        amount: 18000,
+        timestamp: Date.now() - 3600000 * 4,
+        recipient: "Elena Vance",
+        txHash: "0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0",
+        status: "Settled"
+      });
+    }
+
+    return items.sort((a, b) => b.timestamp - a.timestamp);
+  }, [mounted, workspaceMode, isDeveloperMode, client?.account?.address, user?.wallet?.address, testnetBalance, virtualBalance]);
+
+  const filteredActivities = useMemo(() => {
+    if (activityFilter === "all") return recentActivities;
+    return recentActivities.filter(a => a.type === activityFilter);
+  }, [recentActivities, activityFilter]);
 
   // Dynamic Greeting Logic
   const hour = new Date().getHours();
@@ -317,11 +378,18 @@ export default function GlobalHub() {
             </div>
             <div className="flex items-center gap-2 flex-wrap order-1 md:order-2 md:pb-1">
               <NetworkStatusBadge compact />
-              <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${isTestnetMode ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20" : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"}`}>
-                <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isTestnetMode ? "bg-purple-500" : "bg-emerald-500"}`} />
-                {isTestnetMode ? "Monad Testnet" : "Demo Sandbox"}
-              </span>
-              {showAddress && (
+              {isDeveloperMode ? (
+                <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${isTestnetMode ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20" : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isTestnetMode ? "bg-purple-500" : "bg-emerald-500"}`} />
+                  {isTestnetMode ? "Monad Testnet" : "Demo Sandbox"}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full border bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Synced
+                </span>
+              )}
+              {isDeveloperMode && showAddress && (
                 <button
                   onClick={handleCopyAddress}
                   className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-500/20 shrink-0 cursor-pointer"
@@ -331,7 +399,7 @@ export default function GlobalHub() {
                   {copied ? <CheckCircle2 className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
                 </button>
               )}
-              {!isTestnetMode && (
+              {isDeveloperMode && !isTestnetMode && (
                 <>
                   <Link 
                     replace
@@ -369,24 +437,32 @@ export default function GlobalHub() {
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           {mounted && isTestnetMode && (
-            <button
-              onClick={() => {
-                if (isBalanceLoading) return;
-                sounds.playClick();
-                setShowFaucetModal(true);
-              }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-full border font-bold text-xs shadow-sm transition-all hover:scale-105 active:scale-95 cursor-pointer bg-purple-50 dark:bg-purple-500/10 border-purple-200 dark:border-purple-500/20 text-purple-700 dark:text-purple-300"
-              title="Top Up Testnet Balance"
-            >
-              <Coins className="w-3.5 h-3.5" />
-              <span className="tabular-nums">
-                {isBalanceLoading ? (
-                  <span className="w-10 h-3.5 bg-purple-200 dark:bg-purple-500/20 rounded animate-pulse inline-block align-middle" />
-                ) : (
-                  <AnimatedCounter value={testnetBalance} prefix="$" decimals={2} />
-                )}
-              </span>
-            </button>
+            <div className="flex items-center gap-1.5">
+              {isCooldownActive && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-xs" title="Agora testnet 60-second claim cooldown">
+                  <Clock className="w-3 h-3 animate-spin text-amber-500" />
+                  <span>{secondsRemaining}s</span>
+                </span>
+              )}
+              <button
+                onClick={() => {
+                  if (isBalanceLoading) return;
+                  sounds.playClick();
+                  setShowFaucetModal(true);
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-full border font-bold text-xs shadow-sm transition-all hover:scale-105 active:scale-95 cursor-pointer bg-purple-50 dark:bg-purple-500/10 border-purple-200 dark:border-purple-500/20 text-purple-700 dark:text-purple-300"
+                title="Top Up Testnet Balance"
+              >
+                <Coins className="w-3.5 h-3.5" />
+                <span className="tabular-nums">
+                  {isBalanceLoading ? (
+                    <span className="w-10 h-3.5 bg-purple-200 dark:bg-purple-500/20 rounded animate-pulse inline-block align-middle" />
+                  ) : (
+                    <AnimatedCounter value={testnetBalance} prefix="$" decimals={2} />
+                  )}
+                </span>
+              </button>
+            </div>
           )}
           <Link 
             href="/notifications?from=/home" 
@@ -431,17 +507,19 @@ export default function GlobalHub() {
                 <div className="mt-4 flex items-center gap-3 flex-wrap">
                   <button
                     onClick={() => {
-                      if (isBalanceLoading) return;
+                      if (isBalanceLoading || isCooldownActive) return;
                       sounds.playClick();
                       setShowAddFundsModal(true);
                     }}
-                    disabled={isBalanceLoading}
-                    className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-white text-xs font-bold shadow-md transition-all cursor-pointer hover:scale-105 active:scale-95 ${
-                      isBalanceLoading
+                    disabled={isBalanceLoading || isCooldownActive}
+                    className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-white text-xs font-bold shadow-md transition-all ${
+                      isCooldownActive
+                        ? "bg-amber-500/80 cursor-not-allowed opacity-90 shadow-amber-500/20"
+                        : isBalanceLoading
                         ? "bg-indigo-600/60 cursor-wait opacity-80"
                         : isTestnetMode && testnetBalance === 0
-                        ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 shadow-purple-500/25"
-                        : "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/25"
+                        ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 shadow-purple-500/25 hover:scale-105 active:scale-95 cursor-pointer"
+                        : "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/25 hover:scale-105 active:scale-95 cursor-pointer"
                     }`}
                   >
                     {isBalanceLoading ? (
@@ -449,10 +527,15 @@ export default function GlobalHub() {
                         <span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
                         <span>Loading Ledger...</span>
                       </>
+                    ) : isCooldownActive ? (
+                      <>
+                        <Clock className="w-3.5 h-3.5 animate-spin" />
+                        <span>{isDeveloperMode ? `Agora Cooldown (${secondsRemaining}s)` : `Next bonus in ${secondsRemaining}s`}</span>
+                      </>
                     ) : isTestnetMode && testnetBalance === 0 ? (
                       <>
                         <Sparkles className="w-4 h-4 text-amber-300" />
-                        <span>Claim $10,000 Agora AUSD</span>
+                        <span>{isDeveloperMode ? "Claim $10,000 Agora AUSD" : "Claim $10,000 Welcome Bonus"}</span>
                       </>
                     ) : (
                       <>
@@ -556,6 +639,94 @@ export default function GlobalHub() {
           </div>
           {/* Decorative Mesh */}
           <div className="absolute -right-20 -top-20 w-64 h-64 bg-indigo-500/10 dark:bg-indigo-500/30 blur-[80px] rounded-full pointer-events-none" />
+        </div>
+
+        {/* Recent Activity Ledger Card */}
+        <div className="bg-white dark:bg-[#111] border border-slate-200/90 dark:border-white/10 rounded-3xl p-6 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                <Activity className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Recent Activity</h3>
+                <p className="text-[11px] text-slate-500 dark:text-white/50">
+                  {isDeveloperMode ? "Cryptographic ledger transactions & settlements" : "Your recent settlements and balance receipts"}
+                </p>
+              </div>
+            </div>
+
+            {/* Filter Pills */}
+            <div className="flex p-0.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs self-start sm:self-auto">
+              <button
+                onClick={() => setActivityFilter("all")}
+                className={`px-2.5 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${activityFilter === "all" ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-xs" : "text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"}`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setActivityFilter("settlement")}
+                className={`px-2.5 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${activityFilter === "settlement" ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-xs" : "text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"}`}
+              >
+                Settlements
+              </button>
+              <button
+                onClick={() => setActivityFilter("topup")}
+                className={`px-2.5 py-1 rounded-lg font-semibold transition-colors cursor-pointer ${activityFilter === "topup" ? "bg-white dark:bg-white/10 text-slate-900 dark:text-white shadow-xs" : "text-slate-500 dark:text-white/50 hover:text-slate-900 dark:hover:text-white"}`}
+              >
+                Top-Ups
+              </button>
+            </div>
+          </div>
+
+          {filteredActivities.length === 0 ? (
+            <div className="py-8 px-4 rounded-2xl border border-dashed border-slate-200 dark:border-white/10 text-center text-xs text-slate-400 dark:text-white/40">
+              No recent payments yet. Add funds or settle a tab to see receipts here.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filteredActivities.map((act) => (
+                <div
+                  key={act.id}
+                  onClick={() => {
+                    sounds.playClick();
+                    setSelectedReceipt({
+                      amount: act.amount,
+                      recipient: act.recipient,
+                      txHash: act.txHash,
+                      type: act.type === "topup" ? "topup" : "settlement"
+                    });
+                  }}
+                  className="p-3.5 rounded-2xl border border-slate-100 dark:border-white/5 hover:border-indigo-500/30 hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-all flex items-center justify-between cursor-pointer group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                      act.type === "topup"
+                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                        : "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+                    }`}>
+                      {act.type === "topup" ? <ArrowDownLeft className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                        {act.title}
+                      </div>
+                      <div className="text-[10px] text-slate-400 dark:text-white/40 flex items-center gap-1.5 mt-0.5">
+                        <LiveTime ts={act.timestamp} variant="compact" />
+                        <span>•</span>
+                        <span>{act.status}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    <span>View Receipt</span>
+                    <span>→</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Active Tabs with Search & Filter Chips */}
@@ -802,6 +973,16 @@ export default function GlobalHub() {
       <PitchModal 
         isOpen={showPitchModal}
         onClose={() => setShowPitchModal(false)}
+      />
+
+      {/* Global In-App Receipt Modal */}
+      <ReceiptView
+        isOpen={!!selectedReceipt}
+        onClose={() => setSelectedReceipt(null)}
+        amount={selectedReceipt?.amount || 0}
+        recipient={selectedReceipt?.recipient}
+        txHash={selectedReceipt?.txHash}
+        type={selectedReceipt?.type}
       />
 
       {/* MeshBuddy Tab Co-Pilot */}

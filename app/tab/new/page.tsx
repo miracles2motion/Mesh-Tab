@@ -9,7 +9,7 @@ import { Button } from "../../../components/ui/button";
 import Image from "next/image";
 import { MonadLogo, AgoraLogo, PythLogo } from "../../../components/ui/partner-logo";
 
-import { saveNewTab, getStoredUser, DEFAULT_USER_NAME, getWorkspaceMode, saveStoredTabMembers } from "../../../lib/user";
+import { saveNewTab, getStoredUser, DEFAULT_USER_NAME, getWorkspaceMode, saveStoredTabMembers, useDeveloperMode } from "../../../lib/user";
 import { SUPPORTED_CURRENCIES } from "../../../lib/pyth";
 import { useWallets, usePrivy } from "@privy-io/react-auth";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
@@ -27,6 +27,7 @@ async function generateSecureSuffix(address: string) {
 
 export default function CreateTab() {
   const router = useRouter();
+  const { isDeveloperMode } = useDeveloperMode();
   const [step, setStep] = useState<1 | 2>(1);
   const [tabName, setTabName] = useState("");
   const [currency, setCurrency] = useState<string>("USD");
@@ -62,6 +63,7 @@ export default function CreateTab() {
           tabId: newTabId,
           ownerWallet: userAddress,
           payload: {
+            mode: "testnet",
             tabId: newTabId,
             tabName: tabName.trim(),
             creatorName: currentUserName,
@@ -168,7 +170,9 @@ export default function CreateTab() {
                   ))}
                 </div>
                 <p className="text-[10px] text-slate-400 dark:text-white/40 ml-1 leading-relaxed pt-1">
-                  Settlements clear in digital USD (AUSD). Foreign currencies convert automatically with 0% bank markup via Pyth Network mid-market rates.
+                  {isDeveloperMode
+                    ? "Settlements clear in digital USD (AUSD). Foreign currencies convert automatically with 0% bank markup via Pyth Network mid-market rates."
+                    : "Settlements clear instantly with 0% bank markup at live mid-market rates."}
                 </p>
               </div>
 
@@ -177,17 +181,24 @@ export default function CreateTab() {
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
               
-              {/* Partner Branding */}
-              <div className="pt-2 flex items-center justify-center gap-3 text-slate-500 dark:text-white/50 text-xs font-medium">
-                <span>Powered by</span>
-                <div className="flex items-center gap-2.5 opacity-90 hover:opacity-100 transition-all text-slate-800 dark:text-white">
-                  <MonadLogo className="h-3.5 w-auto" />
-                  <span className="text-slate-300 dark:text-white/20">×</span>
-                  <AgoraLogo className="h-3.5 w-auto" />
-                  <span className="text-slate-300 dark:text-white/20">×</span>
-                  <PythLogo className="h-3.5 w-auto" />
+              {/* Partner Branding / Bank Grade Security */}
+              {isDeveloperMode ? (
+                <div className="pt-2 flex items-center justify-center gap-3 text-slate-500 dark:text-white/50 text-xs font-medium">
+                  <span>Powered by</span>
+                  <div className="flex items-center gap-2.5 opacity-90 hover:opacity-100 transition-all text-slate-800 dark:text-white">
+                    <MonadLogo className="h-3.5 w-auto" />
+                    <span className="text-slate-300 dark:text-white/20">×</span>
+                    <AgoraLogo className="h-3.5 w-auto" />
+                    <span className="text-slate-300 dark:text-white/20">×</span>
+                    <PythLogo className="h-3.5 w-auto" />
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="pt-2 flex items-center justify-center gap-2 text-slate-400 dark:text-white/40 text-[11px] font-medium">
+                  <Fingerprint className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>Bank-Grade Passkey Security • 0% Platform Markup</span>
+                </div>
+              )}
             </motion.form>
           )}
 

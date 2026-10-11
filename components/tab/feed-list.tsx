@@ -8,7 +8,7 @@ import Image from "next/image";
 import { MonadLogo } from "../ui/partner-logo";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ExpenseCategory } from "../../lib/user";
+import { ExpenseCategory, useDeveloperMode } from "../../lib/user";
 import { LiveTime } from "../ui/live-time";
 
 export interface ExpenseItem {
@@ -64,6 +64,7 @@ function inferCategory(desc: string): ExpenseCategory {
 export function FeedList({ expenses, currentUserName, isLoading = false }: FeedListProps) {
   const params = useParams();
   const tabId = params?.id || "default";
+  const { isDeveloperMode } = useDeveloperMode();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState<"all" | ExpenseCategory | "settlements">("all");
@@ -310,7 +311,11 @@ export function FeedList({ expenses, currentUserName, isLoading = false }: FeedL
                           {isSettlement ? (
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 shrink-0 flex items-center gap-1">
                               <CheckCircle2 className="w-3 h-3 stroke-[2.5]" /> Settled
-                              {item.txHash && <span className="text-[9px] font-mono text-emerald-600/80 dark:text-emerald-400/80">• Monad Tx</span>}
+                              {item.txHash && (
+                                <span className="text-[9px] font-mono text-emerald-600/80 dark:text-emerald-400/80">
+                                  • {isDeveloperMode ? "Monad Tx" : "Instant Clearing"}
+                                </span>
+                              )}
                             </span>
                           ) : (
                             item.originalCurrency && item.originalCurrency !== "USD" && (
@@ -350,12 +355,19 @@ export function FeedList({ expenses, currentUserName, isLoading = false }: FeedL
 
           {/* Bottom attribution strip */}
           <div className="pt-2 flex items-center justify-end text-[11px] text-slate-400 dark:text-white/40 px-2">
-            <div className="flex items-center gap-1.5">
-              <span>Ledger on</span>
-              <div className="opacity-80 hover:opacity-100 transition-all text-slate-700 dark:text-white/80">
-                <MonadLogo className="h-3.5 w-auto" />
+            {isDeveloperMode ? (
+              <div className="flex items-center gap-1.5">
+                <span>Ledger on</span>
+                <div className="opacity-80 hover:opacity-100 transition-all text-slate-700 dark:text-white/80">
+                  <MonadLogo className="h-3.5 w-auto" />
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-center gap-1 text-[10px] text-slate-400 dark:text-white/40">
+                <ShieldCheck className="w-3 h-3 text-emerald-500" />
+                <span>Zero-Fee Netting Ledger</span>
+              </div>
+            )}
           </div>
         </div>
       )}

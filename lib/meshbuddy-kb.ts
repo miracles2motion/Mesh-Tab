@@ -30,6 +30,7 @@ export interface KBArticle {
   keywords: string[];
   summary: string;
   detailedContent: string;
+  developerContent?: string;
   contextAdvice?: {
     demo?: string;
     customTab?: string;
@@ -144,6 +145,7 @@ export const KB_ARTICLES: KBArticle[] = [
     keywords: ["speed", "instant", "subsecond", "real-time", "fast", "settlement", "network", "performance"],
     summary: "MeshTab runs on a high-throughput transaction engine with sub-second finality, keeping group ledgers instantaneous and tap-to-pay fast.",
     detailedContent: "Traditional bank transfers and older payment networks take hours or days, with volatile fees. MeshTab processes transactions in under 400 milliseconds. Netting calculations, receipt approvals, and debt settlements reflect immediately for all members without spinning wheels or lag.",
+    developerContent: "MeshTab leverages Monad's 10,000 TPS parallel EVM with 400ms block times and ~800ms consensus finality. Group expense graph calculations and batch multilateral netting UserOps execute gaslessly via Pimlico ERC-4337 smart contract accounts with immediate on-chain settlement.",
     actions: [
       { label: "Account Settings", type: "navigate", destination: "/settings" }
     ]
@@ -155,6 +157,7 @@ export const KB_ARTICLES: KBArticle[] = [
     keywords: ["fees", "free", "zero fees", "transfer fee", "cost", "sponsored", "cheap", "no fees", "gas"],
     summary: "All routine ledger updates and tab activities are 100% sponsored by the platform. You never pay unexpected network or transaction fees.",
     detailedContent: "When you create a tab, invite friends, or log an expense, MeshTab sponsors all transaction costs in the background. Unlike traditional banks that tack on wire fees, foreign exchange charges, or card processing markups, keeping tabs on MeshTab is completely free. When settling, transfers are processed directly in Digital Dollars without surprise charges.",
+    developerContent: "MeshTab sponsors 100% of transaction gas on Monad Testnet through a Pimlico ERC-4337 Verifying Paymaster. Group tab actions, member seat claims, and debt netting settlements execute as sponsored UserOperations with zero native MON gas required from users.",
     actions: [
       { label: "Sandbox Balance", type: "faucet" }
     ]
@@ -166,6 +169,7 @@ export const KB_ARTICLES: KBArticle[] = [
     keywords: ["touchid", "faceid", "passkey", "biometric", "login", "fingerprint", "security", "sign in", "no password"],
     summary: "Log in securely in under a second using your device's built-in fingerprint or facial recognition — no passwords or recovery codes required.",
     detailedContent: "MeshTab uses modern passkey technology built directly into your iPhone, Android, Mac, or PC. When you sign in or confirm a payment, your device's secure hardware chip validates your biometric scan (Face ID, Touch ID, or Windows Hello) locally. Your credentials can never be phished, stolen, or forgotten, giving you bank-level security with 1-tap ease.",
+    developerContent: "MeshTab integrates Privy embedded smart accounts backed by WebAuthn passkeys (P-256 / secp256r1). Cryptographic signatures are authorized directly inside your device's Secure Enclave or TPM hardware, controlling a non-custodial smart contract wallet on Monad.",
     actions: [
       { label: "Account Settings", type: "navigate", destination: "/settings" }
     ]
@@ -177,6 +181,7 @@ export const KB_ARTICLES: KBArticle[] = [
     keywords: ["ausd", "digital dollar", "currency", "dollar", "1:1", "usd", "cash", "bank"],
     summary: "A 1:1 US Dollar-backed digital currency used for instant debt settlements, redeemable directly to your bank account.",
     detailedContent: "Digital Dollars (AUSD) maintain a strict 1:1 value with the US Dollar so you never have to worry about price fluctuations. When a friend sends you $50 AUSD for dinner, you receive the exact equivalent of $50 USD, which can be cashed out immediately to your Visa debit card or checking account.",
+    developerContent: "AUSD is Agora's institutional-grade digital dollar deployed natively on Monad. Netting debts settle in AUSD ERC-20 tokens, normalized across international currencies in real time using Pyth Network mid-market price feeds, and redeemable 1:1 for fiat USD via Visa Direct.",
     actions: [
       { label: "Claim +$500 Test Balance", type: "faucet" }
     ]
@@ -358,6 +363,7 @@ export interface SearchOptions {
   isCustomTab?: boolean;
   workspaceMode?: WorkspaceMode;
   tabDisplayName?: string;
+  isDeveloperMode?: boolean;
 }
 
 export interface KBSearchResult {
@@ -479,6 +485,9 @@ export function searchKnowledgeBase(
       results.push({
         article: {
           ...article,
+          detailedContent: (options.isDeveloperMode && article.developerContent)
+            ? article.developerContent
+            : article.detailedContent,
           actions
         },
         score,

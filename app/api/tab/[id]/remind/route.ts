@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { redis } from "@/lib/redis";
 import { getUserIdFromToken } from "@/lib/auth";
+import { backendModeSchema } from "@/lib/mode";
 
 export const dynamic = "force-dynamic";
 
 const remindSchema = z.object({
-  mode: z.enum(["clean", "demo", "testnet"]).default("clean"),
+  mode: backendModeSchema,
   targetUser: z.string().max(50).optional(),
   senderName: z.string().max(50).default("A member")
 });

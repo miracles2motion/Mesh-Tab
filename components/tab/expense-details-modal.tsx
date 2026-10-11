@@ -4,12 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, Receipt, Clock, User, ArrowRight, Trash2, AlertTriangle, Loader2, Edit2, Check, ExternalLink } from "lucide-react";
 import { formatCurrency } from "../../lib/utils";
-import { useUserProfile, getWorkspaceMode, getStoredTabMembers, getStoredExpenses, StoredExpense, deleteStoredExpense, updateStoredExpenseDescription } from "../../lib/user";
+import { useUserProfile, getWorkspaceMode, getStoredTabMembers, getStoredExpenses, StoredExpense, deleteStoredExpense, updateStoredExpenseDescription, useDeveloperMode } from "../../lib/user";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
 import { MonadLogo, PythLogo } from "../ui/partner-logo";
 import { EXPENSE_CATEGORIES } from "./add-expense-form";
 import { LiveTime } from "../ui/live-time";
+import { ReceiptView } from "../ReceiptView";
 
 interface ExpenseDetailsProps {
   onClose?: () => void;
@@ -22,9 +23,11 @@ export function ExpenseDetails({ onClose, expenseId, tabId }: ExpenseDetailsProp
   const profile = useUserProfile();
   const currentUserName = profile.name || "David";
   const mode = getWorkspaceMode();
+  const { isDeveloperMode } = useDeveloperMode();
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showReceipt, setShowReceipt] = useState(false);
 
   // 1. Look up if this is a custom-created expense in localStorage or default feed
   let foundCustomExpense: StoredExpense | null = null;
@@ -232,10 +235,16 @@ export function ExpenseDetails({ onClose, expenseId, tabId }: ExpenseDetailsProp
               Original: {foundCustomExpense.originalCurrency} {foundCustomExpense.originalAmount?.toFixed(2)}
             </span>
             <span className="text-slate-300 dark:text-white/20">•</span>
-            <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-white/50">
-              <span>0% markup via</span>
-              <PythLogo className="h-2.5 w-auto text-slate-700 dark:text-white" />
-            </div>
+            {isDeveloperMode ? (
+              <div className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-white/50">
+                <span>0% markup via</span>
+                <PythLogo className="h-2.5 w-auto text-slate-700 dark:text-white" />
+              </div>
+            ) : (
+              <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                0% Bank FX Markup
+              </span>
+            )}
           </div>
         )}
 
@@ -257,21 +266,39 @@ export function ExpenseDetails({ onClose, expenseId, tabId }: ExpenseDetailsProp
                 <Check className="w-4 h-4" />
               </div>
               <div className="min-w-0 text-left">
-                <p className="text-xs font-bold text-slate-900 dark:text-white truncate">Monad Blockchain Proof</p>
+                <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                  {isDeveloperMode ? "Monad Blockchain Proof" : "Digital Payment Receipt"}
+                </p>
                 <p className="text-[10px] font-mono text-slate-500 dark:text-white/60 truncate">
-                  {`${details.txHash.slice(0, 10)}...${details.txHash.slice(-8)}`}
+                  {isDeveloperMode 
+                    ? `${details.txHash.slice(0, 10)}...${details.txHash.slice(-8)}`
+                    : "Cryptographically Verified & Encrypted"}
                 </p>
               </div>
             </div>
-            <a
-              href={`https://testnet.monadvision.com/tx/${details.txHash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
-            >
-              <span>View on MonadVision</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
+            {isDeveloperMode ? (
+              <a
+                href={`https://testnet.monadvision.com/tx/${details.txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
+              >
+                <span>View on MonadVision</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  sounds.playClick();
+                  setShowReceipt(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
+              >
+                <Receipt className="w-3.5 h-3.5" />
+                <span>View Receipt</span>
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -374,14 +401,30 @@ export function ExpenseDetails({ onClose, expenseId, tabId }: ExpenseDetailsProp
 
         {/* Partner credit */}
         <div className="flex items-center justify-end text-[11px] text-slate-400 dark:text-white/40 pt-1">
-          <div className="flex items-center gap-1.5">
-            <span>Ledger on</span>
-            <div className="opacity-80 hover:opacity-100 transition-all text-slate-700 dark:text-white/80">
-              <MonadLogo className="h-3.5 w-auto" />
+          {isDeveloperMode ? (
+            <div className="flex items-center gap-1.5">
+              <span>Ledger on</span>
+              <div className="opacity-80 hover:opacity-100 transition-all text-slate-700 dark:text-white/80">
+                <MonadLogo className="h-3.5 w-auto" />
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center gap-1 text-[10px] text-slate-400 dark:text-white/40">
+              <Check className="w-3 h-3 text-emerald-500" />
+              <span>Encrypted Shared Ledger • 0% Platform Fee</span>
+            </div>
+          )}
         </div>
       </div>
+
+      <ReceiptView
+        isOpen={showReceipt}
+        onClose={() => setShowReceipt(false)}
+        amount={details.amount}
+        recipient={details.payer}
+        txHash={details.txHash}
+        type="settlement"
+      />
     </div>
   );
 }

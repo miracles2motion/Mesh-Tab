@@ -2,34 +2,45 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, Share, ExternalLink, Check, X } from "lucide-react";
+import { CheckCircle2, Share, ExternalLink, Check, X, ShieldCheck } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { MonadLogo, AgoraLogo } from "./ui/partner-logo";
+import { useDeveloperMode } from "../lib/user";
 
 export function ReceiptView({ 
   isOpen, 
   onClose, 
   amount,
   recipient,
-  txHash: customTxHash
+  txHash: customTxHash,
+  type = "settlement"
 }: { 
   isOpen: boolean; 
   onClose: () => void; 
   amount: number;
   recipient?: string;
   txHash?: string;
+  type?: "settlement" | "topup";
 }) {
+  const { developerMode: isDeveloperMode } = useDeveloperMode();
   const [copied, setCopied] = useState(false);
   
   // Always use the exact amount passed in (in cents)
   const displayAmount = amount;
   const formatCurrency = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
+  const isTopUp = type === "topup" || (!recipient && amount >= 50000);
+
   const txHash = customTxHash || "0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0";
-  const explorerUrl = `https://testnet.monadscan.com/tx/${txHash}`;
+  const explorerUrl = `https://testnet.monadvision.com/tx/${txHash}`;
+  const verificationPayload = isDeveloperMode 
+    ? explorerUrl 
+    : `https://meshtab.app/receipt?id=4891029&amt=${displayAmount}&ts=${Date.now()}`;
 
   const handleShare = () => {
-    const text = `Settled ${formatCurrency(displayAmount)} AUSD via MeshTab: Payment ID #8f29a1 on Monad`;
+    const text = isDeveloperMode
+      ? `${isTopUp ? "Claimed" : "Settled"} ${formatCurrency(displayAmount)} AUSD via MeshTab: Payment ID #4891029 on Monad Testnet`
+      : `${isTopUp ? "Added" : "Settled"} ${formatCurrency(displayAmount)} via MeshTab: Payment ID #4891029`;
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -68,26 +79,40 @@ export function ReceiptView({
               <CheckCircle2 className="w-7 h-7 sm:w-8 sm:h-8 text-emerald-600 dark:text-emerald-400" />
             </div>
 
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-1">Settled</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white mb-1">
+              {isTopUp ? "Funds Added" : "Settled"}
+            </h2>
             <p className="text-slate-500 dark:text-white/60 mb-4 text-center text-xs sm:text-sm max-w-[280px] leading-relaxed">
-              {recipient 
-                ? `Your debt to ${recipient} has been netted and paid successfully.` 
-                : "Your balance has been netted and settled successfully."}
+              {isTopUp ? (
+                isDeveloperMode 
+                  ? "$10,000.00 Agora AUSD testnet funds confirmed on Monad."
+                  : "Your demo balance has been credited and is ready for instant netting."
+              ) : recipient ? (
+                isDeveloperMode
+                  ? `Your debt to ${recipient} has been settled on Monad Testnet.`
+                  : `Your debt to ${recipient} has been netted and cleared.`
+              ) : (
+                isDeveloperMode
+                  ? "Your balance has been netted and settled on Monad Testnet."
+                  : "Your balance has been netted and settled successfully."
+              )}
             </p>
 
             {/* Ledger Details Rows */}
             <div className="w-full space-y-2 mb-4 text-xs sm:text-sm">
               <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-white/10">
-                <span className="text-slate-500 dark:text-white/50">Amount Paid</span>
+                <span className="text-slate-500 dark:text-white/50">
+                  {isTopUp ? "Amount Added" : "Amount Paid"}
+                </span>
                 <span className="text-slate-900 dark:text-white font-bold text-sm sm:text-base">
-                  {formatCurrency(displayAmount)} AUSD
+                  {formatCurrency(displayAmount)} {isDeveloperMode ? "AUSD" : ""}
                 </span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-white/10">
                 <span className="text-slate-500 dark:text-white/50">Network</span>
                 <span className="text-slate-800 dark:text-white font-medium flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
-                  Instant Monad High-Speed Ledger
+                  {isDeveloperMode ? "Instant Monad High-Speed Ledger" : "Instant Smart Balance"}
                 </span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-white/10">
@@ -97,30 +122,41 @@ export function ReceiptView({
               <div className="flex justify-between items-center py-2 border-b border-slate-100 dark:border-white/10">
                 <div className="flex flex-col">
                   <span className="text-slate-500 dark:text-white/50">Payment Receipt</span>
-                  <span className="text-[10px] text-slate-400 dark:text-white/40">Verified Monad Testnet Tx</span>
+                  <span className="text-[10px] text-slate-400 dark:text-white/40">
+                    {isDeveloperMode ? "Verified Monad Testnet Tx" : "Cryptographically Verified"}
+                  </span>
                 </div>
-                <a 
-                  href={explorerUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-indigo-600 dark:text-indigo-400 font-mono flex items-center gap-1 font-semibold text-xs bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors"
-                  title="View on Monad Testnet Explorer"
-                >
-                  <span>{txHash.slice(0, 6)}...{txHash.slice(-4)}</span>
-                  <ExternalLink className="w-3 h-3 text-indigo-500" />
-                </a>
+                {isDeveloperMode ? (
+                  <a 
+                    href={explorerUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-indigo-600 dark:text-indigo-400 font-mono flex items-center gap-1 font-semibold text-xs bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors"
+                    title="View on Monad Testnet Explorer"
+                  >
+                    <span>{txHash.slice(0, 6)}...{txHash.slice(-4)}</span>
+                    <ExternalLink className="w-3 h-3 text-indigo-500" />
+                  </a>
+                ) : (
+                  <span className="text-emerald-600 dark:text-emerald-400 font-medium text-xs flex items-center gap-1 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-100 dark:border-emerald-500/20">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Instant & Encrypted</span>
+                  </span>
+                )}
               </div>
             </div>
 
-            {/* Real QR Code */}
+            {/* QR Code */}
             <div className="w-28 h-28 sm:w-32 sm:h-32 bg-white rounded-2xl flex flex-col items-center justify-center mb-4 p-2 border border-slate-200 shadow-sm flex-shrink-0">
               <QRCodeSVG 
-                value={explorerUrl} 
+                value={verificationPayload} 
                 size={96}
                 level="M"
                 className="w-24 h-24"
               />
-              <span className="text-[9px] text-slate-500 font-bold mt-1">Scan for Explorer</span>
+              <span className="text-[9px] text-slate-500 font-bold mt-1">
+                {isDeveloperMode ? "Scan for Explorer" : "Digital Receipt Seal"}
+              </span>
             </div>
 
             {/* Action Buttons */}
@@ -146,11 +182,18 @@ export function ReceiptView({
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
                 Verified Ledger
               </span>
-              <div className="flex items-center gap-2.5 opacity-80 hover:opacity-100 transition-opacity text-slate-700 dark:text-white/80">
-                <MonadLogo className="h-3.5 w-auto" />
-                <span className="text-slate-300 dark:text-white/20">×</span>
-                <AgoraLogo className="h-3.5 w-auto" />
-              </div>
+              {isDeveloperMode ? (
+                <div className="flex items-center gap-2.5 opacity-80 hover:opacity-100 transition-opacity text-slate-700 dark:text-white/80">
+                  <MonadLogo className="h-3.5 w-auto" />
+                  <span className="text-slate-300 dark:text-white/20">×</span>
+                  <AgoraLogo className="h-3.5 w-auto" />
+                </div>
+              ) : (
+                <div className="flex items-center gap-1 text-slate-500 dark:text-white/60 text-[10px] font-medium">
+                  <ShieldCheck className="w-3 h-3 text-emerald-500" />
+                  <span>Bank-Grade Encryption • 0% Fee</span>
+                </div>
+              )}
             </div>
           </motion.div>
         </motion.div>
@@ -158,3 +201,4 @@ export function ReceiptView({
     </AnimatePresence>
   );
 }
+

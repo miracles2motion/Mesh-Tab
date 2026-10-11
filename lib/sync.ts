@@ -225,15 +225,18 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
 
                     // Self-heal wallet address in Redis if missing on server
                     const localWallet = typeof window !== "undefined" ? (localStorage.getItem("meshTab_walletAddress") || "") : "";
-                    if (localWallet && !userMember.walletAddress) {
+                    if (localWallet && !userMember.walletAddress && mode === "testnet" && token) {
                       fetch("/api/tab/join", {
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
+                        headers: {
+                          "Content-Type": "application/json",
+                          "Authorization": `Bearer ${token}`
+                        },
                         body: JSON.stringify({
                           tabId,
                           name: profile.name,
                           walletAddress: localWallet,
-                          mode
+                          mode: "testnet"
                         })
                       }).catch(() => {});
                     }

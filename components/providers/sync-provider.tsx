@@ -99,9 +99,60 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     // Safety retry loop (every 60s)
     const intervalId = setInterval(runSync, 60000);
 
+    // Profile settings sync handlers (developerMode, buddySettings)
+    const handleDevModeChange = async () => {
+      if (!walletAddress) return;
+      try {
+        const token = await getAccessToken();
+        if (!token) return;
+        const devMode = typeof window !== "undefined" ? localStorage.getItem("meshTab_developerMode") === "true" : false;
+        await fetch("/api/user/profile", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            wallet: walletAddress,
+            developerMode: devMode
+          })
+        });
+      } catch (err) {
+        console.warn("Dev mode sync error:", err);
+      }
+    };
+
+    const handleBuddyUpdate = async () => {
+      if (!walletAddress) return;
+      try {
+        const token = await getAccessToken();
+        if (!token) return;
+        const rawBuddy = typeof window !== "undefined" ? localStorage.getItem("meshTab_buddySettings") : null;
+        const buddySettings = rawBuddy ? JSON.parse(rawBuddy) : undefined;
+        await fetch("/api/user/profile", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            wallet: walletAddress,
+            buddySettings
+          })
+        });
+      } catch (err) {
+        console.warn("Buddy settings sync error:", err);
+      }
+    };
+
+    window.addEventListener("meshTab-developerMode-change", handleDevModeChange);
+    window.addEventListener("meshTab-buddy-update", handleBuddyUpdate);
+
     return () => {
       if (debounceTimer) clearTimeout(debounceTimer);
       window.removeEventListener("meshtab:outbox:updated", handleOutboxUpdate);
+      window.removeEventListener("meshTab-developerMode-change", handleDevModeChange);
+      window.removeEventListener("meshTab-buddy-update", handleBuddyUpdate);
       clearInterval(intervalId);
     };
   }, [ready, authenticated, user?.wallet?.address, client?.account?.address, mode, getAccessToken]);

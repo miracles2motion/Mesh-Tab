@@ -150,6 +150,7 @@ export async function saveStoredUser(name: string, colorIndex?: number, walletAd
         headers["Authorization"] = `Bearer ${authToken}`;
       }
       const buddy = getBuddySettings();
+      const isDev = typeof window !== "undefined" ? localStorage.getItem("meshTab_developerMode") === "true" : false;
       const res = await fetch("/api/user/profile", {
         method: "POST",
         headers,
@@ -158,7 +159,8 @@ export async function saveStoredUser(name: string, colorIndex?: number, walletAd
           name: trimmed, 
           oldName: nameChanged ? oldName : undefined, 
           avatarColorIndex: colorIndex,
-          buddySettings: buddy
+          buddySettings: buddy,
+          developerMode: isDev
         })
       });
       const data = await res.json();
@@ -234,6 +236,17 @@ export function useUserProfile() {
               window.dispatchEvent(new Event("meshTab-buddy-update"));
             }
           }
+
+          if (typeof data.developerMode === "boolean") {
+            const currentDev = localStorage.getItem("meshTab_developerMode");
+            const newDevStr = String(data.developerMode);
+            if (currentDev !== newDevStr) {
+              localStorage.setItem("meshTab_developerMode", newDevStr);
+              localStorage.setItem("meshTab_showAddress", newDevStr);
+              window.dispatchEvent(new Event("meshTab-developerMode-change"));
+              window.dispatchEvent(new Event("meshTab-settings-update"));
+            }
+          }
         }
       });
     }
@@ -243,33 +256,56 @@ export function useUserProfile() {
 }
 
 export function useDeveloperMode() {
-  const [showAddress, setShowAddress] = useState(false);
+  const [developerMode, setDeveloperModeState] = useState(false);
 
   useEffect(() => {
     const sync = () => {
-      const saved = localStorage.getItem("meshTab_showAddress");
-      setShowAddress(saved === "true");
+      if (typeof window === "undefined") return;
+      // meshTab_developerMode is authoritative, falls back to legacy meshTab_showAddress, default false
+      const savedDev = localStorage.getItem("meshTab_developerMode");
+      const savedShow = localStorage.getItem("meshTab_showAddress");
+      const isDev = savedDev !== null ? savedDev === "true" : savedShow === "true";
+      setDeveloperModeState(isDev);
     };
 
     sync();
 
+    window.addEventListener("meshTab-developerMode-change", sync);
     window.addEventListener("meshTab-settings-update", sync);
     window.addEventListener("storage", sync);
 
     return () => {
+      window.removeEventListener("meshTab-developerMode-change", sync);
       window.removeEventListener("meshTab-settings-update", sync);
       window.removeEventListener("storage", sync);
     };
   }, []);
 
-  const toggleAddress = () => {
-    const nextVal = !showAddress;
-    setShowAddress(nextVal);
-    localStorage.setItem("meshTab_showAddress", String(nextVal));
-    window.dispatchEvent(new Event("meshTab-settings-update"));
+  const setDeveloperMode = (nextVal: boolean) => {
+    setDeveloperModeState(nextVal);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("meshTab_developerMode", String(nextVal));
+      localStorage.setItem("meshTab_showAddress", String(nextVal));
+      window.dispatchEvent(new Event("meshTab-developerMode-change"));
+      window.dispatchEvent(new Event("meshTab-settings-update"));
+
+
+    }
   };
 
-  return { showAddress, toggleAddress };
+  const toggleDeveloperMode = () => {
+    setDeveloperMode(!developerMode);
+  };
+
+  return {
+    developerMode,
+    isDeveloperMode: developerMode,
+    setDeveloperMode,
+    toggleDeveloperMode,
+    // Backward-compatible aliases for legacy code
+    showAddress: developerMode,
+    toggleAddress: toggleDeveloperMode
+  };
 }
 
 // Tab Persistence Helpers
@@ -804,7 +840,7 @@ export function saveStoredTabMembers(tabId: string, members: TabMember[]) {
             tabId,
             entityId: a.name,
             ownerWallet: wallet,
-            payload: { action: "add", name: a.name }
+            payload: { mode: "testnet", action: "add", name: a.name }
           });
         });
         removed.forEach(r => {
@@ -813,7 +849,7 @@ export function saveStoredTabMembers(tabId: string, members: TabMember[]) {
             tabId,
             entityId: r.name,
             ownerWallet: wallet,
-            payload: { action: "remove", name: r.name }
+            payload: { mode: "testnet", action: "remove", name: r.name }
           });
         });
       });
@@ -1030,6 +1066,7 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense, skipBal
               entityId: expense.id,
               ownerWallet: wallet,
               payload: {
+                mode: "testnet",
                 expenseId: expense.id,
                 description: expense.desc,
                 originalAmount: expense.amount,
@@ -1187,6 +1224,7 @@ export function deleteStoredExpense(tabId: string, expenseId: string): { success
               entityId: expenseId,
               ownerWallet: wallet,
               payload: {
+                mode: "testnet",
                 expenseId,
                 oldPayers,
                 oldBorrowers,
@@ -1197,7 +1235,7 @@ export function deleteStoredExpense(tabId: string, expenseId: string): { success
         }
 
         const membersKey = storageKey("members", mode, tabId);
-        localStorage.setItem(membersKey, JSON.stringify(updatedMembers));
+        safeSetItem(membersKey, JSON.stringify(updatedMembers));
         window.dispatchEvent(new Event("meshTab-members-update"));
 
         // Update user balance in tab summary
@@ -1288,6 +1326,7 @@ export function updateStoredExpenseDescription(tabId: string, expenseId: string,
         entityId: expenseId,
         ownerWallet: wallet,
         payload: {
+          mode: "testnet",
           description: newDesc.trim(),
           finalAmountUsd: target.amount,
           payers,
@@ -1352,7 +1391,7 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
     }
     return t;
   });
-  localStorage.setItem(key, JSON.stringify(updatedTabs));
+  safeSetItem(key, JSON.stringify(updatedTabs));
   window.dispatchEvent(new Event("meshTab-tabs-update"));
 
   // 2. Update member balances for this tab
@@ -1420,6 +1459,7 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
         entityId: settleId,
         ownerWallet: wallet,
         payload: {
+          mode: "testnet",
           settleId,
           payer: currentUserName,
           amount,
@@ -1656,13 +1696,14 @@ export function saveBuddySettings(settings: Partial<BuddySettings>, walletAddres
   window.dispatchEvent(new Event("meshTab-buddy-update"));
 
   const effectiveWallet = walletAddress || (typeof window !== "undefined" ? localStorage.getItem("meshTab_walletAddress") : null);
-  if (effectiveWallet && isEffectivelyOnline()) {
+  if (effectiveWallet && authToken && isEffectivelyOnline()) {
     try {
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
       fetch("/api/user/profile", {
         method: "POST",
-        headers,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${authToken}`
+        },
         body: JSON.stringify({
           wallet: effectiveWallet,
           buddySettings: updated

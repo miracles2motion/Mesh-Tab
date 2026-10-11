@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { redis } from "@/lib/redis";
 import { getUserIdFromToken } from "@/lib/auth";
+import { backendModeSchema } from "@/lib/mode";
 
 // [OVERSEER MANDATE - Baseline 19 & 32]: Strict validation + String caps
 const createTabSchema = z.object({
@@ -10,7 +11,7 @@ const createTabSchema = z.object({
   creatorName: z.string().max(50),
   currency: z.string().length(3).default("USD"),
   timestamp: z.number(),
-  mode: z.enum(["clean", "demo", "testnet"]).default("clean"),
+  mode: backendModeSchema,
   creatorWallet: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional()
 });
 

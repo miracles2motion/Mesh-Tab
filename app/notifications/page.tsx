@@ -25,7 +25,7 @@ import { MeshBuddy } from "../../components/ui/mesh-buddy";
 import { useNotifications, NotificationType, AppNotification } from "../../lib/notifications";
 import { LiveTime } from "@/components/ui/live-time";
 import { formatAbsolute } from "../../lib/time";
-import { useWorkspaceMode } from "../../lib/user";
+import { useWorkspaceMode, useDeveloperMode } from "../../lib/user";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
 import { GlobalNav } from "../../components/ui/global-nav";
@@ -37,6 +37,7 @@ function NotificationsContent() {
   const fromUrl = searchParams.get("from");
   const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll } = useNotifications();
   const { mode: workspaceMode } = useWorkspaceMode();
+  const { isDeveloperMode } = useDeveloperMode();
   const [filter, setFilter] = useState<"all" | "unread" | "expense" | "settlement" | "netting">("all");
   const [mounted, setMounted] = useState(false);
 
@@ -166,7 +167,9 @@ function NotificationsContent() {
             </div>
             <p className="text-xs text-slate-500 dark:text-white/50 mt-0.5">
               {workspaceMode === "testnet"
-                ? "Live cryptographic activity and settlements on Monad Testnet."
+                ? (isDeveloperMode 
+                    ? "Live cryptographic activity and settlements on Monad Testnet."
+                    : "Real-time activity and payment confirmations.")
                 : workspaceMode === "blank"
                 ? "Activity and settlement updates across your tabs."
                 : "Sample Trip Mode (Lisbon & Demo updates)"}

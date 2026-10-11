@@ -8,7 +8,7 @@ import { formatCurrency } from "../../lib/utils";
 import Image from "next/image";
 import { AgoraLogo, PrivyLogo } from "../ui/partner-logo";
 
-import { DEFAULT_USER_NAME, useSettledPayoutBalance, useWorkspaceMode, deductVirtualBalance } from "../../lib/user";
+import { DEFAULT_USER_NAME, useSettledPayoutBalance, useWorkspaceMode, deductVirtualBalance, useDeveloperMode } from "../../lib/user";
 import { useAvailableBalance } from "../../lib/balance";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
@@ -34,6 +34,7 @@ export function CashOutDrawer({
   const withdrawableAmount = availableCents;
 
   const { mode: workspaceMode } = useWorkspaceMode();
+  const { isDeveloperMode } = useDeveloperMode();
   const [method, setMethod] = useState<"card" | "bank">("card");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -46,14 +47,17 @@ export function CashOutDrawer({
     
     // Passkey Authentication Flow
     setTxState("authenticating");
-    await new Promise((r) => setTimeout(r, 1500));
+    await new Promise((r) => setTimeout(r, 1200));
     setTxState("processing");
-    await new Promise((r) => setTimeout(r, 2000));
+    await new Promise((r) => setTimeout(r, 1500));
     
     if (workspaceMode === "testnet") {
       setTxState("idle");
       setIsProcessing(false);
       setIsSuccess(true);
+      toast.info("Testnet Payout Simulated", {
+        description: `Off-ramping ${formatCurrency(withdrawableAmount)} to bank is simulated on Monad Testnet.`
+      });
       return;
     }
 
@@ -101,7 +105,9 @@ export function CashOutDrawer({
               </div>
               <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Cash Out to Bank</h2>
               <p className="text-slate-500 dark:text-white/60 text-sm max-w-sm mx-auto">
-                Transfer your received group settlements from Agora AUSD directly into your personal bank account.
+                {isDeveloperMode 
+                  ? "Transfer your received group settlements from Agora AUSD directly into your personal bank account."
+                  : "Transfer your settled balance directly to your personal bank account or debit card."}
               </p>
             </div>
 
@@ -215,14 +221,18 @@ export function CashOutDrawer({
                 {/* Security Guarantee */}
                 <div className="w-full flex items-center gap-2 p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 mb-6 text-xs text-slate-600 dark:text-white/60">
                   <ShieldCheck className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                  <span>Secured by Privy Smart Accounts • Backed 1:1 by Agora.</span>
+                  <span>
+                    {isDeveloperMode 
+                      ? "Secured by Privy Smart Accounts • Backed 1:1 by Agora."
+                      : "Secured by Hardware Passkeys • Zero bank transfer fees."}
+                  </span>
                 </div>
 
                 <Button
                   onClick={handleCashOut}
                   variant="primary"
                   size="lg"
-                  className="w-full h-14 font-bold text-base shadow-xl hover:-translate-y-0.5 transition-all"
+                  className="w-full h-14 font-bold text-base shadow-xl hover:-translate-y-0.5 transition-all cursor-pointer"
                   disabled={isProcessing || withdrawableAmount <= 0}
                 >
                   {isProcessing ? (
@@ -237,44 +247,112 @@ export function CashOutDrawer({
                 </Button>
 
                 {/* Settlement & Payout Partner Badges */}
-                <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5 text-slate-500 dark:text-white/50 text-xs font-medium">
-                  <span>Settlement & Payouts powered by</span>
-                  <div className="flex items-center gap-2.5 opacity-90 hover:opacity-100 transition-opacity text-slate-800 dark:text-white">
-                    <PrivyLogo className="h-3.5 w-auto" />
-                    <span className="text-slate-400 dark:text-white/30 text-[10px] font-bold">&</span>
-                    <AgoraLogo className="h-4 w-auto" />
+                {isDeveloperMode ? (
+                  <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5 text-slate-500 dark:text-white/50 text-xs font-medium">
+                    <span>Settlement & Payouts powered by</span>
+                    <div className="flex items-center gap-2.5 opacity-90 hover:opacity-100 transition-opacity text-slate-800 dark:text-white">
+                      <PrivyLogo className="h-3.5 w-auto" />
+                      <span className="text-slate-400 dark:text-white/30 text-[10px] font-bold">&</span>
+                      <AgoraLogo className="h-4 w-auto" />
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="mt-6 flex items-center justify-center gap-2 text-slate-400 dark:text-white/40 text-[11px] font-medium">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>Instant Bank Payouts • 0% Platform Fee</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         ) : workspaceMode === "testnet" ? (
-          <div className="py-8 flex flex-col items-center max-w-md mx-auto text-center animate-in fade-in zoom-in duration-500">
-            <div className="w-full relative aspect-square max-w-[280px] mx-auto mb-6 rounded-2xl overflow-hidden shadow-2xl border border-white/20">
-              <Image 
-                src="/haha-meme.jpg" 
-                alt="Chog Security Guard - Testnet Money Stays On Testnet" 
-                fill 
-                className="object-cover"
-              />
+          isDeveloperMode ? (
+            <div className="py-8 flex flex-col items-center max-w-md mx-auto text-center animate-in fade-in zoom-in duration-500">
+              <div className="w-full relative aspect-square max-w-[280px] mx-auto mb-6 rounded-2xl overflow-hidden shadow-2xl border border-white/20">
+                <Image 
+                  src="/haha-meme.jpg" 
+                  alt="Chog Security Guard - Testnet Money Stays On Testnet" 
+                  fill 
+                  className="object-cover"
+                />
+              </div>
+
+              <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">
+                Nice try 😏
+              </h3>
+              <p className="text-slate-500 dark:text-white/60 text-sm mb-8 leading-relaxed">
+                Withdrawals to real bank accounts will go live at launch. Don't worry, your balance is safe and sound!
+              </p>
+
+              <Button
+                onClick={handleClose}
+                variant="primary"
+                size="lg"
+                className="w-full font-bold shadow-lg"
+              >
+                Got it
+              </Button>
             </div>
+          ) : (
+            <div className="py-6 flex flex-col items-center max-w-md mx-auto text-center animate-in fade-in zoom-in duration-500">
+              <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center mb-4 border border-emerald-500/20 shadow-lg shadow-emerald-500/15">
+                <Building2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+              </div>
 
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">
-              Nice try 😏
-            </h3>
-            <p className="text-slate-500 dark:text-white/60 text-sm mb-8 leading-relaxed">
-              Withdrawals to real bank accounts will go live at launch. Don't worry, your balance is safe and sound!
-            </p>
+              <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1.5">
+                Instant Bank Payouts Preview
+              </h3>
+              <p className="text-slate-500 dark:text-white/60 text-xs sm:text-sm mb-6 max-w-sm leading-relaxed">
+                Transfers settle directly to your bank account via Visa Direct in ~30 seconds.
+              </p>
 
-            <Button
-              onClick={handleClose}
-              variant="primary"
-              size="lg"
-              className="w-full font-bold shadow-lg"
-            >
-              Got it
-            </Button>
-          </div>
+              {/* Linked Account Card */}
+              <div className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-4 mb-4 text-xs space-y-2.5 text-left">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 dark:text-white/50">Linked Destination</span>
+                  <span className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                    Chase Checking (••••4821)
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 dark:text-white/50">Transfer Amount</span>
+                  <span className="font-bold text-slate-900 dark:text-white text-sm">
+                    {formatCurrency(withdrawnAmount || withdrawableAmount)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 dark:text-white/50">Estimated Arrival</span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                    Instant (~30 seconds)
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-slate-200/80 dark:border-white/5">
+                  <span className="text-slate-500 dark:text-white/50">Platform Fee</span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                    $0.00 (Zero Fee)
+                  </span>
+                </div>
+              </div>
+
+              {/* Production Launch Note */}
+              <div className="w-full p-3.5 bg-indigo-50/60 dark:bg-indigo-500/10 rounded-2xl border border-indigo-100 dark:border-indigo-500/20 text-xs text-indigo-900 dark:text-indigo-200 mb-6 text-left flex items-start gap-2.5">
+                <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
+                <span className="leading-relaxed">
+                  Production bank off-ramps will activate on launch. Your testnet balance remains secure and available for group netting.
+                </span>
+              </div>
+
+              <Button
+                onClick={handleClose}
+                variant="primary"
+                size="lg"
+                className="w-full font-bold shadow-lg"
+              >
+                Done
+              </Button>
+            </div>
+          )
         ) : (
           <div className="py-8 flex flex-col items-center">
             <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mb-6 border border-emerald-500/20 shadow-lg shadow-emerald-500/20">
