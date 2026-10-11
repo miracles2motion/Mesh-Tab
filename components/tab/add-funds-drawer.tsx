@@ -857,7 +857,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
                 <div className="flex justify-between">
                   <span>Funding Method</span>
                   <span className="font-semibold text-slate-800 dark:text-white">
-                    {isTestnet
+                    {isDeveloperMode && isTestnet
                       ? "Official Agora AUSD Faucet"
                       : (selectedMethod === "card" ? "Visa Platinum Debit (Instant)" :
                          selectedMethod === "bank" ? "Direct Bank (FedNow)" : 

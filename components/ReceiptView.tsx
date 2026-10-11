@@ -20,7 +20,7 @@ export function ReceiptView({
   amount: number;
   recipient?: string;
   txHash?: string;
-  type?: "settlement" | "topup";
+  type?: "settlement" | "topup" | "deposit";
 }) {
   const { developerMode: isDeveloperMode } = useDeveloperMode();
   const [copied, setCopied] = useState(false);
@@ -29,14 +29,27 @@ export function ReceiptView({
   const displayAmount = amount;
   const formatCurrency = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
-  const isTopUp = type === "topup" || (!recipient && amount >= 50000);
+  const isTopUp = type === "topup" || type === "deposit" || (!recipient && amount >= 50000);
+  const resolvedType = isTopUp ? "deposit" : (type || "settlement");
 
   const txHash = customTxHash || "0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0";
   const explorerUrl = `https://testnet.monadvision.com/tx/${txHash}`;
   const origin = typeof window !== "undefined" ? window.location.origin : "https://meshtab.app";
+  const currentPath = typeof window !== "undefined" ? window.location.pathname : "/home";
+
+  const queryParams = new URLSearchParams({
+    id: "4891029",
+    amt: String(displayAmount),
+    type: resolvedType,
+    ts: String(Date.now()),
+    from: currentPath,
+  });
+  if (recipient) queryParams.set("recipient", recipient);
+  if (isTopUp) queryParams.set("method", "bank");
+
   const verificationPayload = isDeveloperMode 
     ? explorerUrl 
-    : `${origin}/receipt?id=4891029&amt=${displayAmount}&ts=${Date.now()}`;
+    : `${origin}/receipt?${queryParams.toString()}`;
 
   const handleShare = () => {
     const text = isDeveloperMode
@@ -87,7 +100,7 @@ export function ReceiptView({
               {isTopUp ? (
                 isDeveloperMode 
                   ? "$10,000.00 Agora AUSD testnet funds confirmed on Monad."
-                  : "Your demo balance has been credited and is ready for instant netting."
+                  : "Your account balance has been credited and is ready for instant netting."
               ) : recipient ? (
                 isDeveloperMode
                   ? `Your debt to ${recipient} has been settled on Monad Testnet.`
