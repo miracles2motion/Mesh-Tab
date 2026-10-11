@@ -82,6 +82,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
 
     setIsProcessing(true);
 
+    let confirmedTxHash: string | undefined = undefined;
     if (workspaceMode === "testnet" && paymentMethod === "ausd") {
       try {
         if (!client) throw new Error("Could not find connected embedded wallet.");
@@ -141,6 +142,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
         await publicClient.waitForTransactionReceipt({ hash: txHash });
         
         toast.dismiss("tx-toast");
+        confirmedTxHash = txHash;
         setLastTxHash(txHash);
 
       } catch (err: any) {
@@ -153,7 +155,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
     } else {
       await new Promise((r) => setTimeout(r, 1800));
     }
-    settleTab(tabId, activeUser, debtAmount);
+    settleTab(tabId, activeUser, debtAmount, confirmedTxHash);
     setIsProcessing(false);
     setIsSuccess(true);
     

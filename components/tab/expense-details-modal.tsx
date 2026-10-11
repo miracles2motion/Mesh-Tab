@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { X, Receipt, Clock, User, ArrowRight, Trash2, AlertTriangle, Loader2, Edit2, Check } from "lucide-react";
+import { X, Receipt, Clock, User, ArrowRight, Trash2, AlertTriangle, Loader2, Edit2, Check, ExternalLink } from "lucide-react";
 import { formatCurrency } from "../../lib/utils";
 import { useUserProfile, getWorkspaceMode, getStoredTabMembers, getStoredExpenses, StoredExpense, deleteStoredExpense, updateStoredExpenseDescription } from "../../lib/user";
 import { sounds } from "../../lib/sounds";
@@ -108,7 +108,8 @@ export function ExpenseDetails({ onClose, expenseId, tabId }: ExpenseDetailsProp
     time,
     createdAt: foundCustomExpense?.createdAt,
     splitType,
-    splits: dynamicSplits
+    splits: dynamicSplits,
+    txHash: foundCustomExpense?.txHash
   };
 
   const handleSaveEdit = async () => {
@@ -248,6 +249,31 @@ export function ExpenseDetails({ onClose, expenseId, tabId }: ExpenseDetailsProp
             </span>
           </span>
         </div>
+
+        {details.txHash && (
+          <div className="w-full mt-3 p-3.5 rounded-2xl bg-indigo-50/70 dark:bg-indigo-500/10 border border-indigo-200/80 dark:border-indigo-500/20 flex items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-xl bg-indigo-500/15 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                <Check className="w-4 h-4" />
+              </div>
+              <div className="min-w-0 text-left">
+                <p className="text-xs font-bold text-slate-900 dark:text-white truncate">Monad Blockchain Proof</p>
+                <p className="text-[10px] font-mono text-slate-500 dark:text-white/60 truncate">
+                  {`${details.txHash.slice(0, 10)}...${details.txHash.slice(-8)}`}
+                </p>
+              </div>
+            </div>
+            <a
+              href={`https://testnet.monadvision.com/tx/${details.txHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
+            >
+              <span>View on MonadVision</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        )}
       </div>
       </div>
 

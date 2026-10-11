@@ -22,6 +22,8 @@ export interface ExpenseItem {
   originalAmount?: number;
   createdAt?: number;
   syncStatus?: "synced" | "pending" | "failed";
+  isSettlement?: boolean;
+  txHash?: string;
 }
 
 interface FeedListProps {
@@ -308,6 +310,7 @@ export function FeedList({ expenses, currentUserName, isLoading = false }: FeedL
                           {isSettlement ? (
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 shrink-0 flex items-center gap-1">
                               <CheckCircle2 className="w-3 h-3 stroke-[2.5]" /> Settled
+                              {item.txHash && <span className="text-[9px] font-mono text-emerald-600/80 dark:text-emerald-400/80">• Monad Tx</span>}
                             </span>
                           ) : (
                             item.originalCurrency && item.originalCurrency !== "USD" && (

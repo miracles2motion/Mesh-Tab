@@ -120,41 +120,37 @@ export default function JoinTabPage() {
     setIsJoining(true);
     setStep("auth");
 
-    let effectiveWallet = client?.account?.address || overrideUser?.wallet?.address || user?.wallet?.address;
+    // Prioritize the Smart Wallet address (ERC-4337)
+    let effectiveWallet: string | undefined = client?.account?.address;
 
-    // Check linked accounts if not directly on user.wallet
+    // If Privy Smart Wallet is still initializing, wait up to 3 seconds for it to settle
     if (!effectiveWallet) {
-      const accounts = (overrideUser?.linkedAccounts || user?.linkedAccounts) as any[] | undefined;
-      if (Array.isArray(accounts)) {
-        const w = accounts.find(a => a.type === "wallet" && a.address);
-        if (w?.address) effectiveWallet = w.address;
-      }
-    }
-
-    // If Privy embedded wallet is still being provisioned, give it up to 2.5 seconds to settle
-    if (!effectiveWallet) {
-      for (let i = 0; i < 12; i++) {
+      for (let i = 0; i < 15; i++) {
         await new Promise(r => setTimeout(r, 200));
-        const cand = client?.account?.address || user?.wallet?.address;
-        if (cand) {
-          effectiveWallet = cand;
+        if (client?.account?.address) {
+          effectiveWallet = client.account.address;
           break;
         }
-        const accounts = user?.linkedAccounts as any[] | undefined;
-        if (Array.isArray(accounts)) {
-          const w = accounts.find(a => a.type === "wallet" && a.address);
-          if (w?.address) {
-            effectiveWallet = w.address;
-            break;
-          }
-        }
       }
     }
 
+    // Fall back to stored wallet if available
     if (!effectiveWallet && typeof window !== "undefined") {
       const stored = localStorage.getItem("meshTab_walletAddress");
       if (stored && /^0x[a-fA-F0-9]{40}$/.test(stored)) {
         effectiveWallet = stored;
+      }
+    }
+
+    // Fall back to embedded EOA if smart wallet is unavailable
+    if (!effectiveWallet) {
+      effectiveWallet = overrideUser?.wallet?.address || user?.wallet?.address;
+      if (!effectiveWallet) {
+        const accounts = (overrideUser?.linkedAccounts || user?.linkedAccounts) as any[] | undefined;
+        if (Array.isArray(accounts)) {
+          const w = accounts.find(a => a.type === "wallet" && a.address);
+          if (w?.address) effectiveWallet = w.address;
+        }
       }
     }
 

@@ -16,6 +16,7 @@ const settleDebtSchema = z.object({
   })),
   mode: z.enum(["clean", "demo", "testnet"]).default("clean"),
   description: z.string().max(100).default("Settled balance in AUSD (Monad)"),
+  txHash: z.string().optional(),
   timestamp: z.number().optional()
 });
 
@@ -53,6 +54,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       originalCurrency: "USD",
       timestamp: payload.timestamp || serverSyncedAt,
       isSettlement: true,
+      txHash: payload.txHash,
       payers: [{ name: payload.payer, amount: payload.amount }],
       borrowers: payload.creditors.map(c => ({ name: c.name, amount: c.amount })),
       serverSyncedAt
@@ -84,6 +86,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (result[0] === 0 && result[1] === "alreadyApplied") {
       return NextResponse.json({ success: true, alreadyApplied: true });
     }
+
+    // Record settlement notification & activity in tab feed
+    const creditorNames = payload.creditors.map(c => c.name).join(", ");
+    const settleActivity = JSON.stringify({
+      id: `act-${payload.settleId}`,
+      type: "expense_added",
+      title: "Debt Settled On-Chain",
+      desc: `${payload.payer} settled $${(payload.amount / 100).toFixed(2)} with ${creditorNames} in Agora AUSD on Monad.`,
+      actor: payload.payer,
+      tabId: id,
+      timestamp: serverSyncedAt,
+      link: `/tab/${id}`,
+      txHash: payload.txHash
+    });
+    await redis.lpush(`${tabKey}:activity`, settleActivity);
+    await redis.ltrim(`${tabKey}:activity`, 0, 49);
 
     return NextResponse.json({ success: true });
   } catch (error) {

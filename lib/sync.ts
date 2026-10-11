@@ -89,10 +89,19 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
           } catch (e) {}
         }
 
+        const profile = getStoredUser();
+        const storedWallet = typeof window !== "undefined" ? localStorage.getItem("meshTab_walletAddress") : null;
+        const reqHeaders: Record<string, string> = {};
+        if (token) reqHeaders["Authorization"] = `Bearer ${token}`;
+        if (storedWallet && /^0x[a-fA-F0-9]{40}$/i.test(storedWallet)) {
+          reqHeaders["x-wallet-address"] = storedWallet;
+        }
+        if (profile?.name) {
+          reqHeaders["x-user-name"] = profile.name;
+        }
+
         const res = await fetch(`/api/tab/${tabId}/expenses?mode=${mode}`, {
-           headers: {
-             "Authorization": token ? `Bearer ${token}` : ""
-           }
+           headers: reqHeaders
         });
         if (res.ok) {
           errorCount = 0;

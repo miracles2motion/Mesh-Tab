@@ -98,6 +98,29 @@ export async function POST(request: Request) {
       await redis.set(`user:${userId}`, JSON.stringify({ ...newProfile, wallet: wallet || "" }));
     }
 
+    // Automatically propagate wallet to all tabs this user is a member of
+    if (wallet && profileName) {
+      try {
+        const userTabKeys = [
+          `meshtab:testnet:user:${wallet.toLowerCase()}:tabs`,
+          userId ? `meshtab:testnet:user:${userId}:tabs` : null
+        ].filter(Boolean) as string[];
+
+        const allTabIdSets = await Promise.all(userTabKeys.map(k => redis.smembers(k)));
+        const tabIds = Array.from(new Set(allTabIdSets.flat().filter(Boolean))) as string[];
+
+        for (const tabId of tabIds) {
+          const tabKey = `meshtab:testnet:tab:${tabId}`;
+          const isMember = await redis.hexists(`${tabKey}:members`, profileName);
+          if (isMember) {
+            await redis.hset(`${tabKey}:member_wallets`, { [profileName]: wallet });
+          }
+        }
+      } catch (propErr) {
+        console.error("Failed to propagate wallet to member_wallets:", propErr);
+      }
+    }
+
     // Cascade member balance and identity migration in testnet tabs
     if (oldName && oldName.trim() && oldName.trim().toLowerCase() !== name.trim().toLowerCase()) {
       try {

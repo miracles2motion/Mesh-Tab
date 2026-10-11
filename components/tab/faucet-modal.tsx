@@ -50,7 +50,7 @@ export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
   const [claims, setClaims] = useState<ClaimRecord[]>([]);
 
   const isClaiming = workspaceMode === "testnet" ? isTestnetClaiming : isLocalClaiming;
-  const hasClaimed = workspaceMode === "testnet" ? testnetBalance >= 10000 : virtualBalance > 0;
+  const hasClaimed = workspaceMode === "testnet" ? testnetBalance >= 100000 : virtualBalance >= 50000;
 
   // Load claims from storage
   const loadClaims = () => {
@@ -70,28 +70,27 @@ export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
     return () => window.removeEventListener("meshtab:claims:updated", handleUpdate);
   }, [walletAddress, workspaceMode]);
 
-  // If user already claimed previously on Testnet but local history has no record, synthesize initial confirmed entry
+  // If user already claimed previously on Testnet but local history has no record, synthesize confirmed entries
   const displayClaims = useMemo<ClaimRecord[]>(() => {
     if (claims.length > 0) return claims;
-    if (workspaceMode === "testnet" && hasClaimed) {
-      const lastClaimTs = typeof window !== "undefined" 
-        ? parseInt(localStorage.getItem("meshTab_testnet_lastFaucetClaim") || `${Date.now() - 1800000}`, 10)
-        : Date.now() - 1800000;
+    if (workspaceMode === "testnet" && testnetBalance >= 10000) {
+      const numClaims = Math.min(10, Math.max(1, Math.floor(testnetBalance / 10000)));
+      const baseTs = typeof window !== "undefined" 
+        ? parseInt(localStorage.getItem("meshTab_testnet_lastFaucetClaim") || `${Date.now()}`, 10)
+        : Date.now();
       
-      return [{
-        id: "baseline-welcome-claim",
+      return Array.from({ length: numClaims }, (_, idx) => ({
+        id: `faucet-claim-${idx + 1}`,
         amount: 10000,
         currency: "Agora AUSD",
         network: "Monad Testnet",
-        timestamp: isNaN(lastClaimTs) ? Date.now() - 1800000 : lastClaimTs,
+        timestamp: baseTs - (idx * 3600000),
         walletAddress: walletAddress || undefined,
-        explorerUrl: walletAddress 
-          ? `https://testnet.monadexplorer.com/address/${walletAddress}` 
-          : "https://testnet.monadexplorer.com"
-      }];
+        explorerUrl: "https://testnet.monadvision.com/address/0xd236c18D274E54FAccC3dd9DDA4b27965a73ee6C"
+      }));
     }
     return [];
-  }, [claims, workspaceMode, hasClaimed, walletAddress]);
+  }, [claims, workspaceMode, testnetBalance, walletAddress]);
 
   if (!isOpen) return null;
 
@@ -196,7 +195,7 @@ export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
           ) : hasClaimed ? (
             <>
               <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              {workspaceMode === "testnet" ? "Welcome Bonus Claimed ($10,000)" : "Funds Added"}
+              {workspaceMode === "testnet" ? "Agora Faucet Ceiling Reached ($100,000)" : "Funds Added"}
             </>
           ) : (
             <>
@@ -253,26 +252,27 @@ export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
                   {/* Blockchain Transaction & Link */}
                   <div className="pt-2 border-t border-slate-100 dark:border-white/5 flex items-center justify-between text-[11px]">
                     <div className="flex items-center gap-1.5 font-mono text-slate-500 dark:text-white/60">
-                      <span className="text-[10px] text-slate-400 dark:text-white/40 font-sans uppercase font-semibold">Tx:</span>
-                      <span>
-                        {claim.txHash 
-                          ? `${claim.txHash.slice(0, 6)}...${claim.txHash.slice(-4)}` 
-                          : claim.walletAddress 
-                            ? `${claim.walletAddress.slice(0, 6)}...${claim.walletAddress.slice(-4)}` 
-                            : "Verified On-Chain"}
-                      </span>
-                      {claim.txHash && (
-                        <button
-                          onClick={() => handleCopy(claim.txHash!, claim.id)}
-                          className="p-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer"
-                          title="Copy Full Transaction Hash"
-                        >
-                          {copiedId === claim.id ? (
-                            <Check className="w-3 h-3 text-emerald-500" />
-                          ) : (
-                            <Copy className="w-3 h-3" />
-                          )}
-                        </button>
+                      {claim.txHash ? (
+                        <>
+                          <span className="text-[10px] text-slate-400 dark:text-white/40 font-sans uppercase font-semibold">Tx:</span>
+                          <span>{`${claim.txHash.slice(0, 8)}...${claim.txHash.slice(-6)}`}</span>
+                          <button
+                            onClick={() => handleCopy(claim.txHash!, claim.id)}
+                            className="p-1 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer"
+                            title="Copy Full Transaction Hash"
+                          >
+                            {copiedId === claim.id ? (
+                              <Check className="w-3 h-3 text-emerald-500" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                          </button>
+                        </>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-white/50">
+                          <span className="font-semibold text-slate-700 dark:text-white/70">Faucet:</span>
+                          <span className="font-mono text-[10px]">0xd236...ee6C</span>
+                        </div>
                       )}
                     </div>
 
@@ -282,7 +282,7 @@ export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:underline transition-colors shrink-0"
                     >
-                      <span>View on Monad Explorer</span>
+                      <span>{claim.txHash ? "View Tx on MonadVision" : "View Faucet Contract"}</span>
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   </div>

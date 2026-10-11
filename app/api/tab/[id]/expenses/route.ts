@@ -33,6 +33,21 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const start = page * limit;
     const end = start + limit - 1;
     
+    // Auto-heal member wallet and profile in Redis whenever an authenticated tab member connects
+    const callerWallet = req.headers.get("x-wallet-address") || req.nextUrl.searchParams.get("wallet");
+    const callerName = req.headers.get("x-user-name") || req.nextUrl.searchParams.get("name");
+
+    if (callerWallet && /^0x[a-fA-F0-9]{40}$/i.test(callerWallet)) {
+      const cleanWallet = callerWallet.toLowerCase();
+      if (callerName) {
+        await redis.hset(`${tabKey}:member_wallets`, { [callerName]: callerWallet });
+        await redis.set(`user:${cleanWallet}`, JSON.stringify({ name: callerName, avatarColorIndex: 0, lastUpdated: Date.now() }));
+        await redis.sadd(`meshtab:${mode}:user:${cleanWallet}:tabs`, id);
+      }
+      await redis.set(`user:${walletAddress}`, JSON.stringify({ name: callerName || "", wallet: callerWallet, avatarColorIndex: 0, lastUpdated: Date.now() }));
+      await redis.sadd(`meshtab:${mode}:user:${walletAddress}:tabs`, id);
+    }
+
     // Batch fetch members, wallets, legacy expenses, new expense IDs, tab metadata, and activity in one pipeline
     const pipeline = redis.pipeline();
     pipeline.lrange(`${tabKey}:expenses`, start, end); // Legacy list
@@ -46,7 +61,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const legacyExpensesRaw = results[0] as unknown[];
     const newExpenseIds = results[1] as string[];
     const membersMap = results[2] as Record<string, string>;
-    const memberWalletsMap = (results[3] || {}) as Record<string, string>;
+    const memberWalletsMap = ((results[3] || {}) as Record<string, string>);
+    if (callerWallet && callerName) {
+      memberWalletsMap[callerName] = callerWallet;
+    }
     const tabMetaRaw = results[4];
     const activityRaw = (results[5] || []) as unknown[];
     let tabMeta: any = null;

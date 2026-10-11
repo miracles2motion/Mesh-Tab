@@ -881,6 +881,8 @@ export interface StoredExpense {
   editedBy?: string;
   syncStatus?: "synced" | "pending" | "failed";
   syncError?: string;
+  isSettlement?: boolean;
+  txHash?: string;
 }
 
 export const DEFAULT_FEED: Record<string, StoredExpense[]> = {
@@ -1335,7 +1337,7 @@ export function useStoredExpenses(tabId: string) {
   };
 }
 
-export function settleTab(tabId: string, currentUserName: string, amount: number) {
+export function settleTab(tabId: string, currentUserName: string, amount: number, txHash?: string) {
   if (typeof window === "undefined") return;
   
   // 1. Update tab balance in stored tabs
@@ -1401,7 +1403,9 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
     payer: currentUserName,
     amount: amount,
     desc: "Settled balance in AUSD (Monad)",
-    createdAt: Date.now()
+    createdAt: Date.now(),
+    isSettlement: true,
+    txHash
   }, true);
 
   if (mode === "testnet") {
@@ -1418,6 +1422,7 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
           amount,
           creditors: creditorsPaid,
           description: "Settled balance in AUSD (Monad)",
+          txHash,
           timestamp: Date.now()
         }
       });

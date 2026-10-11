@@ -14,13 +14,43 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Prioritize the Smart Wallet address if available
-    const walletAddress = client?.account?.address || user?.wallet?.address || (typeof window !== "undefined" ? localStorage.getItem("meshTab_walletAddress") : null) || "";
+    const smartWalletAddress = client?.account?.address;
+    const walletAddress = smartWalletAddress || user?.wallet?.address || (typeof window !== "undefined" ? localStorage.getItem("meshTab_walletAddress") : null) || "";
 
     if (!ready || !authenticated || mode !== "testnet") return;
 
     if (typeof window !== "undefined" && walletAddress) {
-      localStorage.setItem("meshTab_walletAddress", walletAddress);
+      const prevStored = localStorage.getItem("meshTab_walletAddress");
+      if (prevStored !== walletAddress) {
+        localStorage.setItem("meshTab_walletAddress", walletAddress);
+        window.dispatchEvent(new Event("meshTab-profile-update"));
+      }
     }
+
+    // Auto-sync profile and smart wallet to Redis with zero manual steps
+    const syncProfileToServer = async () => {
+      if (!walletAddress) return;
+      try {
+        const token = await getAccessToken();
+        if (token) {
+          const displayName = typeof window !== "undefined" ? localStorage.getItem("meshTab_displayName") : "";
+          await fetch("/api/user/profile", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              wallet: walletAddress,
+              name: displayName || undefined
+            })
+          });
+        }
+      } catch (err) {
+        console.warn("Auto profile sync to Redis error:", err);
+      }
+    };
+    syncProfileToServer();
 
     const runSync = async () => {
       if (isSyncingRef.current) return;
@@ -33,7 +63,10 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         const token = await getAccessToken();
         if (token) {
           const res = await fetch(`/api/tab/user?mode=${mode}`, {
-            headers: { "Authorization": `Bearer ${token}` },
+            headers: { 
+              "Authorization": `Bearer ${token}`,
+              "x-wallet-address": walletAddress
+            },
             cache: "no-store"
           });
           if (res.ok) {
