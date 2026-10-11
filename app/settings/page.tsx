@@ -27,11 +27,14 @@ import {
   Lock,
   LogOut,
   Trash2,
-  ExternalLink
+  ExternalLink,
+  Fingerprint,
+  Loader2
 } from "lucide-react";
 import { useSecurity } from "../../components/providers/security-provider";
 import { Button } from "../../components/ui/button";
 import { ThemeToggle } from "../../components/theme-toggle";
+import { authenticateWithBiometrics } from "../../lib/biometrics";
 import { 
   useUserProfile, 
   saveStoredUser, 
@@ -102,6 +105,37 @@ function SettingsContent() {
   const [themeMode, setThemeMode] = useState<"light" | "dark" | "system">("system");
   const [mounted, setMounted] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isExportingKey, setIsExportingKey] = useState(false);
+
+  const handleExportPrivateKey = async () => {
+    sounds.playClick();
+    setIsExportingKey(true);
+
+    // Mandatory Biometric Security Clearance
+    const authRes = await authenticateWithBiometrics("Authorize Private Key Export");
+    if (authRes.canceled) {
+      setIsExportingKey(false);
+      toast.info("Export Canceled", {
+        description: "Biometric authentication was canceled. Private key remains secure."
+      });
+      return;
+    }
+
+    try {
+      sounds.playSuccessChime();
+      toast.success("Biometrics Verified", {
+        description: "Opening secure key export dialog..."
+      });
+      await exportWallet();
+    } catch (err: any) {
+      console.error("Wallet export error:", err);
+      toast.error("Export Failed", {
+        description: err?.message || "Could not export private key at this time."
+      });
+    } finally {
+      setIsExportingKey(false);
+    }
+  };
 
   const handleLogout = async () => {
     sounds.playClick();
@@ -861,15 +895,22 @@ function SettingsContent() {
                       
                       <div className="mt-4 pt-3 border-t border-slate-200 dark:border-white/10 flex flex-wrap gap-2.5">
                         <Button
-                          onClick={() => {
-                            sounds.playClick();
-                            exportWallet();
-                          }}
+                          onClick={handleExportPrivateKey}
+                          disabled={isExportingKey}
                           variant="secondary"
                           className="h-10 text-xs font-semibold flex items-center gap-1.5 border border-purple-500/20 bg-purple-500/10 text-purple-700 dark:text-purple-300 hover:bg-purple-500/20 cursor-pointer"
                         >
-                          <Key className="w-3.5 h-3.5" />
-                          <span>Export Private Key (Privy)</span>
+                          {isExportingKey ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              <span>Verifying Biometrics...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Fingerprint className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                              <span>Export Private Key (Privy)</span>
+                            </>
+                          )}
                         </Button>
                         <a
                           href={`https://testnet.monadvision.com/address/${fullAddress}`}
