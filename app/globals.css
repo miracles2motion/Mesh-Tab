@@ -23,11 +23,9 @@
   --surface: #18181b;
 }
 
-/* Global smooth transitions for Theme Switching */
-html, body, main, section, nav, div, p, span, h1, h2, h3, h4, h5, h6, a, button {
-  transition-property: background-color, border-color, color, fill, stroke;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 500ms;
+/* Snappy, performance-optimized Theme Transitions without DOM layout thrashing */
+body {
+  transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1), color 150ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 body {

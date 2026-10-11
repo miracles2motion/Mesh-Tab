@@ -76,7 +76,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body suppressHydrationWarning className="min-h-full flex flex-col antialiased selection:bg-indigo-500/30 bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-300">
+      <body suppressHydrationWarning className="min-h-full flex flex-col antialiased selection:bg-indigo-500/30 bg-[#f5f5f7] dark:bg-[#0a0a0a] text-slate-900 dark:text-white transition-colors duration-150">
         <Web3Provider>
           <ConnectivityProvider>
             <SyncProvider>

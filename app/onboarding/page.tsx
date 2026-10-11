@@ -81,6 +81,13 @@ function OnboardingContent() {
           }
           if (data.theme) {
             localStorage.setItem("meshTab_theme", data.theme);
+            localStorage.setItem("theme", data.theme);
+            if (data.theme === "dark") {
+              document.documentElement.classList.add("dark");
+            } else if (data.theme === "light") {
+              document.documentElement.classList.remove("dark");
+            }
+            window.dispatchEvent(new Event("theme-change"));
             window.dispatchEvent(new Event("meshTab-theme-change"));
           }
           window.dispatchEvent(new Event("meshTab-profile-update"));

@@ -123,9 +123,9 @@ export function PrivyLogo({
 }: React.ImgHTMLAttributes<HTMLImageElement>) {
   return (
     <>
-      {/* Light Theme: Official Privy Light Logo PNG */}
+      {/* Light Theme: Official Privy Light Logo SVG */}
       <img
-        src="/logos/privy-logo-light.png"
+        src="/logos/privy-logo-light.svg"
         alt={alt}
         className={`object-contain shrink-0 dark:hidden ${className}`}
         {...props}
