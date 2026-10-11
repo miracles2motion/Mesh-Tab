@@ -8,12 +8,13 @@ interface BalanceCardProps {
   balance: number; // in cents
   currency: string;
   type: 'debtor' | 'creditor' | 'settled';
+  isLoading?: boolean;
   onSettle?: () => void;
   onRemind?: () => void;
   onCashOut?: () => void;
 }
 
-export function BalanceCard({ balance, currency, type, onSettle, onRemind, onCashOut }: BalanceCardProps) {
+export function BalanceCard({ balance, currency, type, isLoading = false, onSettle, onRemind, onCashOut }: BalanceCardProps) {
   const isSettled = balance === 0 || type === 'settled';
   const prefix = isSettled ? '' : type === 'debtor' ? '-' : '+';
   const formattedAmount = `${prefix}${formatCurrency(balance)}`;
@@ -55,36 +56,48 @@ export function BalanceCard({ balance, currency, type, onSettle, onRemind, onCas
             {currency}
           </span>
         </div>
-        {isSettled && (
+        {isLoading ? (
+          <span className="w-16 h-5 rounded-full bg-slate-200 dark:bg-white/10 animate-pulse inline-block" />
+        ) : isSettled ? (
           <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-2.5 py-0.5 rounded-full">
             <CheckCircle2 className="w-3.5 h-3.5" /> Settled
           </span>
-        )}
+        ) : null}
       </div>
 
       <div className="relative z-10 min-w-0">
-        <div className="flex items-baseline gap-2 flex-wrap min-w-0">
-          <h2 
-            className={`${getBalanceFontSize(charLength)} font-extrabold text-slate-900 dark:text-white tracking-tight tabular-nums break-words min-w-0`}
-            title={formattedAmount}
-          >
-            {formattedAmount}
-          </h2>
-          <span className="text-slate-400 dark:text-white/40 text-xs sm:text-sm font-semibold tracking-normal shrink-0">
-            {currency}
-          </span>
-        </div>
+        {isLoading ? (
+          <div className="py-1">
+            <div className="h-10 sm:h-12 w-44 bg-slate-200 dark:bg-white/10 rounded-2xl animate-pulse" />
+          </div>
+        ) : (
+          <>
+            <div className="flex items-baseline gap-2 flex-wrap min-w-0">
+              <h2 
+                className={`${getBalanceFontSize(charLength)} font-extrabold text-slate-900 dark:text-white tracking-tight tabular-nums break-words min-w-0`}
+                title={formattedAmount}
+              >
+                {formattedAmount}
+              </h2>
+              <span className="text-slate-400 dark:text-white/40 text-xs sm:text-sm font-semibold tracking-normal shrink-0">
+                {currency}
+              </span>
+            </div>
 
-        {/* Compact notation helper for balances >= $100k */}
-        {balance >= 100_000_00 && (
-          <p className="text-xs text-slate-400 dark:text-white/50 font-medium mt-1">
-            ≈ {prefix}{formatCompactCurrency(balance)} {currency}
-          </p>
+            {/* Compact notation helper for balances >= $100k */}
+            {balance >= 100_000_00 && (
+              <p className="text-xs text-slate-400 dark:text-white/50 font-medium mt-1">
+                ≈ {prefix}{formatCompactCurrency(balance)} {currency}
+              </p>
+            )}
+          </>
         )}
       </div>
       
       <div className="mt-8 flex gap-3 relative z-10">
-         {isSettled ? (
+         {isLoading ? (
+            <div className="w-full h-14 rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 animate-pulse" />
+         ) : isSettled ? (
             <div className="w-full py-4 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-semibold flex justify-center items-center gap-2 text-base">
               <CheckCircle2 className="w-5 h-5" /> All balances settled
             </div>

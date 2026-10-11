@@ -33,18 +33,25 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const start = page * limit;
     const end = start + limit - 1;
     
-    // Batch fetch members, wallets, legacy expenses, and new expense IDs in one pipeline
+    // Batch fetch members, wallets, legacy expenses, new expense IDs, and tab metadata in one pipeline
     const pipeline = redis.pipeline();
     pipeline.lrange(`${tabKey}:expenses`, start, end); // Legacy list
     pipeline.zrange(`${tabKey}:expenses_zset`, start, end, { rev: true }); // New zset
     pipeline.hgetall(`${tabKey}:members`);
     pipeline.hgetall(`${tabKey}:member_wallets`);
+    pipeline.get(tabKey); // Tab metadata (creator, currency, etc.)
     const results = await pipeline.exec();
     
     const legacyExpensesRaw = results[0] as unknown[];
     const newExpenseIds = results[1] as string[];
     const membersMap = results[2] as Record<string, string>;
     const memberWalletsMap = (results[3] || {}) as Record<string, string>;
+    const tabMetaRaw = results[4];
+    let tabMeta: any = null;
+    try {
+      tabMeta = typeof tabMetaRaw === 'string' ? JSON.parse(tabMetaRaw) : tabMetaRaw;
+    } catch {}
+    const creatorName = tabMeta?.creator || "";
     
     // Fetch new expenses from hash
     let newExpensesRaw: unknown[] = [];
@@ -98,7 +105,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const members = Object.keys(membersMap || {}).map(name => ({
       name,
       balance: parseFloat(membersMap[name] || "0"),
-      walletAddress: memberWalletsMap[name] || undefined
+      walletAddress: memberWalletsMap[name] || undefined,
+      role: (creatorName && name.toLowerCase() === creatorName.toLowerCase()) ? "admin" : "member"
     }));
 
     return NextResponse.json({ 
@@ -106,6 +114,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       expenses, 
       deletedIds,
       members,
+      creator: creatorName,
       page, 
       hasMore: (parsedLegacy.length === limit) || (parsedNew.length === limit)
     });

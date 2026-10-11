@@ -91,7 +91,7 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
           errorCount = 0;
           setSyncError(false);
           const data = await res.json();
-          const { members, expenses, deletedIds } = data;
+          const { members, expenses, deletedIds, creator } = data;
           
           let stateUpdated = false;
 
@@ -105,7 +105,7 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
                     name: m.name,
                     balance: m.balance,
                     type: m.balance === 0 ? ("settled" as const) : m.balance > 0 ? ("creditor" as const) : ("debtor" as const),
-                    role: localMatch?.role || "member",
+                    role: m.role || localMatch?.role || (creator && m.name.toLowerCase() === creator.toLowerCase() ? "admin" : "member"),
                     walletAddress: m.walletAddress || localMatch?.walletAddress
                  };
               });
@@ -115,6 +115,23 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
                 safeSetItem(storageKeyStr, JSON.stringify(updatedMembers));
                 window.dispatchEvent(new CustomEvent("meshTab-members-update", { detail: { fromServer: true } }));
                 stateUpdated = true;
+
+              if (creator) {
+                try {
+                  const tabs = getStoredTabs();
+                  const tabIdx = tabs.findIndex(t => t.id === tabId);
+                  if (tabIdx >= 0 && (!tabs[tabIdx].creator || tabs[tabIdx].creator !== creator)) {
+                    const updatedTabs = [...tabs];
+                    updatedTabs[tabIdx] = {
+                      ...tabs[tabIdx],
+                      creator
+                    };
+                    const key = storageKey("tabs", mode);
+                    safeSetItem(key, JSON.stringify(updatedTabs));
+                    window.dispatchEvent(new Event("meshTab-tabs-update"));
+                  }
+                } catch (e) {}
+              }
 
                 // Derive peer join notifications if not the first hydration
                 if (localMembers.length > 0) {

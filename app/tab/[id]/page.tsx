@@ -51,13 +51,34 @@ function DashboardContent() {
   const currentUser = profile.name || "David";
   const { members: activeMembers } = useStoredTabMembers(rawTabId, currentUser);
 
+  const isTestnetMode = workspaceMode === "testnet";
+  const [syncTimeoutReached, setSyncTimeoutReached] = useState(false);
+
+  useEffect(() => {
+    // 3.5s safety fallback so offline or cached states aren't stuck forever in skeleton state
+    const timer = setTimeout(() => {
+      setSyncTimeoutReached(true);
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, [rawTabId]);
+
+  // Loading state applies in testnet when initial sync has not settled yet
+  const isTabLoading = isTestnetMode && lastSync === null && !syncTimeoutReached && !syncError;
+
   const isSampleLisbon = workspaceMode === "sample" && rawTabId === "lisbon-24";
+  const storedTab = storedTabs.find(t => t.id === rawTabId);
+  const adminMember = activeMembers.find(m => m.role === "admin");
+
+  // Determine true creator name without falsely falling back to currentUser
   const creatorName = isSampleLisbon 
     ? "Aisha" 
-    : (activeMembers.find(m => m.role === "admin")?.name || currentUser);
-  const isCurrentUserCreator = currentUser.toLowerCase() === creatorName.toLowerCase();
+    : (adminMember?.name || (storedTab?.creator && storedTab.creator.trim().length > 0 ? storedTab.creator : (storedTab?.role === "Creator" ? currentUser : "")));
 
-  const currentTab = storedTabs.find(t => t.id === rawTabId) || {
+  const isCurrentUserCreator = isSampleLisbon
+    ? false
+    : storedTab?.role === "Creator" || (adminMember ? adminMember.name.toLowerCase() === currentUser.toLowerCase() : false);
+
+  const currentTab = storedTab || {
     id: rawTabId,
     name: isSampleLisbon
       ? "Lisbon Weekend"
@@ -282,7 +303,9 @@ function DashboardContent() {
           <div className="min-w-0 flex flex-col md:flex-row md:items-center gap-1.5 md:gap-4">
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-900 dark:text-white tracking-tight truncate">{currentTab.name}</h1>
             <div className="flex items-center gap-2 flex-wrap">
-              {isCurrentUserCreator ? (
+              {isTabLoading || (!isCurrentUserCreator && !creatorName) ? (
+                <span className="w-24 h-5 rounded-full bg-slate-200 dark:bg-white/10 animate-pulse shrink-0 inline-block align-middle" />
+              ) : isCurrentUserCreator ? (
                 <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/20 shrink-0">
                   <Crown className="w-3 h-3 text-indigo-500" /> Created by You
                 </span>
@@ -371,6 +394,7 @@ function DashboardContent() {
             balance={Math.abs(currentUserData.balance)} 
             currency="AUSD"
             type={currentUserData.type}
+            isLoading={isTabLoading}
             onSettle={() => setIsSettlementOpen(true)}
             onCashOut={() => setIsCashOutOpen(true)}
             onRemind={() => {
@@ -397,10 +421,11 @@ function DashboardContent() {
             grossVolume={grossVolume} 
             currentUserName={currentUser} 
             creatorName={creatorName} 
+            isLoading={isTabLoading}
             onSelectMember={(member) => setSelectedMember(member)}
             onRequestPayment={(debtorName, amount) => setPaymentRequest({ debtorName, amount })}
           />
-          <FeedList expenses={expenses} currentUserName={currentUser} />
+          <FeedList expenses={expenses} currentUserName={currentUser} isLoading={isTabLoading} />
         </div>
       </div>
 
@@ -415,7 +440,9 @@ function DashboardContent() {
                 : "bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30"
             }`}
           >
-            {hasOutstandingTabDebt ? (
+            {isTabLoading ? (
+              <span className="w-16 h-4 bg-slate-200 dark:bg-white/10 rounded-full animate-pulse inline-block" />
+            ) : hasOutstandingTabDebt ? (
               <>
                 <Activity className="w-4 h-4 sm:w-5 sm:h-5" /> <span>Run Netting</span>
               </>

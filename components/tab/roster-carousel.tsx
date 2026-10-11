@@ -19,6 +19,7 @@ interface RosterCarouselProps {
   grossVolume: number; // in cents
   currentUserName?: string;
   creatorName?: string;
+  isLoading?: boolean;
   onSelectMember?: (member: RosterMember) => void;
   onRequestPayment?: (debtorName: string, amount: number) => void;
 }
@@ -28,6 +29,7 @@ export function RosterCarousel({
   grossVolume, 
   currentUserName, 
   creatorName,
+  isLoading = false,
   onSelectMember,
   onRequestPayment
 }: RosterCarouselProps) {
@@ -83,11 +85,17 @@ export function RosterCarousel({
         <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
           <h3 className="text-sm font-semibold text-slate-900 dark:text-white/80 flex items-center gap-2">
             Group Roster
-            <span className="text-xs text-slate-500 dark:text-white/40 font-mono font-normal bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-md border border-slate-200 dark:border-white/10">Gross Vol: {formatCurrency(grossVolume)}</span>
+            {isLoading ? (
+              <span className="w-24 h-5 rounded-md bg-slate-200 dark:bg-white/10 animate-pulse shrink-0 inline-block" />
+            ) : (
+              <span className="text-xs text-slate-500 dark:text-white/40 font-mono font-normal bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-md border border-slate-200 dark:border-white/10">Gross Vol: {formatCurrency(grossVolume)}</span>
+            )}
           </h3>
 
-          {/* Ping Button: Available ONLY when a debt is not yet settled by one or more members */}
-          {debtorsToPing.length > 0 ? (
+          {/* Ping Button / Status Pill */}
+          {isLoading ? (
+            <span className="w-20 h-5 rounded-full bg-slate-200 dark:bg-white/10 animate-pulse shrink-0 inline-block" />
+          ) : debtorsToPing.length > 0 ? (
             <button
               onClick={handlePingAll}
               disabled={isAllPinged}
@@ -122,28 +130,45 @@ export function RosterCarousel({
       
       {/* Roster Cards Carousel */}
       <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide -mx-6 px-6 md:mx-0 md:px-0">
-        {members.map((member, i) => {
-          const isSettled = member.balance === 0 || member.type === 'settled';
-          const isCreditor = member.type === 'creditor';
-          const isUser = member.name.toLowerCase() === (currentUserName || "").toLowerCase();
-          const isCreator = member.role === "admin" || (creatorName && member.name.toLowerCase() === creatorName.toLowerCase());
-
-          return (
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.05 }}
-              key={member.name}
-              onClick={() => {
-                sounds.playClick();
-                onSelectMember?.(member);
-              }}
-              className={`flex-shrink-0 bg-white dark:bg-white/5 backdrop-blur-md border rounded-2xl p-3.5 w-[150px] flex flex-col justify-between h-[112px] shadow-sm relative transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
-                isUser 
-                  ? "border-indigo-400/60 dark:border-indigo-500/50 bg-indigo-50/20 dark:bg-indigo-500/[0.06] ring-1 ring-indigo-500/20 shadow-indigo-500/5" 
-                  : "border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20"
-              }`}
+        {isLoading ? (
+          [1, 2].map((idx) => (
+            <div
+              key={idx}
+              className="flex-shrink-0 bg-white dark:bg-white/5 backdrop-blur-md border border-slate-200/70 dark:border-white/10 rounded-2xl p-3.5 w-[150px] flex flex-col justify-between h-[112px] animate-pulse"
             >
+              <div className="flex items-start justify-between">
+                <div className="space-y-2">
+                  <div className="w-16 h-3.5 bg-slate-200 dark:bg-white/10 rounded" />
+                  <div className="w-8 h-3 bg-slate-200 dark:bg-white/10 rounded" />
+                </div>
+                <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-white/10" />
+              </div>
+              <div className="w-20 h-5 bg-slate-200 dark:bg-white/10 rounded" />
+            </div>
+          ))
+        ) : (
+          members.map((member, i) => {
+            const isSettled = member.balance === 0 || member.type === 'settled';
+            const isCreditor = member.type === 'creditor';
+            const isUser = member.name.toLowerCase() === (currentUserName || "").toLowerCase();
+            const isCreator = member.role === "admin" || (creatorName ? member.name.toLowerCase() === creatorName.toLowerCase() : false);
+
+            return (
+              <motion.div 
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+                key={member.name}
+                onClick={() => {
+                  sounds.playClick();
+                  onSelectMember?.(member);
+                }}
+                className={`flex-shrink-0 bg-white dark:bg-white/5 backdrop-blur-md border rounded-2xl p-3.5 w-[150px] flex flex-col justify-between h-[112px] shadow-sm relative transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
+                  isUser 
+                    ? "border-indigo-400/60 dark:border-indigo-500/50 bg-indigo-50/20 dark:bg-indigo-500/[0.06] ring-1 ring-indigo-500/20 shadow-indigo-500/5" 
+                    : "border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20"
+                }`}
+              >
               <div className="flex items-start justify-between gap-1">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -203,7 +228,8 @@ export function RosterCarousel({
               </div>
             </motion.div>
           );
-        })}
+        })
+      )}
       </div>
     </div>
   );

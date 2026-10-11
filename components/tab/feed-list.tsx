@@ -27,6 +27,7 @@ export interface ExpenseItem {
 interface FeedListProps {
   expenses: ExpenseItem[];
   currentUserName?: string;
+  isLoading?: boolean;
 }
 
 const CATEGORY_MAP: Record<ExpenseCategory, { icon: string; label: string }> = {
@@ -58,7 +59,7 @@ function inferCategory(desc: string): ExpenseCategory {
   return "other";
 }
 
-export function FeedList({ expenses, currentUserName }: FeedListProps) {
+export function FeedList({ expenses, currentUserName, isLoading = false }: FeedListProps) {
   const params = useParams();
   const tabId = params?.id || "default";
 
@@ -225,7 +226,28 @@ export function FeedList({ expenses, currentUserName }: FeedListProps) {
       )}
 
       {/* Expenses Feed */}
-      {filteredExpenses.length === 0 ? (
+      {isLoading ? (
+        <div className="space-y-3">
+          {[1, 2].map((idx) => (
+            <div
+              key={idx}
+              className="bg-white dark:bg-white/5 backdrop-blur-md border border-slate-200/70 dark:border-white/10 rounded-2xl p-4 flex gap-4 items-center animate-pulse"
+            >
+              <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-white/10 shrink-0" />
+              <div className="flex-1 space-y-2 min-w-0">
+                <div className="flex justify-between items-center">
+                  <div className="w-32 h-4 bg-slate-200 dark:bg-white/10 rounded" />
+                  <div className="w-16 h-4 bg-slate-200 dark:bg-white/10 rounded" />
+                </div>
+                <div className="flex justify-between items-center">
+                  <div className="w-24 h-3 bg-slate-200 dark:bg-white/10 rounded" />
+                  <div className="w-16 h-3 bg-slate-200 dark:bg-white/10 rounded" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : filteredExpenses.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-3xl border-dashed">
           <Receipt className="w-12 h-12 text-slate-300 dark:text-white/20 mb-4" />
           <h4 className="text-slate-800 dark:text-white/70 font-semibold">
