@@ -960,15 +960,17 @@ export function getStoredExpenses(tabId: string): StoredExpense[] {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.map((e: StoredExpense) => {
-          if (!e.createdAt && e.time) {
-            const parsedTs = Date.parse(e.time);
-            if (!isNaN(parsedTs) && parsedTs > 0) {
-              return { ...e, createdAt: parsedTs, time: "Just now" };
+        return parsed
+          .map((e: StoredExpense) => {
+            if (!e.createdAt && e.time) {
+              const parsedTs = Date.parse(e.time);
+              if (!isNaN(parsedTs) && parsedTs > 0) {
+                return { ...e, createdAt: parsedTs, time: "Just now" };
+              }
             }
-          }
-          return e;
-        });
+            return e;
+          })
+          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       }
     }
   } catch (e) {}
@@ -992,7 +994,9 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense, skipBal
     expense.participants = currentMembers.map(m => m.name);
   }
 
-  const updated = [expense, ...current];
+  const updated = [expense, ...current.filter((e) => e.id !== expense.id)].sort(
+    (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
+  );
   safeSetItem(storageKeyStr, JSON.stringify(updated));
 
   // Dynamically recalculate tab member balances

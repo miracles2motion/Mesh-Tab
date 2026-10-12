@@ -70,30 +70,32 @@ export function FeedList({ expenses, currentUserName, isLoading = false }: FeedL
   const [selectedFilter, setSelectedFilter] = useState<"all" | ExpenseCategory | "settlements">("all");
 
   const filteredExpenses = useMemo(() => {
-    return expenses.filter(item => {
-      const isSettlement = 
-        item.id.startsWith("settle") || 
-        item.desc.toLowerCase().includes("settle") || 
-        item.desc.toLowerCase().includes("cleared") ||
-        item.desc.toLowerCase().includes("repaid");
+    return expenses
+      .filter(item => {
+        const isSettlement = 
+          item.id.startsWith("settle") || 
+          item.desc.toLowerCase().includes("settle") || 
+          item.desc.toLowerCase().includes("cleared") ||
+          item.desc.toLowerCase().includes("repaid");
 
-      if (selectedFilter === "settlements") {
-        if (!isSettlement) return false;
-      } else if (selectedFilter !== "all") {
-        if (isSettlement) return false;
-        const cat = item.category || inferCategory(item.desc);
-        if (cat !== selectedFilter) return false;
-      }
+        if (selectedFilter === "settlements") {
+          if (!isSettlement) return false;
+        } else if (selectedFilter !== "all") {
+          if (isSettlement) return false;
+          const cat = item.category || inferCategory(item.desc);
+          if (cat !== selectedFilter) return false;
+        }
 
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchDesc = item.desc.toLowerCase().includes(q);
-        const matchPayer = item.payer.toLowerCase().includes(q);
-        if (!matchDesc && !matchPayer) return false;
-      }
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          const matchDesc = item.desc.toLowerCase().includes(q);
+          const matchPayer = item.payer.toLowerCase().includes(q);
+          if (!matchDesc && !matchPayer) return false;
+        }
 
-      return true;
-    });
+        return true;
+      })
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   }, [expenses, selectedFilter, searchQuery]);
 
   return (

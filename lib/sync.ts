@@ -294,7 +294,9 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
               !deletedIdSet.has(le.id)
             );
 
-            const mergedExpenses = [...mappedExpenses, ...localPending];
+            const mergedExpenses = [...mappedExpenses, ...localPending].sort(
+              (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
+            );
 
             if (haveExpensesChanged(mergedExpenses, localExpenses)) {
               const storageKeyStr = storageKey("expenses", mode, tabId);

@@ -110,7 +110,8 @@ function getNotificationsStorageKey(mode?: WorkspaceMode): string {
 export function getStoredNotifications(): AppNotification[] {
   const mode = getWorkspaceMode();
   if (typeof window === "undefined") {
-    return mode === "testnet" ? TESTNET_NOTIFICATIONS : mode === "blank" ? BLANK_NOTIFICATIONS : SAMPLE_NOTIFICATIONS;
+    const list = mode === "testnet" ? TESTNET_NOTIFICATIONS : mode === "blank" ? BLANK_NOTIFICATIONS : SAMPLE_NOTIFICATIONS;
+    return [...list].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
   }
   const key = getNotificationsStorageKey(mode);
   try {
@@ -118,22 +119,25 @@ export function getStoredNotifications(): AppNotification[] {
     if (raw !== null) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
+        let list = parsed;
         if (mode === "blank" || mode === "testnet") {
-          return parsed.filter((n) => n.tabId !== "lisbon-24");
+          list = parsed.filter((n) => n.tabId !== "lisbon-24");
         }
-        return parsed;
+        return [...list].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
       }
     }
   } catch (e) {}
 
-  return mode === "testnet" ? TESTNET_NOTIFICATIONS : mode === "blank" ? BLANK_NOTIFICATIONS : SAMPLE_NOTIFICATIONS;
+  const fallback = mode === "testnet" ? TESTNET_NOTIFICATIONS : mode === "blank" ? BLANK_NOTIFICATIONS : SAMPLE_NOTIFICATIONS;
+  return [...fallback].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 }
 
 export function saveStoredNotifications(notifs: AppNotification[], mode?: WorkspaceMode) {
   if (typeof window === "undefined") return;
   const key = getNotificationsStorageKey(mode);
   try {
-    localStorage.setItem(key, JSON.stringify(notifs.slice(0, 50)));
+    const sorted = [...notifs].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    localStorage.setItem(key, JSON.stringify(sorted.slice(0, 50)));
     window.dispatchEvent(new Event("meshTab-notifications-update"));
   } catch (e) {}
 }
@@ -167,7 +171,8 @@ export function addNotification(
 
   // Preserve read status permanently once marked read — never flip back to unread on re-sync
   const unreadStatus = existing !== undefined ? existing.unread : (notif.unread !== undefined ? notif.unread : true);
-  const effectiveTs = existing?.timestamp || notif.timestamp || Date.now();
+  // Always use the latest timestamp provided by the caller or fall back to existing/now
+  const effectiveTs = notif.timestamp || existing?.timestamp || Date.now();
 
   const newNotif: AppNotification = {
     ...notif,
@@ -176,7 +181,7 @@ export function addNotification(
     unread: unreadStatus
   };
 
-  const updated = [newNotif, ...current.filter((n) => n.id !== targetId)];
+  const updated = [newNotif, ...current.filter((n) => n.id !== targetId)].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
   saveStoredNotifications(updated);
   return newNotif;
 }

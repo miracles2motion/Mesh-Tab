@@ -338,14 +338,16 @@ export default function GlobalHub() {
     router.push(`/tab/${joinedId}`);
   };
 
-  // Filter and search tabs
-  const filteredTabs = syncedTabs.filter(tab => {
-    const matchesSearch = tab.name.toLowerCase().includes(searchQuery.toLowerCase());
-    if (!matchesSearch) return false;
-    if (activeFilter === "owe") return tab.balance < 0;
-    if (activeFilter === "owed") return tab.balance > 0;
-    return true;
-  });
+  // Filter, search, and sort tabs newest first
+  const filteredTabs = syncedTabs
+    .filter(tab => {
+      const matchesSearch = tab.name.toLowerCase().includes(searchQuery.toLowerCase());
+      if (!matchesSearch) return false;
+      if (activeFilter === "owe") return tab.balance < 0;
+      if (activeFilter === "owed") return tab.balance > 0;
+      return true;
+    })
+    .sort((a, b) => (b.lastActivityAt || b.createdAt || 0) - (a.lastActivityAt || a.createdAt || 0));
 
   return (
     <AuthGuard>

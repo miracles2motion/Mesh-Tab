@@ -57,13 +57,15 @@ function NotificationsContent() {
   };
 
   const filteredNotifications = useMemo(() => {
-    return notifications.filter((notif) => {
-      if (filter === "unread") return notif.unread;
-      if (filter === "expense") return notif.type === "expense";
-      if (filter === "settlement") return notif.type === "settlement" || notif.type === "cashout" || notif.type === "payment_request";
-      if (filter === "netting") return notif.type === "netting" || notif.type === "payment_request";
-      return true;
-    });
+    return notifications
+      .filter((notif) => {
+        if (filter === "unread") return notif.unread;
+        if (filter === "expense") return notif.type === "expense";
+        if (filter === "settlement") return notif.type === "settlement" || notif.type === "cashout" || notif.type === "payment_request";
+        if (filter === "netting") return notif.type === "netting" || notif.type === "payment_request";
+        return true;
+      })
+      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
   }, [notifications, filter]);
 
   const handleMarkAllRead = () => {
