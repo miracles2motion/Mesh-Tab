@@ -100,10 +100,24 @@ export default function GlobalHub() {
     }
   }, [isTestnetMode]);
 
+  // Check if wallet had previously recorded funds or claims
+  const hasClaimedBefore = mounted && Boolean(
+    typeof window !== "undefined" && (
+      localStorage.getItem("meshTab_testnet_lastFaucetClaim") ||
+      localStorage.getItem("meshTab_testnet_hasClaimed") === "true" ||
+      (() => {
+        try {
+          const raw = localStorage.getItem("meshTab_testnet_agoraWalletSnapshot");
+          return raw ? JSON.parse(raw).cents > 0 : false;
+        } catch { return false; }
+      })()
+    )
+  );
+
   // Loading state during initial unlock or page transition while testnet RPC resolves
   const isBalanceLoading = !loadingTimeout && (
     !mounted || 
-    (isTestnetMode && testnetBalance === 0 && (!fullAddress || isFetchingBalance || isBalanceAvailableLoading))
+    (isTestnetMode && testnetBalance === 0 && !hasClaimedBefore && (!fullAddress || isFetchingBalance || isBalanceAvailableLoading))
   );
 
   const currentUserName = profile.name || "David";
@@ -529,7 +543,7 @@ export default function GlobalHub() {
                         ? "bg-amber-500/80 cursor-not-allowed opacity-90 shadow-amber-500/20"
                         : isBalanceLoading
                         ? "bg-indigo-600/60 cursor-wait opacity-80"
-                        : isTestnetMode && testnetBalance === 0
+                        : isTestnetMode && testnetBalance === 0 && !hasClaimedBefore
                         ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 shadow-purple-500/25 hover:scale-105 active:scale-95 cursor-pointer"
                         : "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/25 hover:scale-105 active:scale-95 cursor-pointer"
                     }`}
@@ -544,7 +558,7 @@ export default function GlobalHub() {
                         <Clock className="w-3.5 h-3.5 animate-spin" />
                         <span>{isDeveloperMode ? `Agora Cooldown (${secondsRemaining}s)` : `Next bonus in ${secondsRemaining}s`}</span>
                       </>
-                    ) : isTestnetMode && testnetBalance === 0 ? (
+                    ) : isTestnetMode && testnetBalance === 0 && !hasClaimedBefore ? (
                       <>
                         <Sparkles className="w-4 h-4 text-amber-300" />
                         <span>{isDeveloperMode ? "Claim $10,000 Agora AUSD" : "Claim $10,000 Welcome Bonus"}</span>

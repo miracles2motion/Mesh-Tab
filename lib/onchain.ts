@@ -15,7 +15,7 @@ const monadPublicClient = createPublicClient({
 
 export function useRealAusdBalance(workspaceMode: string) {
   const { client } = useSmartWallets();
-  const walletAddress = client?.account?.address;
+  const walletAddress = client?.account?.address || (typeof window !== "undefined" ? localStorage.getItem("meshTab_walletAddress") || undefined : undefined);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["realAusdBalance", workspaceMode, walletAddress],
@@ -66,6 +66,24 @@ export function useRealAusdBalance(workspaceMode: string) {
 
       return result;
     },
+    initialData: () => {
+      if (typeof window === "undefined" || workspaceMode !== "testnet") return undefined;
+      try {
+        const cached = localStorage.getItem("meshTab_testnet_agoraWalletSnapshot");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && typeof parsed.cents === "number") {
+            return {
+              balance: parsed.cents / 100,
+              cents: parsed.cents,
+              at: parsed.at || Date.now(),
+              isStale: false
+            };
+          }
+        }
+      } catch {}
+      return undefined;
+    },
     refetchInterval: 15000,
     refetchIntervalInBackground: false,
     staleTime: 5000,
@@ -73,10 +91,10 @@ export function useRealAusdBalance(workspaceMode: string) {
   });
 
   return {
-    balance: data?.balance || 0,
-    cents: data?.cents || 0,
-    isLoading,
-    at: data?.at || Date.now(),
+    balance: data?.balance ?? 0,
+    cents: data?.cents ?? 0,
+    isLoading: isLoading && !data,
+    at: data?.at ?? 0,
     isStale: data?.isStale || false,
     refetch
   };
@@ -85,7 +103,7 @@ export function useRealAusdBalance(workspaceMode: string) {
 export function useClaimAgoraFunds(workspaceMode: string) {
   const { client } = useSmartWallets();
   const [isClaiming, setIsClaiming] = useState(false);
-  const walletAddress = client?.account?.address;
+  const walletAddress = client?.account?.address || (typeof window !== "undefined" ? localStorage.getItem("meshTab_walletAddress") || undefined : undefined);
 
   // Determine claimed status based on holding Agora AUSD allocation (>= 10,000 AUSD)
   const { data: hasClaimed = false, refetch: checkHasClaimed } = useQuery({
@@ -100,6 +118,18 @@ export function useClaimAgoraFunds(workspaceMode: string) {
       });
       const balance = parseFloat(formatUnits(rawBal as bigint, 6));
       return balance >= 100000; // Agora Faucet allows up to 100,000 AUSD max ceiling
+    },
+    initialData: () => {
+      if (typeof window === "undefined" || workspaceMode !== "testnet") return false;
+      if (localStorage.getItem("meshTab_testnet_lastFaucetClaim")) return true;
+      try {
+        const cached = localStorage.getItem("meshTab_testnet_agoraWalletSnapshot");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && parsed.cents > 0) return true;
+        }
+      } catch {}
+      return false;
     },
     staleTime: 10000,
     enabled: workspaceMode === "testnet" && !!walletAddress,

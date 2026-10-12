@@ -102,6 +102,8 @@ export default function LockedPage() {
       }
 
       sounds.playSuccessChime();
+      // Brief 300ms transition to let the success chime trigger and provide a smooth unlock animation
+      await new Promise((resolve) => setTimeout(resolve, 300));
       localStorage.removeItem("mesh_session_locked");
 
       if (authenticatedRef.current) {
