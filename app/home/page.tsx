@@ -273,7 +273,7 @@ export default function GlobalHub() {
           // Persist joined tab locally so it's in dashboard immediately
           saveTab({
             id: data.tabId,
-            name: `Group #${joinCode.toUpperCase()}`,
+            name: data.tabName || `Group #${joinCode.toUpperCase()}`,
             role: "Member",
             balance: 0,
             memberCount: 2,
@@ -302,8 +302,8 @@ export default function GlobalHub() {
       return;
     }
 
-    // Demo/Clean Slate Mode: 6-character mock
-    if (joinCode.length !== 6) return;
+    // Demo/Clean Slate Mode: 8-character mock
+    if (joinCode.length !== 8) return;
     setShowJoinModal(false);
     setTxState("authenticating");
     await new Promise(r => setTimeout(r, 1500));
@@ -313,18 +313,26 @@ export default function GlobalHub() {
     await new Promise(r => setTimeout(r, 1000));
     setTxState("idle");
     
-    // Persist joined tab locally for mock modes
-    const joinedId = `joined-${joinCode.toLowerCase()}`;
-    saveTab({
-      id: joinedId,
-      name: `Group #${joinCode}`,
-      role: "Member",
-      balance: 0,
-      memberCount: 3,
-      createdAt: Date.now(),
-      lastActivityAt: Date.now(),
-      lastActivityKind: "joined"
-    });
+    // Check if code matches an existing local tab suffix
+    const existingTab = syncedTabs.find(t => 
+      t.id.toLowerCase().endsWith(joinCode.toLowerCase()) || 
+      t.id.toLowerCase() === joinCode.toLowerCase()
+    );
+    const joinedId = existingTab ? existingTab.id : `joined-${joinCode.toLowerCase()}`;
+    
+    // Persist joined tab locally for mock modes if new
+    if (!existingTab) {
+      saveTab({
+        id: joinedId,
+        name: `Group #${joinCode}`,
+        role: "Member",
+        balance: 0,
+        memberCount: 3,
+        createdAt: Date.now(),
+        lastActivityAt: Date.now(),
+        lastActivityKind: "joined"
+      });
+    }
 
     setJoinCode("");
     router.push(`/tab/${joinedId}`);
@@ -930,13 +938,23 @@ export default function GlobalHub() {
 
       {/* Join Modal */}
       {showJoinModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div 
+          className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowJoinModal(false); }}
+        >
           <div className="bg-white dark:bg-[#121212] border border-slate-200 dark:border-white/10 rounded-3xl p-6 md:p-8 max-w-lg w-full space-y-6 shadow-2xl text-slate-900 dark:text-white my-auto max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-bold">Join Group via Code</h3>
+              <div>
+                <h3 className="text-xl font-bold">Join Group via Code</h3>
+                <p className="text-xs text-slate-500 dark:text-white/60 mt-0.5">
+                  {workspaceMode === "testnet" 
+                    ? "Enter the 8-character invite code to join this Monad Testnet tab." 
+                    : "Enter an 8-character code to join the shared group."}
+                </p>
+              </div>
               <button 
                 onClick={() => setShowJoinModal(false)} 
-                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/10 flex items-center justify-center text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white transition-colors"
+                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/10 flex items-center justify-center text-slate-500 dark:text-white/60 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                 aria-label="Close modal"
               >
                 ✕
@@ -944,20 +962,28 @@ export default function GlobalHub() {
             </div>
             <form onSubmit={handleJoin} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-500 dark:text-white/60 uppercase tracking-wider mb-2">6-Digit Code</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-semibold text-slate-500 dark:text-white/60 uppercase tracking-wider">
+                    8-Character Code
+                  </label>
+                  <span className={`text-[11px] font-mono font-medium ${joinCode.length === 8 ? "text-indigo-600 dark:text-indigo-400 font-bold" : "text-slate-400 dark:text-white/40"}`}>
+                    {joinCode.length}/8
+                  </span>
+                </div>
                 <input 
                   type="text" 
-                  maxLength={6}
+                  maxLength={8}
+                  autoFocus
                   value={joinCode}
-                  onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                  placeholder="e.g. A3F9K2" 
-                  className="w-full bg-[#f5f5f7] dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-center tracking-widest text-2xl font-mono uppercase text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                  onChange={(e) => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8))}
+                  placeholder="e.g. 9A42F1B0" 
+                  className="w-full bg-[#f5f5f7] dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-center tracking-widest text-2xl font-mono uppercase text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30"
                 />
               </div>
               <button 
                 type="submit"
-                disabled={joinCode.length !== 6}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:hover:bg-indigo-600 text-white font-bold py-4 rounded-xl transition-all shadow-md"
+                disabled={joinCode.length !== 8}
+                className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:hover:bg-indigo-600 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl transition-all shadow-md cursor-pointer"
               >
                 Join Group
               </button>

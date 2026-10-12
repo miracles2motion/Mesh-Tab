@@ -349,11 +349,13 @@ export function ManageMembers({
           </div>
           
           <div className="w-full pt-2 space-y-3">
-             {workspaceMode === "testnet" && tabId.length > 8 && (
+             {((workspaceMode === "testnet" && tabId.length >= 8) || (tabId.includes("-") && tabId.split("-").pop()?.length === 8)) && (
                <div className="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 rounded-xl p-3 flex flex-col items-center">
-                 <div className="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider mb-1">Testnet Join Code</div>
+                 <div className="text-[10px] font-bold text-indigo-700 dark:text-indigo-400 uppercase tracking-wider mb-1">
+                   {workspaceMode === "testnet" ? "Testnet Join Code" : "Group Join Code"}
+                 </div>
                  <div className="text-xl font-mono font-bold tracking-widest text-indigo-900 dark:text-indigo-100 select-all">
-                   {tabId.slice(-8).toUpperCase()}
+                   {(tabId.includes("-") ? tabId.split("-").pop() : tabId.slice(-8))?.toUpperCase()}
                  </div>
                </div>
              )}

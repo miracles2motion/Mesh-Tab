@@ -48,11 +48,16 @@ export async function POST(req: NextRequest) {
       if (indexed && typeof indexed === "string") {
         resolvedTabId = indexed;
       } else {
-        // Fallback scan for backwards compatibility with legacy tabs
-        const keys = await redis.keys(`meshtab:${mode}:tab:*-${joinCode.toLowerCase()}`);
-        if (keys.length > 0) {
-          const prefixLength = `meshtab:${mode}:tab:`.length;
-          resolvedTabId = keys[0].substring(prefixLength);
+        const directExists = await redis.exists(`meshtab:${mode}:tab:${joinCode.toLowerCase()}`);
+        if (directExists) {
+          resolvedTabId = joinCode.toLowerCase();
+        } else {
+          // Fallback scan for backwards compatibility with legacy tabs
+          const keys = await redis.keys(`meshtab:${mode}:tab:*-${joinCode.toLowerCase()}`);
+          if (keys.length > 0) {
+            const prefixLength = `meshtab:${mode}:tab:`.length;
+            resolvedTabId = keys[0].substring(prefixLength);
+          }
         }
       }
     }
@@ -92,7 +97,13 @@ export async function POST(req: NextRequest) {
          buddySettings: existingUser.buddySettings || undefined,
          lastUpdated: existingUser.lastUpdated || Date.now()
        }));
-       return NextResponse.json({ success: true, message: "Already a member", tabId });
+       const tabRaw = await redis.get(fullTabKey);
+       let tabData: any = null;
+       try {
+         tabData = typeof tabRaw === "string" ? JSON.parse(tabRaw) : tabRaw;
+       } catch {}
+       const existingTabName = tabData?.name || `Group #${tabId.slice(-8).toUpperCase()}`;
+       return NextResponse.json({ success: true, message: "Already a member", tabId, tabName: existingTabName });
     }
 
     // [OVERSEER MANDATE - Member Capacity]: Check 20-member cap to guarantee instant sub-second netting velocity
@@ -176,7 +187,7 @@ export async function POST(req: NextRequest) {
     
     await multi.exec();
 
-    return NextResponse.json({ success: true, tabId });
+    return NextResponse.json({ success: true, tabId, tabName });
     
   } catch (error) {
     // [OVERSEER MANDATE - Baseline 22]: Backend Error Serialization
