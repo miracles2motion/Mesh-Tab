@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sheet } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -261,83 +262,11 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
 
   return (
     <>
-      <Sheet isOpen={isOpen} onClose={handleClose} size="4xl">
+      <Sheet isOpen={isOpen && !isProcessing && currentStep !== "success"} onClose={handleClose} size="4xl">
       <div className="p-6 md:p-8 flex flex-col items-center bg-white dark:bg-[#0a0a0a] text-slate-900 dark:text-white">
         <AnimatePresence mode="wait">
-          {/* MULTI-STAGE PROCESSING STEPPER VIEW */}
-          {isProcessing ? (
-            <motion.div
-              key="processing-stepper-view"
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.96 }}
-              transition={{ duration: 0.2 }}
-              className="py-6 flex flex-col items-center max-w-sm mx-auto text-center w-full"
-            >
-              {/* Animated processing spinner */}
-              <div className="relative mb-5">
-                <div className="w-16 h-16 rounded-full bg-indigo-500/10 dark:bg-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-                  <Zap className="w-8 h-8 animate-pulse" />
-                </div>
-                <div className="absolute inset-0 rounded-full border-2 border-indigo-600/20 border-t-indigo-600 animate-spin" />
-              </div>
-
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1.5">
-                {isDeveloperMode ? "Executing Web3 Settlement" : "Processing Instant Deposit"}
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-white/60 mb-6">
-                {isDeveloperMode 
-                  ? "Routing UserOp through Pimlico Paymaster to Monad Testnet..." 
-                  : `Securing ${formatCurrency(depositCents)} deposit via instant payment rails...`}
-              </p>
-
-              {/* 4-Stage Visual Stepper */}
-              <div className="w-full space-y-2.5 text-left mb-6">
-                {STEPPER_STAGES.map((stg, idx) => {
-                  const stageNum = idx + 1;
-                  const isDone = processingStage > stageNum;
-                  const isCurrent = processingStage === stageNum;
-
-                  return (
-                    <div 
-                      key={idx}
-                      className={`p-3 rounded-2xl border flex items-center gap-3 transition-all ${
-                        isDone 
-                          ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-700 dark:text-emerald-300"
-                          : isCurrent
-                          ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-700 dark:text-indigo-300 shadow-xs"
-                          : "bg-slate-50 dark:bg-white/5 border-slate-200/50 dark:border-white/5 text-slate-400 opacity-60"
-                      }`}
-                    >
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                        isDone 
-                          ? "bg-emerald-500 text-white" 
-                          : isCurrent 
-                          ? "bg-indigo-600 text-white animate-pulse" 
-                          : "bg-slate-200 dark:bg-white/10 text-slate-500"
-                      }`}>
-                        {isDone ? <Check className="w-3.5 h-3.5" /> : stageNum}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold leading-none truncate">
-                          {isDeveloperMode ? stg.devTitle : stg.title}
-                        </p>
-                        <p className="text-[10px] text-slate-500 dark:text-white/50 mt-1 truncate">
-                          {isDeveloperMode ? stg.devDesc : stg.desc}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Trust Badge */}
-              <div className="text-[11px] text-slate-400 dark:text-white/40 flex items-center gap-1.5 justify-center">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-                <span>{isDeveloperMode ? "Monad × Agora × Pimlico • 0% Gas" : "Encrypted Bank Rails • 0% Platform Fee"}</span>
-              </div>
-            </motion.div>
-          ) : isAlreadyAllocated && currentStep !== "success" ? (
+          {/* CEILING ALLOCATED VIEW */}
+          {isAlreadyAllocated ? (
             <motion.div
               key="allocation-active-view"
               initial={{ opacity: 0, scale: 0.96 }}
@@ -844,73 +773,174 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
               )}
             </motion.div>
           )}
-
-          {/* STEP 3: SUCCESS CONFIRMATION RECEIPT */}
-          {currentStep === "success" && (
-            <motion.div 
-              key="success-step"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.25 }}
-              className="py-6 flex flex-col items-center max-w-md mx-auto text-center"
-            >
-              <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mb-5 border border-emerald-500/20 shadow-lg shadow-emerald-500/20">
-                <CheckCircle2 className="w-10 h-10 text-emerald-600 dark:text-emerald-400" />
-              </div>
-
-              <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
-                Deposit Successful!
-              </h3>
-              <p className="text-slate-500 dark:text-white/60 text-sm mb-6 leading-relaxed">
-                <span className="font-extrabold text-emerald-600 dark:text-emerald-400 font-mono text-base">
-                  +{formatCurrency(lastDepositedCents)}
-                </span>{" "}
-                has been credited directly to your Account Balance.
-              </p>
-
-              {/* Receipt Summary Card */}
-              <div className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-4 mb-6 text-xs text-slate-500 dark:text-white/60 space-y-2.5 text-left">
-                <div className="flex justify-between">
-                  <span>Funding Method</span>
-                  <span className="font-semibold text-slate-800 dark:text-white">
-                    {isDeveloperMode && isTestnet
-                      ? "Official Agora AUSD Faucet"
-                      : (selectedMethod === "card" ? "Visa Platinum Debit (Instant)" :
-                         selectedMethod === "bank" ? "Direct Bank (FedNow)" : 
-                         "Google Pay")}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>New Available Balance</span>
-                  <span className="font-bold text-indigo-600 dark:text-indigo-400 font-mono">
-                    {formatCurrency(availableCents)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Transaction ID</span>
-                  <span className="font-mono text-slate-400">DEP-{Date.now().toString().slice(-6)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Status</span>
-                  <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Completed
-                  </span>
-                </div>
-              </div>
-
-              <Button 
-                onClick={handleClose} 
-                variant="primary" 
-                size="lg"
-                className="w-full h-12 font-bold shadow-md bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-all cursor-pointer"
-              >
-                Done
-              </Button>
-            </motion.div>
-          )}
         </AnimatePresence>
       </div>
     </Sheet>
+
+    {/* DEDICATED TRANSACTION CONFIRMATION MODAL OVERLAY */}
+    {isProcessing && mounted && typeof document !== "undefined" && createPortal(
+      <AnimatePresence>
+        <div className="fixed inset-0 z-[350] flex items-center justify-center p-4 sm:p-6 overflow-hidden">
+          {/* Dark blurred backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-md"
+          />
+
+          {/* Centered Confirmation Card */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.94, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.94, y: 16 }}
+            transition={{ duration: 0.2 }}
+            className="relative w-full max-w-sm sm:max-w-md bg-white dark:bg-[#0d0d0d] border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col items-center text-center text-slate-900 dark:text-white z-10"
+          >
+            {/* Animated processing spinner */}
+            <div className="relative mb-5">
+              <div className="w-16 h-16 rounded-full bg-indigo-500/10 dark:bg-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                <Zap className="w-8 h-8 animate-pulse" />
+              </div>
+              <div className="absolute inset-0 rounded-full border-2 border-indigo-600/20 border-t-indigo-600 animate-spin" />
+            </div>
+
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1.5">
+              {isDeveloperMode ? "Executing Web3 Settlement" : "Processing Instant Deposit"}
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-white/60 mb-6">
+              {isDeveloperMode 
+                ? "Routing UserOp through Pimlico Paymaster to Monad Testnet..." 
+                : `Securing ${formatCurrency(depositCents)} deposit via instant payment rails...`}
+            </p>
+
+            {/* 4-Stage Visual Stepper */}
+            <div className="w-full space-y-2.5 text-left mb-6">
+              {STEPPER_STAGES.map((stg, idx) => {
+                const stageNum = idx + 1;
+                const isDone = processingStage > stageNum;
+                const isCurrent = processingStage === stageNum;
+
+                return (
+                  <div 
+                    key={idx}
+                    className={`p-3 rounded-2xl border flex items-center gap-3 transition-all ${
+                      isDone 
+                        ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-700 dark:text-emerald-300"
+                        : isCurrent 
+                        ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-700 dark:text-indigo-300 shadow-xs"
+                        : "bg-slate-50 dark:bg-white/5 border-slate-200/50 dark:border-white/5 text-slate-400 opacity-60"
+                    }`}
+                  >
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                      isDone 
+                        ? "bg-emerald-500 text-white" 
+                        : isCurrent 
+                        ? "bg-indigo-600 text-white animate-pulse" 
+                        : "bg-slate-200 dark:bg-white/10 text-slate-500"
+                    }`}>
+                      {isDone ? <Check className="w-3.5 h-3.5" /> : stageNum}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold leading-none truncate">
+                        {isDeveloperMode ? stg.devTitle : stg.title}
+                      </p>
+                      <p className="text-[10px] text-slate-500 dark:text-white/50 mt-1 truncate">
+                        {isDeveloperMode ? stg.devDesc : stg.desc}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Trust Badge */}
+            <div className="text-[11px] text-slate-400 dark:text-white/40 flex items-center gap-1.5 justify-center">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+              <span>{isDeveloperMode ? "Monad × Agora × Pimlico • 0% Gas" : "Encrypted Bank Rails • 0% Platform Fee"}</span>
+            </div>
+          </motion.div>
+        </div>
+      </AnimatePresence>,
+      document.body
+    )}
+
+    {/* DEDICATED SUCCESS RECEIPT MODAL */}
+    {currentStep === "success" && mounted && typeof document !== "undefined" && createPortal(
+      <AnimatePresence>
+        <div className="fixed inset-0 z-[350] flex items-center justify-center p-4 sm:p-6 overflow-hidden">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-md"
+            onClick={handleClose}
+          />
+
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.94, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.94, y: 16 }}
+            transition={{ duration: 0.25 }}
+            className="relative w-full max-w-sm sm:max-w-md bg-white dark:bg-[#0d0d0d] border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col items-center text-center text-slate-900 dark:text-white z-10"
+          >
+            <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mb-5 border border-emerald-500/20 shadow-lg shadow-emerald-500/20">
+              <CheckCircle2 className="w-10 h-10 text-emerald-600 dark:text-emerald-400" />
+            </div>
+
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
+              Deposit Successful!
+            </h3>
+            <p className="text-slate-500 dark:text-white/60 text-sm mb-6 leading-relaxed">
+              <span className="font-extrabold text-emerald-600 dark:text-emerald-400 font-mono text-base">
+                +{formatCurrency(lastDepositedCents)}
+              </span>{" "}
+              has been credited directly to your Account Balance.
+            </p>
+
+            {/* Receipt Summary Card */}
+            <div className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl p-4 mb-6 text-xs text-slate-500 dark:text-white/60 space-y-2.5 text-left">
+              <div className="flex justify-between">
+                <span>Funding Method</span>
+                <span className="font-semibold text-slate-800 dark:text-white">
+                  {isDeveloperMode && isTestnet
+                    ? "Official Agora AUSD Faucet"
+                    : (selectedMethod === "card" ? "Visa Platinum Debit (Instant)" :
+                       selectedMethod === "bank" ? "Direct Bank (FedNow)" : 
+                       "Google Pay")}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>New Available Balance</span>
+                <span className="font-bold text-indigo-600 dark:text-indigo-400 font-mono">
+                  {formatCurrency(availableCents)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Transaction ID</span>
+                <span className="font-mono text-slate-400">DEP-{Date.now().toString().slice(-6)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Status</span>
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Completed
+                </span>
+              </div>
+            </div>
+
+            <Button 
+              onClick={handleClose} 
+              variant="primary" 
+              size="lg"
+              className="w-full h-12 font-bold shadow-md bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-all cursor-pointer"
+            >
+              Done
+            </Button>
+          </motion.div>
+        </div>
+      </AnimatePresence>,
+      document.body
+    )}
 
     <PasskeyPromptModal
       isOpen={showPasskeyPrompt}
