@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { getStoredTabMembers, getStoredExpenses, getWorkspaceMode, getStoredUser, getStoredTabs, TabMember, StoredExpense } from "./user";
+import { getStoredTabMembers, getStoredExpenses, getWorkspaceMode, getStoredUser, getStoredTabs, TabMember, StoredExpense, resolveExpenseTimestamp } from "./user";
 import { isEffectivelyOnline } from "./network";
 import { storageKey, safeSetItem } from "./storage-keys";
 import { addNotification, getExpenseNotifId, getMemberJoinNotifId, getSettlementNotifId, removeNotification } from "./notifications";
@@ -38,9 +38,10 @@ function haveExpensesChanged(serverExpenses: StoredExpense[], localExpenses: Sto
   if (!serverExpenses || !localExpenses) return true;
   if (serverExpenses.length !== localExpenses.length) return true;
 
-  for (const se of serverExpenses) {
-    const le = localExpenses.find(e => e.id === se.id);
-    if (!le) return true;
+  for (let i = 0; i < serverExpenses.length; i++) {
+    const se = serverExpenses[i];
+    const le = localExpenses[i];
+    if (!se || !le || se.id !== le.id) return true;
     if (le.amount !== se.amount || le.desc !== se.desc || le.payer !== se.payer || le.syncStatus !== se.syncStatus) {
       return true;
     }
@@ -254,18 +255,14 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
             const mappedExpenses: StoredExpense[] = rawServerExpenses
               .filter((e: any) => !deletedIdSet.has(e.expenseId))
               .map((e: any) => {
-                const expTimestamp = typeof e.timestamp === "number"
-                  ? e.timestamp
-                  : e.createdAt
-                    ? (typeof e.createdAt === "number" ? e.createdAt : new Date(e.createdAt).getTime())
-                    : e.timestamp
-                      ? new Date(e.timestamp).getTime()
-                      : (e.serverSyncedAt ? Number(e.serverSyncedAt) : Date.now());
+                const expTimestamp = resolveExpenseTimestamp(e) || (e.serverSyncedAt ? Number(e.serverSyncedAt) : Date.now());
 
                 if (e.metadata) {
+                  const resolvedMeta = resolveExpenseTimestamp(e.metadata) || expTimestamp;
                   return { 
                     ...e.metadata, 
-                    createdAt: e.metadata.createdAt || expTimestamp,
+                    id: e.metadata.id || e.expenseId,
+                    createdAt: resolvedMeta,
                     time: "Just now",
                     syncStatus: "synced" as const 
                   };
@@ -294,9 +291,12 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
               !deletedIdSet.has(le.id)
             );
 
-            const mergedExpenses = [...mappedExpenses, ...localPending].sort(
-              (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
-            );
+            const mergedExpenses = [...mappedExpenses, ...localPending].sort((a, b) => {
+              const tsB = resolveExpenseTimestamp(b);
+              const tsA = resolveExpenseTimestamp(a);
+              if (tsB !== tsA) return tsB - tsA;
+              return String(b.id || "").localeCompare(String(a.id || ""));
+            });
 
             if (haveExpensesChanged(mergedExpenses, localExpenses)) {
               const storageKeyStr = storageKey("expenses", mode, tabId);

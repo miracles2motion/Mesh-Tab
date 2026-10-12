@@ -948,6 +948,52 @@ export const DEFAULT_FEED: Record<string, StoredExpense[]> = {
   ]
 };
 
+export function resolveExpenseTimestamp(item: any): number {
+  if (!item) return 0;
+  
+  if (typeof item.createdAt === "number" && !isNaN(item.createdAt) && item.createdAt > 0) {
+    return item.createdAt;
+  }
+  if (typeof item.serverSyncedAt === "number" && !isNaN(item.serverSyncedAt) && item.serverSyncedAt > 0) {
+    return item.serverSyncedAt;
+  }
+  if (typeof item.timestamp === "number" && !isNaN(item.timestamp) && item.timestamp > 0) {
+    return item.timestamp;
+  }
+
+  // Check strings
+  for (const field of [item.createdAt, item.serverSyncedAt, item.timestamp]) {
+    if (typeof field === "string" && field.trim()) {
+      const num = Number(field);
+      if (!isNaN(num) && num > 100000000000) {
+        return num;
+      }
+      const parsed = Date.parse(field);
+      if (!isNaN(parsed) && parsed > 0) {
+        return parsed;
+      }
+    }
+  }
+
+  // Check if ID is or ends in an epoch timestamp (e.g. "1728734000000" or "settle-1728734000000")
+  if (typeof item.id === "string") {
+    const rawId = item.id.replace(/^[a-zA-Z_-]+/, "");
+    const numId = Number(rawId);
+    if (!isNaN(numId) && numId > 100000000000) {
+      return numId;
+    }
+  }
+
+  if (typeof item.time === "string" && item.time.trim()) {
+    const parsed = Date.parse(item.time);
+    if (!isNaN(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+
+  return 0;
+}
+
 export function getStoredExpenses(tabId: string): StoredExpense[] {
   const mode = getWorkspaceMode();
   if (typeof window === "undefined") {
@@ -962,15 +1008,18 @@ export function getStoredExpenses(tabId: string): StoredExpense[] {
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed
           .map((e: StoredExpense) => {
-            if (!e.createdAt && e.time) {
-              const parsedTs = Date.parse(e.time);
-              if (!isNaN(parsedTs) && parsedTs > 0) {
-                return { ...e, createdAt: parsedTs, time: "Just now" };
-              }
-            }
-            return e;
+            const resolved = resolveExpenseTimestamp(e);
+            return {
+              ...e,
+              createdAt: resolved || e.createdAt || Date.now()
+            };
           })
-          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+          .sort((a, b) => {
+            const tsB = resolveExpenseTimestamp(b);
+            const tsA = resolveExpenseTimestamp(a);
+            if (tsB !== tsA) return tsB - tsA;
+            return String(b.id || "").localeCompare(String(a.id || ""));
+          });
       }
     }
   } catch (e) {}
@@ -982,6 +1031,11 @@ export function getStoredExpenses(tabId: string): StoredExpense[] {
 export function saveStoredExpense(tabId: string, expense: StoredExpense, skipBalanceUpdate = false) {
   if (typeof window === "undefined") return;
   
+  // Ensure createdAt is always a valid epoch timestamp
+  if (!expense.createdAt) {
+    expense.createdAt = Date.now();
+  }
+
   // Always set to pending so it gets picked up by pushTabStateToRedis
   expense.syncStatus = "pending";
   
@@ -994,9 +1048,12 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense, skipBal
     expense.participants = currentMembers.map(m => m.name);
   }
 
-  const updated = [expense, ...current.filter((e) => e.id !== expense.id)].sort(
-    (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
-  );
+  const updated = [expense, ...current.filter((e) => e.id !== expense.id)].sort((a, b) => {
+    const tsB = resolveExpenseTimestamp(b);
+    const tsA = resolveExpenseTimestamp(a);
+    if (tsB !== tsA) return tsB - tsA;
+    return String(b.id || "").localeCompare(String(a.id || ""));
+  });
   safeSetItem(storageKeyStr, JSON.stringify(updated));
 
   // Dynamically recalculate tab member balances

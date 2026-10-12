@@ -27,19 +27,29 @@ export function LiveTime({
   let effectiveTs: number | undefined = undefined;
   if (typeof ts === "number" && !isNaN(ts) && ts > 0) {
     effectiveTs = ts;
-  } else if (typeof ts === "string") {
-    const parsed = Date.parse(ts);
-    if (!isNaN(parsed) && parsed > 0) {
-      effectiveTs = parsed;
+  } else if (typeof ts === "string" && ts.trim()) {
+    const num = Number(ts);
+    if (!isNaN(num) && num > 100000000000) {
+      effectiveTs = num;
+    } else {
+      const parsed = Date.parse(ts);
+      if (!isNaN(parsed) && parsed > 0) {
+        effectiveTs = parsed;
+      }
     }
   }
 
   if (!effectiveTs && fallback) {
-    const looksLikeDate = fallback.includes("T") || fallback.includes("-") || fallback.includes(":");
-    if (looksLikeDate) {
-      const parsed = Date.parse(fallback);
-      if (!isNaN(parsed) && parsed > 0) {
-        effectiveTs = parsed;
+    const numFallback = Number(fallback);
+    if (!isNaN(numFallback) && numFallback > 100000000000) {
+      effectiveTs = numFallback;
+    } else {
+      const looksLikeDate = fallback.includes("T") || fallback.includes("-") || fallback.includes(":");
+      if (looksLikeDate) {
+        const parsed = Date.parse(fallback);
+        if (!isNaN(parsed) && parsed > 0) {
+          effectiveTs = parsed;
+        }
       }
     }
   }

@@ -139,8 +139,34 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     
     const expenses = Array.from(expensesMap.values());
     
-    // Sort combined expenses by serverSyncedAt descending
-    expenses.sort((a, b) => (b.serverSyncedAt || 0) - (a.serverSyncedAt || 0));
+    // Sort combined expenses newest-first
+    const getExpTs = (e: any): number => {
+      if (!e) return 0;
+      if (typeof e.serverSyncedAt === "number" && !isNaN(e.serverSyncedAt) && e.serverSyncedAt > 0) return e.serverSyncedAt;
+      if (typeof e.timestamp === "number" && !isNaN(e.timestamp) && e.timestamp > 0) return e.timestamp;
+      if (typeof e.createdAt === "number" && !isNaN(e.createdAt) && e.createdAt > 0) return e.createdAt;
+      for (const v of [e.serverSyncedAt, e.timestamp, e.createdAt]) {
+        if (typeof v === "string" && v.trim()) {
+          const num = Number(v);
+          if (!isNaN(num) && num > 100000000000) return num;
+          const parsed = Date.parse(v);
+          if (!isNaN(parsed) && parsed > 0) return parsed;
+        }
+      }
+      if (typeof e.expenseId === "string") {
+        const rawId = e.expenseId.replace(/^[a-zA-Z_-]+/, "");
+        const numId = Number(rawId);
+        if (!isNaN(numId) && numId > 100000000000) return numId;
+      }
+      return 0;
+    };
+
+    expenses.sort((a, b) => {
+      const tsB = getExpTs(b);
+      const tsA = getExpTs(a);
+      if (tsB !== tsA) return tsB - tsA;
+      return String(b.expenseId || "").localeCompare(String(a.expenseId || ""));
+    });
 
     const members = Object.keys(membersMap || {}).map(name => ({
       name,

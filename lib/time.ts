@@ -8,10 +8,18 @@ export function formatRelative(ts: number, now: number = Date.now()): string {
   if (minutes < 60) return `${minutes}m ago`;
   
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
 
   const date = new Date(ts);
   const nowDate = new Date(now);
+
+  const isToday = 
+    date.getDate() === nowDate.getDate() &&
+    date.getMonth() === nowDate.getMonth() &&
+    date.getFullYear() === nowDate.getFullYear();
+
+  if (isToday) {
+    return `${hours}h ago`;
+  }
 
   const isYesterday = 
     date.getDate() === nowDate.getDate() - 1 &&
@@ -22,7 +30,7 @@ export function formatRelative(ts: number, now: number = Date.now()): string {
     return `Yesterday, ${date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
   }
 
-  const days = Math.floor(hours / 24);
+  const days = Math.floor(diff / (24 * 3600 * 1000));
   if (days < 7) {
     return `${date.toLocaleDateString("en-US", { weekday: "short" })}, ${date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
   }

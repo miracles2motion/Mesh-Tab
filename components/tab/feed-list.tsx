@@ -8,7 +8,7 @@ import Image from "next/image";
 import { MonadLogo } from "../ui/partner-logo";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ExpenseCategory, useDeveloperMode } from "../../lib/user";
+import { ExpenseCategory, useDeveloperMode, resolveExpenseTimestamp } from "../../lib/user";
 import { LiveTime } from "../ui/live-time";
 
 export interface ExpenseItem {
@@ -95,7 +95,12 @@ export function FeedList({ expenses, currentUserName, isLoading = false }: FeedL
 
         return true;
       })
-      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      .sort((a, b) => {
+        const tsB = resolveExpenseTimestamp(b);
+        const tsA = resolveExpenseTimestamp(a);
+        if (tsB !== tsA) return tsB - tsA;
+        return String(b.id || "").localeCompare(String(a.id || ""));
+      });
   }, [expenses, selectedFilter, searchQuery]);
 
   return (
@@ -344,7 +349,7 @@ export function FeedList({ expenses, currentUserName, isLoading = false }: FeedL
                               <CloudUpload className="w-3 h-3" />
                             </span>
                           )}
-                          <LiveTime ts={item.createdAt} kind={isSettlement ? "settled" : "expense"} variant="activity" fallback={item.time} />
+                          <LiveTime ts={resolveExpenseTimestamp(item) || item.createdAt} kind={isSettlement ? "settled" : "expense"} variant="activity" fallback={item.time} />
                         </span>
                       </div>
                     </div>
