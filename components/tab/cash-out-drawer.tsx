@@ -16,6 +16,9 @@ import { fireSettlementConfetti } from "../../lib/confetti";
 import { addNotification } from "../../lib/notifications";
 import { TransactionOverlay, TransactionState } from "../ui/transaction-overlay";
 import { authenticateWithBiometrics } from "../../lib/biometrics";
+import { usePrivy } from "@privy-io/react-auth";
+import { PasskeyPromptModal, isPasskeyEnrolled } from "../ui/passkey-prompt-modal";
+import { PaymentConfirmationModal } from "../ui/payment-confirmation-modal";
 
 interface CashOutDrawerProps {
   isOpen: boolean;
@@ -41,13 +44,38 @@ export function CashOutDrawer({
   const [isSuccess, setIsSuccess] = useState(false);
   const [txState, setTxState] = useState<TransactionState>("idle");
   const [withdrawnAmount, setWithdrawnAmount] = useState(0);
+  const { user } = usePrivy();
+  const [showPasskeyPrompt, setShowPasskeyPrompt] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-  const handleCashOut = async () => {
-    // Biometric passkey authentication
-    const authRes = await authenticateWithBiometrics("Authorize Bank Withdrawal");
-    if (authRes.canceled) {
-      toast.info("Withdrawal Canceled", { description: "Biometric authentication was canceled." });
+  const handleCashOut = async (opts?: { confirmed?: boolean; bypassBiometrics?: boolean } | React.MouseEvent) => {
+    const isConfirmedByUser = Boolean(opts && "confirmed" in opts && opts.confirmed);
+    const bypassBiometrics = Boolean(opts && "bypassBiometrics" in opts && opts.bypassBiometrics);
+
+    if (withdrawableAmount <= 0) {
+      toast.error("No funds available", { description: "You have no withdrawable settled balance to cash out." });
       return;
+    }
+
+    // Passkey Gate: on Testnet in Consumer Mode, verify user has an enrolled passkey unless confirmed
+    const isSnoozed = typeof window !== "undefined" && localStorage.getItem("mesh_snooze_passkey_prompt") === "true";
+    if (!isDeveloperMode && workspaceMode === "testnet" && !isPasskeyEnrolled(user) && !isConfirmedByUser) {
+      if (!isSnoozed && !bypassBiometrics) {
+        setShowPasskeyPrompt(true);
+        return;
+      } else {
+        setShowConfirmModal(true);
+        return;
+      }
+    }
+
+    // Prompt native device biometrics only if passkey is enrolled and not bypassed
+    if (!bypassBiometrics && isPasskeyEnrolled(user)) {
+      const authRes = await authenticateWithBiometrics("Authorize Bank Withdrawal");
+      if (authRes.canceled) {
+        toast.info("Withdrawal Canceled", { description: "Biometric authentication was canceled." });
+        return;
+      }
     }
 
     setIsProcessing(true);
@@ -409,6 +437,44 @@ export function CashOutDrawer({
         processing: "Processing off-ramp transfer...",
         success: "Transfer initiated!"
       }}
+    />
+
+    <PasskeyPromptModal
+      isOpen={showPasskeyPrompt}
+      onClose={() => setShowPasskeyPrompt(false)}
+      onSuccess={() => {
+        setShowPasskeyPrompt(false);
+        handleCashOut();
+      }}
+      onContinueWithoutPasskey={() => {
+        setShowPasskeyPrompt(false);
+        if (!isDeveloperMode) {
+          setShowConfirmModal(true);
+        } else {
+          toast.info("Using Cloud Smart Wallet", {
+            description: "Authorizing withdrawal using your secure embedded account."
+          });
+          handleCashOut({ bypassBiometrics: true });
+        }
+      }}
+      actionTitle="authorize bank withdrawal"
+    />
+
+    <PaymentConfirmationModal
+      isOpen={showConfirmModal}
+      onClose={() => setShowConfirmModal(false)}
+      onConfirm={() => {
+        setShowConfirmModal(false);
+        handleCashOut({ confirmed: true, bypassBiometrics: true });
+      }}
+      amountCents={withdrawableAmount}
+      title="Confirm Bank Withdrawal"
+      subtitle={`Transfer settled funds to your ${method === "card" ? "debit card" : "bank account"}.`}
+      recipient={method === "card" ? "Visa Direct (•••• 4242)" : "Chase Checking (•••• 8821)"}
+      paymentMethodLabel="Agora AUSD Account Balance"
+      feeLabel="$0.00 (Gas Covered)"
+      actionLabel="Withdraw"
+      currency="AUSD"
     />
     </>
   );

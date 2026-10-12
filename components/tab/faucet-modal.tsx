@@ -31,7 +31,7 @@ import { getStoredClaimHistory, addClaimRecord, ClaimRecord } from "../../lib/cl
 import { TransactionOverlay, TransactionState } from "../ui/transaction-overlay";
 import { ReceiptView } from "../ReceiptView";
 import { PaymentConfirmationModal } from "../ui/payment-confirmation-modal";
-import { isPasskeyEnrolled } from "../ui/passkey-prompt-modal";
+import { PasskeyPromptModal, isPasskeyEnrolled } from "../ui/passkey-prompt-modal";
 
 interface FaucetModalProps {
   isOpen: boolean;
@@ -49,6 +49,7 @@ export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
   const { balance: virtualBalance, topUp } = useVirtualBalance();
   const { balance: testnetBalance } = useRealAusdBalance(workspaceMode);
   const { claimBonus, isClaiming: isTestnetClaiming } = useClaimWelcomeBonus(workspaceMode);
+  const [showPasskeyPrompt, setShowPasskeyPrompt] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   
   const displayBalance = workspaceMode === "testnet" ? testnetBalance * 100 : virtualBalance;
@@ -112,14 +113,21 @@ export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleClaim = async (opts?: { confirmed?: boolean } | React.MouseEvent) => {
+  const handleClaim = async (opts?: { confirmed?: boolean; bypassBiometrics?: boolean } | React.MouseEvent) => {
     const isConfirmedByUser = Boolean(opts && "confirmed" in opts && opts.confirmed);
+    const bypassBiometrics = Boolean(opts && "bypassBiometrics" in opts && opts.bypassBiometrics);
 
     if (workspaceMode === "testnet") {
-      // If user lacks a passkey and hasn't explicitly confirmed via Slide/Type, prompt confirmation
-      if (!isDeveloperMode && !isConfirmedByUser && !isPasskeyEnrolled(user)) {
-        setShowConfirmModal(true);
-        return;
+      // Passkey Gate: on Testnet in Consumer Mode, verify user has an enrolled passkey unless confirmed
+      const isSnoozed = typeof window !== "undefined" && localStorage.getItem("mesh_snooze_passkey_prompt") === "true";
+      if (!isDeveloperMode && !isPasskeyEnrolled(user) && !isConfirmedByUser) {
+        if (!isSnoozed && !bypassBiometrics) {
+          setShowPasskeyPrompt(true);
+          return;
+        } else {
+          setShowConfirmModal(true);
+          return;
+        }
       }
 
       if (!isDeveloperMode) {
@@ -409,12 +417,30 @@ export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
         }}
       />
 
+      <PasskeyPromptModal
+        isOpen={showPasskeyPrompt}
+        onClose={() => setShowPasskeyPrompt(false)}
+        onSuccess={() => {
+          setShowPasskeyPrompt(false);
+          handleClaim();
+        }}
+        onContinueWithoutPasskey={() => {
+          setShowPasskeyPrompt(false);
+          if (!isDeveloperMode) {
+            setShowConfirmModal(true);
+          } else {
+            handleClaim({ bypassBiometrics: true });
+          }
+        }}
+        actionTitle="claim testnet deposit"
+      />
+
       <PaymentConfirmationModal
         isOpen={showConfirmModal}
         onClose={() => setShowConfirmModal(false)}
         onConfirm={() => {
           setShowConfirmModal(false);
-          handleClaim({ confirmed: true });
+          handleClaim({ confirmed: true, bypassBiometrics: true });
         }}
         amountCents={1000000}
         title="Confirm $10,000 Deposit"

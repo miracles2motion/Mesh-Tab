@@ -197,9 +197,9 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
       return;
     }
 
-    // Passkey Gate: on Testnet with AUSD in Consumer Mode, verify user has an enrolled passkey unless confirmed
+    // Passkey Gate: on Testnet in Consumer Mode, verify user has an enrolled passkey unless confirmed
     const isSnoozed = typeof window !== "undefined" && localStorage.getItem("mesh_snooze_passkey_prompt") === "true";
-    if (!isDeveloperMode && workspaceMode === "testnet" && paymentMethod === "ausd" && !isPasskeyEnrolled(user) && !isConfirmedByUser) {
+    if (!isDeveloperMode && workspaceMode === "testnet" && !isPasskeyEnrolled(user) && !isConfirmedByUser) {
       if (!isSnoozed && !bypassBiometrics) {
         setShowPasskeyPrompt(true);
         return;

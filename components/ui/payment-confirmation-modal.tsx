@@ -23,6 +23,8 @@ export interface PaymentConfirmationModalProps {
   onClose: () => void;
   onConfirm: () => void;
   amountCents: number;
+  amountDisplayOverride?: string;
+  confirmKeyword?: string;
   title?: string;
   subtitle?: string;
   recipient?: string;
@@ -49,6 +51,8 @@ export function PaymentConfirmationModal({
   onClose,
   onConfirm,
   amountCents,
+  amountDisplayOverride,
+  confirmKeyword,
   title = "Confirm Authorization",
   subtitle = "Review and confirm this transaction before signing.",
   recipient = "Account Balance",
@@ -110,7 +114,10 @@ export function PaymentConfirmationModal({
 
   // Handle typing validation
   const parsedCents = parseInputToCents(typedValue);
-  const isTypeMatched = parsedCents !== null && parsedCents === amountCents;
+  const isKeywordMatched = confirmKeyword
+    ? typedValue.trim().toUpperCase() === confirmKeyword.toUpperCase()
+    : (amountCents === 0 && typedValue.trim().toUpperCase() === "CONFIRM");
+  const isTypeMatched = (parsedCents !== null && parsedCents === amountCents) || Boolean(isKeywordMatched);
 
   // Slider Touch / Pointer Events
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -204,7 +211,7 @@ export function PaymentConfirmationModal({
             Amount to Authorize
           </span>
           <div className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white font-mono">
-            {formattedTarget}
+            {amountDisplayOverride || formattedTarget}
           </div>
           <div className="mt-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 flex items-center justify-center gap-1">
             <Sparkles className="w-3 h-3" />
@@ -255,7 +262,7 @@ export function PaymentConfirmationModal({
                     <CheckCircle2 className="w-4 h-4" /> Authorized!
                   </span>
                 ) : (
-                  <span>Slide to {actionLabel} {formattedTarget}</span>
+                  <span>Slide to {actionLabel} {amountDisplayOverride || formattedTarget}</span>
                 )}
               </div>
 
@@ -297,10 +304,16 @@ export function PaymentConfirmationModal({
           <div className="space-y-3">
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold text-slate-500 dark:text-white/60 flex items-center justify-between">
-                <span>Type <strong className="text-slate-900 dark:text-white font-mono">{(amountCents / 100).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</strong> to confirm:</span>
+                <span>
+                  Type{" "}
+                  <strong className="text-slate-900 dark:text-white font-mono">
+                    {confirmKeyword || (amountCents === 0 ? "CONFIRM" : (amountCents / 100).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 }))}
+                  </strong>{" "}
+                  to confirm:
+                </span>
                 {isTypeMatched && (
                   <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-bold text-[11px]">
-                    <CheckCircle2 className="w-3 h-3" /> Amount Matched
+                    <CheckCircle2 className="w-3 h-3" /> Matched
                   </span>
                 )}
               </label>
@@ -308,9 +321,9 @@ export function PaymentConfirmationModal({
               <div className="relative">
                 <input
                   type="text"
-                  inputMode="decimal"
+                  inputMode={confirmKeyword || amountCents === 0 ? "text" : "decimal"}
                   autoFocus
-                  placeholder={`e.g. ${(amountCents / 100).toLocaleString()}`}
+                  placeholder={confirmKeyword || (amountCents === 0 ? "Type CONFIRM" : `e.g. ${(amountCents / 100).toLocaleString()}`)}
                   value={typedValue}
                   onChange={(e) => setTypedValue(e.target.value)}
                   className={`w-full h-12 px-4 rounded-xl text-lg font-bold font-mono tracking-wide bg-white dark:bg-white/5 border transition-all outline-none ${
@@ -346,9 +359,9 @@ export function PaymentConfirmationModal({
                   <CheckCircle2 className="w-4 h-4 animate-spin" /> Authorizing...
                 </span>
               ) : isTypeMatched ? (
-                `Authorize ${formattedTarget}`
+                `Authorize ${actionLabel}`
               ) : (
-                `Enter ${formattedTarget} to Enable`
+                `Enter ${confirmKeyword || formattedTarget} to Enable`
               )}
             </Button>
           </div>

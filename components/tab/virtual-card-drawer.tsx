@@ -37,11 +37,14 @@ import {
 } from "@/lib/user";
 import { useAvailableBalance } from "@/lib/balance";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
+import { usePrivy } from "@privy-io/react-auth";
 import { formatCurrency } from "@/lib/utils";
 import { sounds } from "@/lib/sounds";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { AddFundsDrawer } from "./add-funds-drawer";
+import { PasskeyPromptModal, isPasskeyEnrolled } from "@/components/ui/passkey-prompt-modal";
+import { PaymentConfirmationModal } from "@/components/ui/payment-confirmation-modal";
 
 interface VirtualCardDrawerProps {
   isOpen: boolean;
@@ -61,6 +64,7 @@ export function VirtualCardDrawer({
   const { isDeveloperMode } = useDeveloperMode();
   const isTestnet = workspaceMode === "testnet";
 
+  const { user } = usePrivy();
   const { client } = useSmartWallets();
   
   // Use unified cross-tab available balance (total funds minus held debt)
@@ -71,6 +75,8 @@ export function VirtualCardDrawer({
   const [card, setCard] = useState<VirtualCard>(() => getVirtualCard(workspaceMode, profile.name));
   const [showDetails, setShowDetails] = useState(false);
   const [isAddFundsOpen, setIsAddFundsOpen] = useState(false);
+  const [showPasskeyPrompt, setShowPasskeyPrompt] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // 2-Step Issuance Flow State
   const [issuanceStep, setIssuanceStep] = useState<"preferences" | "authenticating" | "countdown">("preferences");
@@ -123,8 +129,24 @@ export function VirtualCardDrawer({
   // -------------------------------------------------------------
   // 2-Step Issuance Flow with 3-Second Live Countdown
   // -------------------------------------------------------------
-  const handleStartIssuance = async () => {
+  const handleStartIssuance = async (opts?: { confirmed?: boolean; bypassBiometrics?: boolean } | React.MouseEvent) => {
+    const isConfirmedByUser = Boolean(opts && "confirmed" in opts && opts.confirmed);
+    const bypassBiometrics = Boolean(opts && "bypassBiometrics" in opts && opts.bypassBiometrics);
+
     sounds.playClick();
+
+    // Passkey Gate: on Testnet in Consumer Mode, verify user has an enrolled passkey unless confirmed
+    const isSnoozed = typeof window !== "undefined" && localStorage.getItem("mesh_snooze_passkey_prompt") === "true";
+    if (!isDeveloperMode && isTestnet && !isPasskeyEnrolled(user) && !isConfirmedByUser) {
+      if (!isSnoozed && !bypassBiometrics) {
+        setShowPasskeyPrompt(true);
+        return;
+      } else {
+        setShowConfirmModal(true);
+        return;
+      }
+    }
+
     setIssuanceStep("authenticating");
 
     // Testnet Mode: Real biometric passkey signing via Smart Wallet client
@@ -145,13 +167,13 @@ export function VirtualCardDrawer({
         });
 
         sounds.playSuccessChime();
-        toast.success("Biometrics Verified via Passkey", {
+        toast.success(isPasskeyEnrolled(user) ? "Biometrics Verified via Passkey" : "Card Issuance Authorized", {
           description: "Smart Account authenticated successfully.",
         });
       } catch (err: any) {
         setIssuanceStep("preferences");
-        toast.error("Passkey Authentication Cancelled", {
-          description: "Biometric approval is required to issue your on-chain card.",
+        toast.error("Authentication Cancelled", {
+          description: "Approval is required to issue your on-chain card.",
         });
         return;
       }
@@ -549,6 +571,43 @@ export function VirtualCardDrawer({
         onSuccess={() => {
           setIsAddFundsOpen(false);
         }}
+      />
+
+      <PasskeyPromptModal
+        isOpen={showPasskeyPrompt}
+        onClose={() => setShowPasskeyPrompt(false)}
+        onSuccess={() => {
+          setShowPasskeyPrompt(false);
+          handleStartIssuance();
+        }}
+        onContinueWithoutPasskey={() => {
+          setShowPasskeyPrompt(false);
+          if (!isDeveloperMode) {
+            setShowConfirmModal(true);
+          } else {
+            handleStartIssuance({ bypassBiometrics: true });
+          }
+        }}
+        actionTitle="authorize personal visa card issuance"
+      />
+
+      <PaymentConfirmationModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={() => {
+          setShowConfirmModal(false);
+          handleStartIssuance({ confirmed: true, bypassBiometrics: true });
+        }}
+        amountCents={0}
+        amountDisplayOverride="Free Issuance ($0.00)"
+        confirmKeyword="ISSUE"
+        title="Confirm Visa Card Issuance"
+        subtitle="Authorize personal virtual debit card binding to your account."
+        recipient="Stripe Issuing × Visa Network"
+        paymentMethodLabel="MeshTab Smart Account"
+        feeLabel="$0.00 (Gas Covered)"
+        actionLabel="Issue Card"
+        currency="USD"
       />
     </>
   );
