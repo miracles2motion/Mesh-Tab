@@ -1055,7 +1055,7 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense, skipBal
               const isParticipant = expense.participants ? expense.participants.includes(m.name) : true;
               if (isParticipant) {
                 const baseShare = Math.floor(expense.amount / splitCount);
-                let rp = expense.amount - (baseShare * splitCount);
+                const rp = expense.amount - (baseShare * splitCount);
                 let extraPenny = 0;
                 // re-simulate exact logic
                 const idx = participatingMembers.findIndex(pm => pm.name === m.name);
@@ -1214,7 +1214,7 @@ export function deleteStoredExpense(tabId: string, expenseId: string): { success
               const isParticipant = target.participants ? target.participants.includes(m.name) : true;
               if (isParticipant) {
                 const baseShare = Math.floor(target.amount / splitCount);
-                let rp = target.amount - (baseShare * splitCount);
+                const rp = target.amount - (baseShare * splitCount);
                 let extraPenny = 0;
                 const idx = participatingMembers.findIndex(pm => pm.name === m.name);
                 if (idx !== -1 && idx < rp) extraPenny = 1;
@@ -1790,6 +1790,7 @@ export function seedDemoExpenses(tabId: string, currentUserName?: string) {
 export function getTotalOutstandingDebt(currentUserName: string): number {
   if (typeof window === "undefined") return 0;
   // Delegate to computeCrossTabPosition to include pending changes and single source of truth
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { computeCrossTabPosition } = require('./balance');
   const pos = computeCrossTabPosition(currentUserName);
   return pos.totalOwe;

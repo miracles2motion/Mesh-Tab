@@ -29,7 +29,7 @@ export function Web3Provider({ children }: { children: ReactNode }) {
 
   return (
       <PrivyProvider
-      appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID!}
+      appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || "cmumvudgl005o0ckz1jn2ged5"}
       config={{
         appearance: {
           theme: theme, // Dynamically syncs with app's light/dark mode!

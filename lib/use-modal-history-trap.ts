@@ -13,7 +13,9 @@ import { useEffect, useRef } from "react";
  */
 export function useModalHistoryTrap(isOpen: boolean, onClose: () => void) {
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   useEffect(() => {
     if (!isOpen || typeof window === "undefined") {
