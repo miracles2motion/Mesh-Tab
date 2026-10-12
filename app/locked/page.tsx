@@ -18,9 +18,12 @@ export default function LockedPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const readyRef = useRef(ready);
-  readyRef.current = ready;
   const authenticatedRef = useRef(authenticated);
-  authenticatedRef.current = authenticated;
+
+  useEffect(() => {
+    readyRef.current = ready;
+    authenticatedRef.current = authenticated;
+  }, [ready, authenticated]);
 
   useEffect(() => {
     // If in demo mode, shouldn't be on /locked — redirect back to demo home
