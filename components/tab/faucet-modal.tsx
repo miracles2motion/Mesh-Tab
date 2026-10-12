@@ -30,6 +30,8 @@ import { LiveTime } from "../ui/live-time";
 import { getStoredClaimHistory, addClaimRecord, ClaimRecord } from "../../lib/claims";
 import { TransactionOverlay, TransactionState } from "../ui/transaction-overlay";
 import { ReceiptView } from "../ReceiptView";
+import { PaymentConfirmationModal } from "../ui/payment-confirmation-modal";
+import { isPasskeyEnrolled } from "../ui/passkey-prompt-modal";
 
 interface FaucetModalProps {
   isOpen: boolean;
@@ -47,6 +49,7 @@ export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
   const { balance: virtualBalance, topUp } = useVirtualBalance();
   const { balance: testnetBalance } = useRealAusdBalance(workspaceMode);
   const { claimBonus, isClaiming: isTestnetClaiming } = useClaimWelcomeBonus(workspaceMode);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   
   const displayBalance = workspaceMode === "testnet" ? testnetBalance * 100 : virtualBalance;
   const [isLocalClaiming, setIsLocalClaiming] = useState(false);
@@ -109,8 +112,16 @@ export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleClaim = async () => {
+  const handleClaim = async (opts?: { confirmed?: boolean } | React.MouseEvent) => {
+    const isConfirmedByUser = Boolean(opts && "confirmed" in opts && opts.confirmed);
+
     if (workspaceMode === "testnet") {
+      // If user lacks a passkey and hasn't explicitly confirmed via Slide/Type, prompt confirmation
+      if (!isDeveloperMode && !isConfirmedByUser && !isPasskeyEnrolled(user)) {
+        setShowConfirmModal(true);
+        return;
+      }
+
       if (!isDeveloperMode) {
         setTxState("authenticating");
         sounds.playClick();
@@ -396,6 +407,23 @@ export function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
           processing: "Crediting $10,000 to Mesh Balance...",
           success: "Funds Credited!"
         }}
+      />
+
+      <PaymentConfirmationModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={() => {
+          setShowConfirmModal(false);
+          handleClaim({ confirmed: true });
+        }}
+        amountCents={1000000}
+        title="Confirm $10,000 Deposit"
+        subtitle="Review and claim your testnet Agora AUSD balance."
+        recipient="Your MeshTab Account"
+        paymentMethodLabel="Agora Testnet Reserve"
+        feeLabel="$0.00 (Gas Covered)"
+        actionLabel="Claim"
+        currency="AUSD"
       />
     </>
   );

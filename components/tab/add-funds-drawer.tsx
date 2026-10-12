@@ -42,6 +42,7 @@ import { toast } from "sonner";
 import { authenticateWithBiometrics } from "@/lib/biometrics";
 import { usePrivy } from "@privy-io/react-auth";
 import { PasskeyPromptModal, isPasskeyEnrolled } from "@/components/ui/passkey-prompt-modal";
+import { PaymentConfirmationModal } from "@/components/ui/payment-confirmation-modal";
 
 interface AddFundsDrawerProps {
   isOpen: boolean;
@@ -98,6 +99,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
   const { claimBonus, isClaiming: isTestnetClaiming, hasClaimed, checkHasClaimed } = useClaimWelcomeBonus(workspaceMode);
   const { user } = usePrivy();
   const [showPasskeyPrompt, setShowPasskeyPrompt] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const initialAmount = isTestnet 
     ? "10000.00" 
@@ -160,7 +162,8 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
     setCurrentStep("select");
   };
 
-  const handleConfirmDeposit = async (opts?: { bypassBiometrics?: boolean } | React.MouseEvent) => {
+  const handleConfirmDeposit = async (opts?: { confirmed?: boolean; bypassBiometrics?: boolean } | React.MouseEvent) => {
+    const isConfirmedByUser = Boolean(opts && "confirmed" in opts && opts.confirmed);
     const bypassBiometrics = Boolean(opts && "bypassBiometrics" in opts && opts.bypassBiometrics);
 
     if (depositCents <= 0) {
@@ -170,9 +173,15 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
 
     // Passkey Gate: on Testnet, check if user has an enrolled passkey or snoozed prompt
     const isSnoozed = typeof window !== "undefined" && localStorage.getItem("mesh_snooze_passkey_prompt") === "true";
-    if (isTestnet && !isPasskeyEnrolled(user) && !isSnoozed && !bypassBiometrics) {
-      setShowPasskeyPrompt(true);
-      return;
+    if (isTestnet && !isPasskeyEnrolled(user) && !isConfirmedByUser) {
+      if (!isSnoozed && !bypassBiometrics) {
+        setShowPasskeyPrompt(true);
+        return;
+      } else {
+        // No passkey on device: show deliberate Slide/Type confirmation modal
+        setShowConfirmModal(true);
+        return;
+      }
     }
 
     // Prompt native device biometrics only if passkey is enrolled and not bypassed
@@ -951,12 +960,30 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
       }}
       onContinueWithoutPasskey={() => {
         setShowPasskeyPrompt(false);
-        toast.info("Using Cloud Smart Wallet", {
-          description: "Authorizing deposit using your secure embedded account."
-        });
-        handleConfirmDeposit({ bypassBiometrics: true });
+        setShowConfirmModal(true);
       }}
       actionTitle="claim testnet AUSD"
+    />
+
+    <PaymentConfirmationModal
+      isOpen={showConfirmModal}
+      onClose={() => setShowConfirmModal(false)}
+      onConfirm={() => {
+        setShowConfirmModal(false);
+        handleConfirmDeposit({ confirmed: true, bypassBiometrics: true });
+      }}
+      amountCents={depositCents}
+      title="Confirm Instant Deposit"
+      subtitle="Review and authorize your account deposit."
+      recipient="Your MeshTab Account"
+      paymentMethodLabel={
+        selectedMethod === "card" ? "Visa Platinum Debit" :
+        selectedMethod === "bank" ? "Chase Checking (FedNow)" : 
+        "Google Pay"
+      }
+      feeLabel="$0.00 (Gas Covered)"
+      actionLabel="Deposit"
+      currency="AUSD"
     />
   </>
   );

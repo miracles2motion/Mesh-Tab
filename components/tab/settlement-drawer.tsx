@@ -21,6 +21,7 @@ import { useRealAusdBalance } from "../../lib/onchain";
 import { monadTestnet } from "../../lib/chains";
 import { authenticateWithBiometrics } from "../../lib/biometrics";
 import { PasskeyPromptModal, isPasskeyEnrolled } from "../ui/passkey-prompt-modal";
+import { PaymentConfirmationModal } from "../ui/payment-confirmation-modal";
 
 const MeshTabLedgerABI = [
   {
@@ -152,6 +153,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
   const { balance: virtualBalance, deduct, topUp } = useVirtualBalance();
   const [showAddFunds, setShowAddFunds] = useState(false);
   const [showPasskeyPrompt, setShowPasskeyPrompt] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const activeUser = currentUserName || profile.name || "David";
   const { members: tabMembers } = useStoredTabMembers(tabId, activeUser);
   
@@ -186,7 +188,8 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
   const activeBalance = workspaceMode === "testnet" ? testnetBalance * 100 : virtualBalance; // convert testnet balance to cents for comparison
   const hasEnoughVirtual = activeBalance >= debtAmount;
 
-  const handleSettle = async (opts?: { bypassBiometrics?: boolean } | React.MouseEvent) => {
+  const handleSettle = async (opts?: { confirmed?: boolean; bypassBiometrics?: boolean } | React.MouseEvent) => {
+    const isConfirmedByUser = Boolean(opts && "confirmed" in opts && opts.confirmed);
     const bypassBiometrics = Boolean(opts && "bypassBiometrics" in opts && opts.bypassBiometrics);
 
     if (onConfirmPayment) {
@@ -194,11 +197,16 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
       return;
     }
 
-    // Passkey Gate: on Testnet with AUSD, verify user has an enrolled passkey unless snoozed or bypassed
+    // Passkey Gate: on Testnet with AUSD, verify user has an enrolled passkey unless snoozed or confirmed
     const isSnoozed = typeof window !== "undefined" && localStorage.getItem("mesh_snooze_passkey_prompt") === "true";
-    if (workspaceMode === "testnet" && paymentMethod === "ausd" && !isPasskeyEnrolled(user) && !isSnoozed && !bypassBiometrics) {
-      setShowPasskeyPrompt(true);
-      return;
+    if (workspaceMode === "testnet" && paymentMethod === "ausd" && !isPasskeyEnrolled(user) && !isConfirmedByUser) {
+      if (!isSnoozed && !bypassBiometrics) {
+        setShowPasskeyPrompt(true);
+        return;
+      } else {
+        setShowConfirmModal(true);
+        return;
+      }
     }
 
     // Prompt native device biometrics only if passkey is enrolled and not bypassed
@@ -595,12 +603,30 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
       }}
       onContinueWithoutPasskey={() => {
         setShowPasskeyPrompt(false);
-        toast.info("Using Cloud Smart Wallet", {
-          description: "Authorizing debt settlement using your secure embedded account."
-        });
-        handleSettle({ bypassBiometrics: true });
+        setShowConfirmModal(true);
       }}
       actionTitle="settle your netted debt"
+    />
+
+    <PaymentConfirmationModal
+      isOpen={showConfirmModal}
+      onClose={() => setShowConfirmModal(false)}
+      onConfirm={() => {
+        setShowConfirmModal(false);
+        handleSettle({ confirmed: true, bypassBiometrics: true });
+      }}
+      amountCents={debtAmount}
+      title="Confirm Debt Settlement"
+      subtitle={`Settle balance with ${recipientDisplay}`}
+      recipient={recipientDisplay}
+      paymentMethodLabel={
+        paymentMethod === "ausd"
+          ? "Agora AUSD Balance"
+          : "Visa Platinum Debit"
+      }
+      feeLabel="$0.00 (Gas Covered)"
+      actionLabel="Settle"
+      currency="AUSD"
     />
   </>
   );
