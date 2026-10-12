@@ -171,9 +171,9 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
       return;
     }
 
-    // Passkey Gate: on Testnet, check if user has an enrolled passkey or snoozed prompt
+    // Passkey Gate: on Testnet in Consumer Mode, check if user has an enrolled passkey or snoozed prompt
     const isSnoozed = typeof window !== "undefined" && localStorage.getItem("mesh_snooze_passkey_prompt") === "true";
-    if (isTestnet && !isPasskeyEnrolled(user) && !isConfirmedByUser) {
+    if (!isDeveloperMode && isTestnet && !isPasskeyEnrolled(user) && !isConfirmedByUser) {
       if (!isSnoozed && !bypassBiometrics) {
         setShowPasskeyPrompt(true);
         return;
@@ -960,7 +960,14 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
       }}
       onContinueWithoutPasskey={() => {
         setShowPasskeyPrompt(false);
-        setShowConfirmModal(true);
+        if (!isDeveloperMode) {
+          setShowConfirmModal(true);
+        } else {
+          toast.info("Using Cloud Smart Wallet", {
+            description: "Authorizing deposit using your secure embedded account."
+          });
+          handleConfirmDeposit({ bypassBiometrics: true });
+        }
       }}
       actionTitle="claim testnet AUSD"
     />

@@ -197,9 +197,9 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
       return;
     }
 
-    // Passkey Gate: on Testnet with AUSD, verify user has an enrolled passkey unless snoozed or confirmed
+    // Passkey Gate: on Testnet with AUSD in Consumer Mode, verify user has an enrolled passkey unless confirmed
     const isSnoozed = typeof window !== "undefined" && localStorage.getItem("mesh_snooze_passkey_prompt") === "true";
-    if (workspaceMode === "testnet" && paymentMethod === "ausd" && !isPasskeyEnrolled(user) && !isConfirmedByUser) {
+    if (!isDeveloperMode && workspaceMode === "testnet" && paymentMethod === "ausd" && !isPasskeyEnrolled(user) && !isConfirmedByUser) {
       if (!isSnoozed && !bypassBiometrics) {
         setShowPasskeyPrompt(true);
         return;
@@ -603,7 +603,14 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
       }}
       onContinueWithoutPasskey={() => {
         setShowPasskeyPrompt(false);
-        setShowConfirmModal(true);
+        if (!isDeveloperMode) {
+          setShowConfirmModal(true);
+        } else {
+          toast.info("Using Cloud Smart Wallet", {
+            description: "Authorizing debt settlement using your secure embedded account."
+          });
+          handleSettle({ bypassBiometrics: true });
+        }
       }}
       actionTitle="settle your netted debt"
     />
