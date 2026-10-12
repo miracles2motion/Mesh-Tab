@@ -18,7 +18,7 @@ import { getSessionSnapshot, saveSessionSnapshot, isSessionSnapshotValid } from 
  * Uses `router.replace` so browser back button can't return to a dead session.
  */
 
-const SDK_TIMEOUT_MS = 5000; // 5 second failsafe
+const SDK_TIMEOUT_MS = 10000; // 10 second failsafe (relaxed for waking background tabs)
 const PUBLIC_ROUTES = ["/", "/login", "/demo", "/onboarding", "/locked"];
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
@@ -75,13 +75,18 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     setOfflineStatusDetermined(true);
   }, [isOnline, isDemo, isPublicRoute]);
 
-  // Timeout failsafe: if Privy SDK hasn't initialized within 5s, flag it
+  // Timeout failsafe: if Privy SDK hasn't initialized within 10s, flag it
   useEffect(() => {
     if (isDemo || isPublicRoute || !isOnline) return;
     if (!ready) {
       timeoutRef.current = setTimeout(() => {
         setHasTimedOut(true);
       }, SDK_TIMEOUT_MS);
+    } else {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      setHasTimedOut(false);
     }
 
     return () => {
@@ -134,7 +139,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     
     if (hasTimedOut && !ready) {
       const isLocked = typeof window !== "undefined" && localStorage.getItem("mesh_session_locked") === "true";
-      if (isLocked) {
+      const hasProfile = typeof window !== "undefined" && (Boolean(getSessionSnapshot()) || Boolean(localStorage.getItem("meshTab_displayName")));
+
+      if (isLocked || hasProfile) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("mesh_session_locked", "true");
+        }
         router.replace("/locked");
       } else {
         router.replace("/");
@@ -146,7 +156,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     if (isDemo || isPublicRoute || !isOnline) return;
     if (ready && !authenticated) {
       const isLocked = typeof window !== "undefined" && localStorage.getItem("mesh_session_locked") === "true";
-      if (isLocked) {
+      const hasProfile = typeof window !== "undefined" && (Boolean(getSessionSnapshot()) || Boolean(localStorage.getItem("meshTab_displayName")));
+
+      if (isLocked || hasProfile) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("mesh_session_locked", "true");
+        }
         router.replace("/locked");
       } else {
         router.replace("/");

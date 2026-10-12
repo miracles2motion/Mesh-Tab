@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { Lock, Fingerprint, LogIn, Loader2, AlertCircle } from "lucide-react";
 import { usePrivy, useLoginWithPasskey } from "@privy-io/react-auth";
@@ -16,6 +16,11 @@ export default function LockedPage() {
   const [hadPasskey, setHadPasskey] = useState(true);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const readyRef = useRef(ready);
+  readyRef.current = ready;
+  const authenticatedRef = useRef(authenticated);
+  authenticatedRef.current = authenticated;
 
   useEffect(() => {
     // If in demo mode, shouldn't be on /locked — redirect back to demo home
@@ -44,6 +49,16 @@ export default function LockedPage() {
     setErrorMsg(null);
 
     try {
+      // 1. If Privy SDK is still waking up from background tab sleep, wait up to 4s for ready state
+      if (!readyRef.current) {
+        let waitTime = 0;
+        const maxWait = 4000;
+        while (!readyRef.current && waitTime < maxWait) {
+          await new Promise((resolve) => setTimeout(resolve, 150));
+          waitTime += 150;
+        }
+      }
+
       if (hadPasskey && typeof window !== "undefined" && window.PublicKeyCredential) {
         // Native biometric challenge (Face ID / Touch ID / Windows Hello)
         const challenge = new Uint8Array(32);
@@ -86,7 +101,7 @@ export default function LockedPage() {
       sounds.playSuccessChime();
       localStorage.removeItem("mesh_session_locked");
 
-      if (authenticated) {
+      if (authenticatedRef.current) {
         setWorkspaceMode("testnet");
         router.replace("/home");
       } else if (hadPasskey) {
@@ -135,7 +150,7 @@ export default function LockedPage() {
           {isAuthenticating ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
-              Verifying Biometrics...
+              {hadPasskey ? "Verifying Biometrics..." : "Securing Session..."}
             </>
           ) : (
             <>
