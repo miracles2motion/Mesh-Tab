@@ -11,6 +11,7 @@ import { usePrivy, useLogin } from "@privy-io/react-auth";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
 import { sounds } from "../../../../lib/sounds";
 import confetti from "canvas-confetti";
+import { isPasskeyEnrolled } from "@/components/ui/passkey-prompt-modal";
 
 export default function JoinTabPage() {
   const params = useParams();
@@ -20,7 +21,7 @@ export default function JoinTabPage() {
   const tabName = paramName || tabId.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   const router = useRouter();
   const { isDeveloperMode } = useDeveloperMode();
-  const { ready, getAccessToken, authenticated, user, login } = usePrivy();
+  const { ready, getAccessToken, authenticated, user, login, linkPasskey } = usePrivy();
   const { client } = useSmartWallets();
   const smartWalletAddress = client?.account?.address || user?.wallet?.address;
   const [name, setName] = useState(() => {
@@ -33,7 +34,7 @@ export default function JoinTabPage() {
     }
     return "";
   });
-  const [step, setStep] = useState<"name" | "auth" | "success">("name");
+  const [step, setStep] = useState<"name" | "passkey" | "auth" | "success">("name");
   const [isJoining, setIsJoining] = useState(false);
 
   // Auto-passthrough: If current user is already an active member of this tab, bypass join screen
@@ -91,6 +92,11 @@ export default function JoinTabPage() {
       } catch {}
 
       if (targetName) {
+        const mode = getWorkspaceMode() === "sample" ? "testnet" : getWorkspaceMode();
+        if (mode === "testnet" && !isPasskeyEnrolled(loggedInUser)) {
+          setStep("passkey");
+          return;
+        }
         executeJoin(targetName, loggedInUser);
       }
     }
@@ -110,6 +116,12 @@ export default function JoinTabPage() {
         sessionStorage.setItem("mesh_pending_join", JSON.stringify({ tabId, tabName, name: trimmedName }));
       } catch {}
       login();
+      return;
+    }
+
+    const mode = getWorkspaceMode() === "sample" ? "testnet" : getWorkspaceMode();
+    if (mode === "testnet" && !isPasskeyEnrolled(user)) {
+      setStep("passkey");
       return;
     }
     
@@ -388,6 +400,58 @@ export default function JoinTabPage() {
                     </button>
                   </div>
                 )}
+              </div>
+            )}
+
+            {step === "passkey" && (
+              <div className="animate-in fade-in slide-in-from-bottom-2 space-y-4 max-w-sm mx-auto">
+                <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-500/10 rounded-2xl flex items-center justify-center mx-auto border border-indigo-100 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400">
+                  <Fingerprint className="w-8 h-8 animate-pulse" />
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                    {isDeveloperMode ? "Register Passkey Signer" : "Enable 1-Tap Biometrics"}
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-white/60 mt-1 leading-relaxed">
+                    {isDeveloperMode
+                      ? "Bind a WebAuthn P-256 passkey to your smart account for gas-sponsored transactions on Monad Testnet."
+                      : "Secure your account with Face ID, Touch ID, or Windows Hello for instant 1-tap gasless settlements."}
+                  </p>
+                </div>
+
+                <div className="space-y-2 pt-2">
+                  <button
+                    onClick={async () => {
+                      sounds.playClick();
+                      try {
+                        if (linkPasskey) {
+                          await linkPasskey();
+                          sounds.playSuccessChime();
+                          if (typeof window !== "undefined") {
+                            localStorage.setItem("mesh_last_passkey_status", "true");
+                          }
+                          toast.success("Passkey Linked!");
+                        }
+                      } catch (e: any) {
+                        console.warn("Passkey link skipped/cancelled", e);
+                      }
+                      await executeJoin(name.trim());
+                    }}
+                    className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] active:scale-[0.98] cursor-pointer"
+                  >
+                    <Fingerprint className="w-5 h-5" />
+                    {isDeveloperMode ? "Register Passkey" : "Set Up Face ID / Touch ID"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => executeJoin(name.trim())}
+                    className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors py-2 cursor-pointer"
+                  >
+                    Skip and continue without passkey
+                  </button>
+                </div>
               </div>
             )}
 

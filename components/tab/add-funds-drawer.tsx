@@ -39,6 +39,8 @@ import { sounds } from "@/lib/sounds";
 import { fireFaucetConfetti } from "@/lib/confetti";
 import { toast } from "sonner";
 import { authenticateWithBiometrics } from "@/lib/biometrics";
+import { usePrivy } from "@privy-io/react-auth";
+import { PasskeyPromptModal, isPasskeyEnrolled } from "@/components/ui/passkey-prompt-modal";
 
 interface AddFundsDrawerProps {
   isOpen: boolean;
@@ -93,6 +95,8 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
   const { totalCents, heldCents, availableCents } = useAvailableBalance(profile.name || "David");
   const { balance: testnetBalance, refetch: refetchTestnetBalance } = useRealAusdBalance(workspaceMode);
   const { claimBonus, isClaiming: isTestnetClaiming, hasClaimed, checkHasClaimed } = useClaimWelcomeBonus(workspaceMode);
+  const { user } = usePrivy();
+  const [showPasskeyPrompt, setShowPasskeyPrompt] = useState(false);
 
   const initialAmount = isTestnet 
     ? "10000.00" 
@@ -158,6 +162,12 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
   const handleConfirmDeposit = async () => {
     if (depositCents <= 0) {
       toast.error("Invalid Amount", { description: "Please enter a deposit amount greater than $0." });
+      return;
+    }
+
+    // Passkey Gate: on Testnet, ensure user has an enrolled passkey before proceeding
+    if (isTestnet && !isPasskeyEnrolled(user)) {
+      setShowPasskeyPrompt(true);
       return;
     }
 
@@ -245,7 +255,8 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
   };
 
   return (
-    <Sheet isOpen={isOpen} onClose={handleClose} size="4xl">
+    <>
+      <Sheet isOpen={isOpen} onClose={handleClose} size="4xl">
       <div className="p-6 md:p-8 flex flex-col items-center bg-white dark:bg-[#0a0a0a] text-slate-900 dark:text-white">
         <AnimatePresence mode="wait">
           {/* MULTI-STAGE PROCESSING STEPPER VIEW */}
@@ -895,5 +906,16 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
         </AnimatePresence>
       </div>
     </Sheet>
+
+    <PasskeyPromptModal
+      isOpen={showPasskeyPrompt}
+      onClose={() => setShowPasskeyPrompt(false)}
+      onSuccess={() => {
+        setShowPasskeyPrompt(false);
+        handleConfirmDeposit();
+      }}
+      actionTitle="claim testnet AUSD"
+    />
+  </>
   );
 }
