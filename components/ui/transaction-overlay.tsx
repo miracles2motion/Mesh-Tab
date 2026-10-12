@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Fingerprint, Loader2, CheckCircle2, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 export type TransactionState = "idle" | "authenticating" | "processing" | "success";
 
@@ -23,12 +24,17 @@ export function TransactionOverlay({
     success: "Success!"
   }
 }: TransactionOverlayProps) {
-  
-  if (state === "idle") return null;
+  const [mounted, setMounted] = useState(false);
 
-  return (
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  
+  if (state === "idle" || !mounted || typeof document === "undefined") return null;
+
+  return createPortal(
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+      <div className="fixed inset-0 z-[350] flex items-center justify-center p-6">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -85,6 +91,7 @@ export function TransactionOverlay({
           </p>
         </motion.div>
       </div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

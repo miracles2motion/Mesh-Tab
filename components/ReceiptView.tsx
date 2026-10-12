@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, Share, ExternalLink, Check, X, ShieldCheck } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
@@ -24,6 +25,11 @@ export function ReceiptView({
 }) {
   const { developerMode: isDeveloperMode } = useDeveloperMode();
   const [copied, setCopied] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   // Always use the exact amount passed in (in cents)
   const displayAmount = amount;
@@ -60,14 +66,16 @@ export function ReceiptView({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  return (
+  if (!mounted || typeof document === "undefined") return null;
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[60] bg-black/60 dark:bg-black/80 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
+          className="fixed inset-0 z-[250] bg-black/60 dark:bg-black/80 backdrop-blur-xl flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
         >
           <motion.div 
             initial={{ scale: 0.95, y: 16 }}
@@ -212,7 +220,8 @@ export function ReceiptView({
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
 

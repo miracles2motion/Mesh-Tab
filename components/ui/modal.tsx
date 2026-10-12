@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
@@ -13,6 +14,7 @@ interface ModalProps {
   className?: string;
   hideCloseButton?: boolean;
   size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "full";
+  zIndexClassName?: string;
 }
 
 const sizeClasses = {
@@ -27,7 +29,14 @@ const sizeClasses = {
   full: "w-[98vw] h-[98vh] max-w-[98vw] max-h-[98vh] m-auto rounded-3xl",
 };
 
-export function Modal({ children, onClose, className, hideCloseButton = false, size = "full" }: ModalProps) {
+export function Modal({ 
+  children, 
+  onClose, 
+  className, 
+  hideCloseButton = false, 
+  size = "full",
+  zIndexClassName = "z-[200]" 
+}: ModalProps) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
@@ -59,11 +68,11 @@ export function Modal({ children, onClose, className, hideCloseButton = false, s
     };
   }, [handleClose]);
 
-  if (!mounted) return null;
+  if (!mounted || typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+      <div className={cn("fixed inset-0 flex items-center justify-center p-3 sm:p-6 overflow-y-auto", zIndexClassName)}>
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -98,6 +107,7 @@ export function Modal({ children, onClose, className, hideCloseButton = false, s
           </div>
         </motion.div>
       </div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

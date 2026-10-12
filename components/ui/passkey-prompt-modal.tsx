@@ -75,7 +75,7 @@ export function PasskeyPromptModal({
   };
 
   return (
-    <Modal onClose={onClose} size="md">
+    <Modal onClose={onClose} size="md" zIndexClassName="z-[300]">
       <div className="p-6 sm:p-8 flex flex-col items-center text-center text-slate-900 dark:text-white">
         {/* Glow & Icon */}
         <div className="relative mb-6">
