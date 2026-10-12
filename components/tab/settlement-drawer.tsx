@@ -186,22 +186,28 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
   const activeBalance = workspaceMode === "testnet" ? testnetBalance * 100 : virtualBalance; // convert testnet balance to cents for comparison
   const hasEnoughVirtual = activeBalance >= debtAmount;
 
-  const handleSettle = async () => {
+  const handleSettle = async (opts?: { bypassBiometrics?: boolean } | React.MouseEvent) => {
+    const bypassBiometrics = Boolean(opts && "bypassBiometrics" in opts && opts.bypassBiometrics);
+
     if (onConfirmPayment) {
       onConfirmPayment();
       return;
     }
 
-    // Passkey Gate: on Testnet with AUSD, verify user has an enrolled passkey before calling biometrics
-    if (workspaceMode === "testnet" && paymentMethod === "ausd" && !isPasskeyEnrolled(user)) {
+    // Passkey Gate: on Testnet with AUSD, verify user has an enrolled passkey unless snoozed or bypassed
+    const isSnoozed = typeof window !== "undefined" && localStorage.getItem("mesh_snooze_passkey_prompt") === "true";
+    if (workspaceMode === "testnet" && paymentMethod === "ausd" && !isPasskeyEnrolled(user) && !isSnoozed && !bypassBiometrics) {
       setShowPasskeyPrompt(true);
       return;
     }
 
-    const authRes = await authenticateWithBiometrics("Authorize Settlement Payment");
-    if (authRes.canceled) {
-      toast.info("Payment Canceled", { description: "Biometric authentication was canceled." });
-      return;
+    // Prompt native device biometrics only if passkey is enrolled and not bypassed
+    if (!bypassBiometrics && isPasskeyEnrolled(user)) {
+      const authRes = await authenticateWithBiometrics("Authorize Settlement Payment");
+      if (authRes.canceled) {
+        toast.info("Payment Canceled", { description: "Biometric authentication was canceled." });
+        return;
+      }
     }
 
     setIsProcessing(true);
@@ -531,7 +537,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
                 </div>
               ) : (
                 <Button 
-                  onClick={handleSettle}
+                  onClick={() => handleSettle()}
                   disabled={paymentMethod === "ausd" && !hasEnoughVirtual}
                   variant="primary" 
                   size="lg" 
@@ -586,6 +592,13 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
       onSuccess={() => {
         setShowPasskeyPrompt(false);
         handleSettle();
+      }}
+      onContinueWithoutPasskey={() => {
+        setShowPasskeyPrompt(false);
+        toast.info("Using Cloud Smart Wallet", {
+          description: "Authorizing debt settlement using your secure embedded account."
+        });
+        handleSettle({ bypassBiometrics: true });
       }}
       actionTitle="settle your netted debt"
     />

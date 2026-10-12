@@ -159,23 +159,28 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
     setCurrentStep("select");
   };
 
-  const handleConfirmDeposit = async () => {
+  const handleConfirmDeposit = async (opts?: { bypassBiometrics?: boolean } | React.MouseEvent) => {
+    const bypassBiometrics = Boolean(opts && "bypassBiometrics" in opts && opts.bypassBiometrics);
+
     if (depositCents <= 0) {
       toast.error("Invalid Amount", { description: "Please enter a deposit amount greater than $0." });
       return;
     }
 
-    // Passkey Gate: on Testnet, ensure user has an enrolled passkey before proceeding
-    if (isTestnet && !isPasskeyEnrolled(user)) {
+    // Passkey Gate: on Testnet, check if user has an enrolled passkey or snoozed prompt
+    const isSnoozed = typeof window !== "undefined" && localStorage.getItem("mesh_snooze_passkey_prompt") === "true";
+    if (isTestnet && !isPasskeyEnrolled(user) && !isSnoozed && !bypassBiometrics) {
       setShowPasskeyPrompt(true);
       return;
     }
 
-    // Step 1: Prompt native device biometrics (Face ID / Touch ID / Enclave)
-    const authRes = await authenticateWithBiometrics("Authorize Instant Deposit");
-    if (authRes.canceled) {
-      toast.info("Deposit Canceled", { description: "Biometric authentication was canceled." });
-      return;
+    // Prompt native device biometrics only if passkey is enrolled and not bypassed
+    if (!bypassBiometrics && isPasskeyEnrolled(user)) {
+      const authRes = await authenticateWithBiometrics("Authorize Instant Deposit");
+      if (authRes.canceled) {
+        toast.info("Deposit Canceled", { description: "Biometric authentication was canceled." });
+        return;
+      }
     }
 
     setIsProcessing(true);
@@ -798,7 +803,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
 
                 {/* Confirm CTA Button */}
                 <Button
-                  onClick={handleConfirmDeposit}
+                  onClick={() => handleConfirmDeposit()}
                   isLoading={isProcessing}
                   disabled={isProcessing || isCooldownActive}
                   variant="primary"
@@ -913,6 +918,13 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
       onSuccess={() => {
         setShowPasskeyPrompt(false);
         handleConfirmDeposit();
+      }}
+      onContinueWithoutPasskey={() => {
+        setShowPasskeyPrompt(false);
+        toast.info("Using Cloud Smart Wallet", {
+          description: "Authorizing deposit using your secure embedded account."
+        });
+        handleConfirmDeposit({ bypassBiometrics: true });
       }}
       actionTitle="claim testnet AUSD"
     />

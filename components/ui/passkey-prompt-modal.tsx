@@ -19,6 +19,7 @@ interface PasskeyPromptModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  onContinueWithoutPasskey?: () => void;
   actionTitle?: string;
 }
 
@@ -26,13 +27,27 @@ export function PasskeyPromptModal({
   isOpen,
   onClose,
   onSuccess,
+  onContinueWithoutPasskey,
   actionTitle = "complete your transaction"
 }: PasskeyPromptModalProps) {
   const { linkPasskey, user } = usePrivy();
   const { isDeveloperMode } = useDeveloperMode();
   const [isRegistering, setIsRegistering] = useState(false);
+  const [dontRemind, setDontRemind] = useState(false);
 
   if (!isOpen) return null;
+
+  const handleContinueWithoutPasskey = () => {
+    sounds.playClick();
+    if (dontRemind && typeof window !== "undefined") {
+      localStorage.setItem("mesh_snooze_passkey_prompt", "true");
+    }
+    if (onContinueWithoutPasskey) {
+      onContinueWithoutPasskey();
+    } else {
+      onClose();
+    }
+  };
 
   const handleEnroll = async () => {
     if (isRegistering) return;
@@ -61,14 +76,14 @@ export function PasskeyPromptModal({
     } catch (err: any) {
       console.warn("Passkey linking cancelled or failed:", err);
       setIsRegistering(false);
-      // User cancelled browser prompt
+      // User cancelled browser prompt or device has no platform authenticator
       if (err?.name === "NotAllowedError" || err?.message?.includes("cancelled") || err?.message?.includes("closed")) {
-        toast.info("Passkey Setup Postponed", {
-          description: "You can set up a passkey anytime in your profile settings."
+        toast.info("Passkey Setup Skipped", {
+          description: "You can continue securely using your Cloud Smart Wallet."
         });
       } else {
-        toast.error("Could not register passkey", {
-          description: err?.message || "Please make sure biometric credentials or hardware keys are enabled on your device."
+        toast.error("Biometrics not registered", {
+          description: "You can still proceed safely using your authenticated Cloud Account."
         });
       }
     }
@@ -160,13 +175,26 @@ export function PasskeyPromptModal({
             )}
           </Button>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-xs text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white transition-colors py-2 cursor-pointer"
-          >
-            Cancel and continue without passkey
-          </button>
+          <div className="flex flex-col items-center gap-2 pt-1">
+            <button
+              type="button"
+              onClick={handleContinueWithoutPasskey}
+              className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors py-1 cursor-pointer flex items-center gap-1 group"
+            >
+              <span>Continue without passkey</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </button>
+
+            <label className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-white/40 cursor-pointer select-none hover:text-slate-600 dark:hover:text-white/70 transition-colors">
+              <input
+                type="checkbox"
+                checked={dontRemind}
+                onChange={(e) => setDontRemind(e.target.checked)}
+                className="w-3.5 h-3.5 rounded border-slate-300 dark:border-white/20 text-indigo-600 focus:ring-0 cursor-pointer accent-indigo-600"
+              />
+              <span>Don&apos;t ask again on this device</span>
+            </label>
+          </div>
         </div>
       </div>
     </Modal>
