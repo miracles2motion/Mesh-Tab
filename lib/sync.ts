@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { getStoredTabMembers, getStoredExpenses, getWorkspaceMode, getStoredUser, getStoredTabs, TabMember, StoredExpense, resolveExpenseTimestamp } from "./user";
+import { getStoredTabMembers, getStoredExpenses, getWorkspaceMode, getStoredUser, getStoredTabs, TabMember, StoredExpense, resolveExpenseTimestamp, saveStoredSettlement } from "./user";
 import { isEffectivelyOnline } from "./network";
 import { storageKey, safeSetItem } from "./storage-keys";
 import { addNotification, getExpenseNotifId, getMemberJoinNotifId, getSettlementNotifId, removeNotification } from "./notifications";
@@ -264,9 +264,12 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
                     id: e.metadata.id || e.expenseId,
                     createdAt: resolvedMeta,
                     time: "Just now",
-                    syncStatus: "synced" as const 
+                    syncStatus: "synced" as const,
+                    isSettlement: Boolean(e.metadata.isSettlement || e.isSettlement || e.expenseId?.startsWith("settle-") || e.metadata.desc?.toLowerCase().includes("settled")),
+                    txHash: e.metadata.txHash || e.txHash,
                   };
                 }
+                const isSettle = Boolean(e.isSettlement || e.expenseId?.startsWith("settle-") || e.description?.toLowerCase().includes("settled"));
                 return {
                   id: e.expenseId || Math.random().toString(36).substr(2, 9),
                   payer: e.payers?.[0]?.name || "Unknown",
@@ -275,12 +278,14 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
                   createdAt: expTimestamp,
                   time: "Just now",
                   splitType: e.splitType || "equal",
-                  splits: e.splits,
+                  splits: e.splits || (e.borrowers ? Object.fromEntries(e.borrowers.map((b: any) => [b.name, b.amount])) : undefined),
                   participants: e.participants || (e.borrowers ? e.borrowers.map((b: any) => b.name) : undefined),
                   category: e.category || "other",
                   originalCurrency: e.originalCurrency || "USD",
                   originalAmount: e.originalAmount,
-                  syncStatus: "synced" as const
+                  syncStatus: "synced" as const,
+                  isSettlement: isSettle,
+                  txHash: e.txHash
                 };
               });
 
@@ -316,8 +321,20 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
                     const isNew = !localExpenses.some(le => le.id === exp.id);
                     const isPeer = exp.payer.toLowerCase() !== currentName;
                     if (isNew && isPeer) {
-                      const isSettle = exp.id.startsWith("settle-") || exp.desc.toLowerCase().includes("settled balance");
+                      const isSettle = exp.id.startsWith("settle-") || exp.desc.toLowerCase().includes("settled balance") || exp.isSettlement;
                       if (isSettle) {
+                        saveStoredSettlement({
+                          id: exp.id,
+                          tabId,
+                          tabName,
+                          payer: exp.payer,
+                          amount: exp.amount,
+                          recipient: profile.name || "You",
+                          txHash: exp.txHash,
+                          timestamp: resolveExpenseTimestamp(exp) || Date.now(),
+                          type: "settlement",
+                          direction: "in"
+                        }, mode);
                         addNotification({
                           id: getSettlementNotifId(exp.id),
                           type: "settlement",

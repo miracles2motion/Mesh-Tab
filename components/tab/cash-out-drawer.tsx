@@ -8,7 +8,7 @@ import { formatCurrency } from "../../lib/utils";
 import Image from "next/image";
 import { AgoraLogo, PrivyLogo } from "../ui/partner-logo";
 
-import { DEFAULT_USER_NAME, useSettledPayoutBalance, useWorkspaceMode, deductVirtualBalance, useDeveloperMode } from "../../lib/user";
+import { DEFAULT_USER_NAME, useSettledPayoutBalance, useWorkspaceMode, deductVirtualBalance, useDeveloperMode, saveStoredSettlement } from "../../lib/user";
 import { useAvailableBalance } from "../../lib/balance";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
@@ -103,6 +103,18 @@ export function CashOutDrawer({
     });
 
     try {
+      saveStoredSettlement({
+        id: `cashout-${Date.now()}`,
+        tabId: "wallet",
+        tabName: "Bank Withdrawal",
+        payer: "You",
+        amount: withdrawableAmount,
+        recipient: method === "card" ? "Visa Direct" : "Bank Transfer",
+        timestamp: Date.now(),
+        type: "settlement",
+        direction: "out"
+      }, workspaceMode);
+
       addNotification({
         type: "cashout",
         title: "Cash Out to Bank",

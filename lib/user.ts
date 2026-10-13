@@ -1449,12 +1449,59 @@ export function useStoredExpenses(tabId: string) {
   };
 }
 
-export function settleTab(tabId: string, currentUserName: string, amount: number, txHash?: string) {
+export interface StoredSettlement {
+  id: string;
+  tabId: string;
+  tabName?: string;
+  payer: string;
+  amount: number;
+  recipient?: string;
+  creditors?: { name: string; amount: number }[];
+  txHash?: string;
+  timestamp: number;
+  type: "settlement";
+  direction?: "in" | "out";
+}
+
+export function getStoredSettlements(mode?: WorkspaceMode): StoredSettlement[] {
+  if (typeof window === "undefined") return [];
+  const activeMode = mode || getWorkspaceMode();
+  try {
+    const raw = localStorage.getItem(storageKey("settlements", activeMode));
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {}
+  return [];
+}
+
+export function saveStoredSettlement(settlement: StoredSettlement, mode?: WorkspaceMode) {
+  if (typeof window === "undefined") return;
+  const activeMode = mode || getWorkspaceMode();
+  const current = getStoredSettlements(activeMode);
+  const updated = [
+    settlement,
+    ...current.filter(s => s.id !== settlement.id && (!settlement.txHash || s.txHash !== settlement.txHash))
+  ].sort((a, b) => b.timestamp - a.timestamp);
+  safeSetItem(storageKey("settlements", activeMode), JSON.stringify(updated));
+  window.dispatchEvent(new Event("meshTab-settlement-update"));
+}
+
+export function settleTab(
+  tabId: string, 
+  currentUserName: string, 
+  amount: number, 
+  txHash?: string,
+  recipientDisplay?: string,
+  explicitCreditors?: { name: string; amount: number }[]
+) {
   if (typeof window === "undefined") return;
   
   // 1. Update tab balance in stored tabs
   const key = getTabsStorageKey();
   const tabs = getStoredTabs();
+  const currentTab = tabs.find(t => t.id === tabId);
   const updatedTabs = tabs.map(t => {
     if (t.id === tabId) {
       return { ...t, balance: 0, lastActivityAt: Date.now() };
@@ -1466,7 +1513,7 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
 
   // 2. Update member balances for this tab
   const mode = getWorkspaceMode();
-  const creditorsPaid: { name: string; amount: number }[] = [];
+  const creditorsPaid: { name: string; amount: number }[] = explicitCreditors && explicitCreditors.length > 0 ? explicitCreditors : [];
   try {
     const members = getStoredTabMembers(tabId, currentUserName);
     let remainingToDeduct = amount;
@@ -1483,7 +1530,9 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
         const deduct = Math.min(m.balance, remainingToDeduct);
         const newBal = m.balance - deduct;
         remainingToDeduct -= deduct;
-        creditorsPaid.push({ name: m.name, amount: deduct });
+        if (!explicitCreditors || explicitCreditors.length === 0) {
+          creditorsPaid.push({ name: m.name, amount: deduct });
+        }
         
         // If the creditor getting paid is the main user (David/You), credit their payout balance
         const activeUser = getStoredUser().name || DEFAULT_USER_NAME;
@@ -1508,8 +1557,11 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
     window.dispatchEvent(new Event("meshTab-members-update"));
   } catch (e) {}
 
-  // 3. Add settlement entry to tab expenses (skip balance update as we just did it manually)
+  // 3. Add settlement entry to tab expenses with creditor splits
   const settleId = `settle-${Date.now()}`;
+  const splitsMap: Record<string, number> = {};
+  creditorsPaid.forEach(c => { splitsMap[c.name] = c.amount; });
+
   saveStoredExpense(tabId, {
     id: settleId,
     payer: currentUserName,
@@ -1517,8 +1569,26 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
     desc: "Settled balance in AUSD (Monad)",
     createdAt: Date.now(),
     isSettlement: true,
+    splits: splitsMap,
+    participants: creditorsPaid.map(c => c.name),
     txHash
   }, true);
+
+  // 4. Record global settlement activity for recent activity ledger
+  const targetRecipient = recipientDisplay || creditorsPaid.map(c => c.name).join(", ") || "Group Members";
+  saveStoredSettlement({
+    id: settleId,
+    tabId,
+    tabName: currentTab?.name || "Shared Tab",
+    payer: currentUserName,
+    amount,
+    recipient: targetRecipient,
+    creditors: creditorsPaid,
+    txHash,
+    timestamp: Date.now(),
+    type: "settlement",
+    direction: "out"
+  }, mode);
 
   if (mode === "testnet") {
     const wallet = localStorage.getItem("meshTab_walletAddress") || "";
@@ -1542,12 +1612,15 @@ export function settleTab(tabId: string, currentUserName: string, amount: number
     });
   }
 
-  // 4. In demo mode (sample / blank), when the user settles their own debt,
+  // 5. In demo mode (sample / blank), when the user settles their own debt,
   // deduct the amount from their cashable payout balance and virtual balance
   if (mode !== "testnet") {
     deductSettledPayout(amount);
     deductVirtualBalance(amount);
   }
+
+  window.dispatchEvent(new Event("meshTab-expenses-update"));
+  window.dispatchEvent(new Event("meshTab-settlement-update"));
 }
 
 // -------------------------------------------------------------

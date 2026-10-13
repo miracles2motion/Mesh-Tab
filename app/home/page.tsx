@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode, Settings, Search, Filter, Crown, CheckCircle2, TrendingDown, TrendingUp, ArrowDownToLine, Coins, Sparkles, Award, Fingerprint, Copy, CreditCard, Clock, ArrowDownLeft, Activity } from "lucide-react";
+import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode, Settings, Search, Filter, Crown, CheckCircle2, TrendingDown, TrendingUp, ArrowDownToLine, Coins, Sparkles, Award, Fingerprint, Copy, CreditCard, Clock, ArrowDownLeft, ArrowUpRight, Activity } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { TransactionOverlay, TransactionState } from "../../components/ui/transaction-overlay";
 import { formatCurrency, formatDistanceToNow } from "../../lib/utils";
 import { ThemeToggle } from "../../components/theme-toggle";
-import { useUserProfile, useStoredTabs, useVirtualBalance, useWorkspaceMode, getStoredTabMembers, useDeveloperMode } from "../../lib/user";
+import { useUserProfile, useStoredTabs, useVirtualBalance, useWorkspaceMode, getStoredTabMembers, useDeveloperMode, getStoredSettlements, getStoredExpenses, resolveExpenseTimestamp, getStoredTabs } from "../../lib/user";
 import { storageKey } from "../../lib/storage-keys";
 import { useAvailableBalance, computeCrossTabPosition } from "../../lib/balance";
 import { useNotifications } from "../../lib/notifications";
@@ -175,6 +175,28 @@ export default function GlobalHub() {
   } | null>(null);
   const [activityFilter, setActivityFilter] = useState<"all" | "settlement" | "topup">("all");
   const [showAllActivityModal, setShowAllActivityModal] = useState(false);
+  const [activityNonce, setActivityNonce] = useState(0);
+
+  // Real-time listener for settlements, tab expenses, faucet claims, and withdrawals
+  useEffect(() => {
+    const handleUpdate = () => setActivityNonce(n => n + 1);
+    window.addEventListener("meshTab-expenses-update", handleUpdate);
+    window.addEventListener("meshTab-settlement-update", handleUpdate);
+    window.addEventListener("meshTab-tabs-update", handleUpdate);
+    window.addEventListener("meshTab-claims-update", handleUpdate);
+    window.addEventListener("meshtab:claims:updated", handleUpdate);
+    window.addEventListener("meshTab-payout-update", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      window.removeEventListener("meshTab-expenses-update", handleUpdate);
+      window.removeEventListener("meshTab-settlement-update", handleUpdate);
+      window.removeEventListener("meshTab-tabs-update", handleUpdate);
+      window.removeEventListener("meshTab-claims-update", handleUpdate);
+      window.removeEventListener("meshtab:claims:updated", handleUpdate);
+      window.removeEventListener("meshTab-payout-update", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, []);
 
   const recentActivities = useMemo(() => {
     if (!mounted) return [];
@@ -182,6 +204,7 @@ export default function GlobalHub() {
       id: string;
       title: string;
       type: "topup" | "settlement";
+      direction: "in" | "out";
       amount: number;
       timestamp: number;
       txHash?: string;
@@ -189,14 +212,37 @@ export default function GlobalHub() {
       status: string;
     }> = [];
 
-    // Faucet claims from local storage
+    const seenIds = new Set<string>();
+    const seenTxHashes = new Set<string>();
+
+    const recordItem = (item: {
+      id: string;
+      title: string;
+      type: "topup" | "settlement";
+      direction: "in" | "out";
+      amount: number;
+      timestamp: number;
+      txHash?: string;
+      recipient?: string;
+      status: string;
+    }) => {
+      if (item.txHash && seenTxHashes.has(item.txHash.toLowerCase())) return;
+      if (seenIds.has(item.id)) return;
+      seenIds.add(item.id);
+      if (item.txHash) seenTxHashes.add(item.txHash.toLowerCase());
+      items.push(item);
+    };
+
+    // 1. Faucet claims / Top-Ups from local storage (Money Coming In)
     const claims = getStoredClaimHistory(client?.account?.address || user?.wallet?.address || undefined, workspaceMode);
-    claims.slice(0, 10).forEach((c, idx) => {
-      items.push({
+    claims.forEach((c, idx) => {
+      const claimAmountCents = c.amount * 100;
+      recordItem({
         id: c.id || `claim-${idx}`,
-        title: isDeveloperMode ? `+${formatCurrency(c.amount * 100)} Agora AUSD` : `+${formatCurrency(c.amount * 100)} Top-Up`,
+        title: isDeveloperMode ? `+${formatCurrency(claimAmountCents)} Agora AUSD Top-Up` : `+${formatCurrency(claimAmountCents)} Top-Up`,
         type: "topup",
-        amount: c.amount * 100,
+        direction: "in",
+        amount: claimAmountCents,
         timestamp: c.timestamp,
         txHash: c.txHash,
         recipient: isDeveloperMode ? "Agora Testnet Reserve" : "Account Top-Up",
@@ -204,12 +250,137 @@ export default function GlobalHub() {
       });
     });
 
-    // Sample mode settlements or benchmark activity
+    // 2. Explicit Stored Settlements (from getStoredSettlements)
+    const storedSettlements = getStoredSettlements(workspaceMode);
+    storedSettlements.forEach(s => {
+      const isOutbound = s.direction === "out" || 
+        s.payer.trim().toLowerCase() === currentUserName.trim().toLowerCase() ||
+        s.payer.trim().toLowerCase() === "you";
+
+      if (isOutbound) {
+        // Money leaving
+        const displayRecipient = s.recipient || s.tabName || "Group Members";
+        recordItem({
+          id: s.id,
+          title: isDeveloperMode
+            ? `-${formatCurrency(s.amount)} Agora AUSD • Settled to ${displayRecipient}`
+            : `-${formatCurrency(s.amount)} • Settled to ${displayRecipient}`,
+          type: "settlement",
+          direction: "out",
+          amount: s.amount,
+          timestamp: s.timestamp,
+          txHash: s.txHash,
+          recipient: displayRecipient,
+          status: "Settled"
+        });
+      } else {
+        // Money coming in
+        recordItem({
+          id: s.id,
+          title: isDeveloperMode
+            ? `+${formatCurrency(s.amount)} Agora AUSD • Settled by ${s.payer}`
+            : `+${formatCurrency(s.amount)} • Settled by ${s.payer}`,
+          type: "settlement",
+          direction: "in",
+          amount: s.amount,
+          timestamp: s.timestamp,
+          txHash: s.txHash,
+          recipient: "You",
+          status: "Received"
+        });
+      }
+    });
+
+    // 3. Scan all stored tabs & active tabs for settlement expenses
+    const candidateTabs = [...activeTabsList];
+    try {
+      const storedTabsList = getStoredTabs();
+      storedTabsList.forEach(st => {
+        if (!candidateTabs.some(ct => ct.id === st.id)) {
+          candidateTabs.push(st as any);
+        }
+      });
+    } catch {}
+
+    candidateTabs.forEach(tab => {
+      const tabExpenses = getStoredExpenses(tab.id);
+      tabExpenses.forEach(exp => {
+        const isSettle = Boolean(
+          exp.isSettlement ||
+          exp.id.startsWith("settle-") ||
+          exp.desc?.toLowerCase().includes("settled balance") ||
+          exp.desc?.toLowerCase().includes("settled up") ||
+          exp.desc?.toLowerCase().includes("debt settled")
+        );
+        if (!isSettle) return;
+
+        const ts = resolveExpenseTimestamp(exp) || exp.createdAt || Date.now();
+        const isUserPayer = 
+          exp.payer.trim().toLowerCase() === currentUserName.trim().toLowerCase() ||
+          exp.payer.trim().toLowerCase() === "you";
+
+        if (isUserPayer) {
+          // Outbound money: user settled their debt in this tab
+          const recipientName = exp.participants?.filter(p => 
+            p.trim().toLowerCase() !== currentUserName.trim().toLowerCase() && 
+            p.trim().toLowerCase() !== "you"
+          ).join(", ") || tab.name;
+
+          recordItem({
+            id: exp.id,
+            title: isDeveloperMode
+              ? `-${formatCurrency(exp.amount)} Agora AUSD • ${tab.name} Settlement`
+              : `-${formatCurrency(exp.amount)} • ${tab.name} Settlement`,
+            type: "settlement",
+            direction: "out",
+            amount: exp.amount,
+            timestamp: ts,
+            txHash: exp.txHash,
+            recipient: recipientName,
+            status: "Settled"
+          });
+        } else {
+          // Inbound money: another user settled debt that pays current user
+          let userShare = 0;
+          if (exp.splits) {
+            const splitKey = Object.keys(exp.splits).find(k => 
+              k.trim().toLowerCase() === currentUserName.trim().toLowerCase() || 
+              k.trim().toLowerCase() === "you"
+            );
+            if (splitKey) {
+              userShare = exp.splits[splitKey];
+            }
+          }
+          if (!userShare && (!exp.splits || Object.keys(exp.splits).length === 0)) {
+            userShare = exp.amount;
+          }
+
+          if (userShare > 0) {
+            recordItem({
+              id: exp.id,
+              title: isDeveloperMode
+                ? `+${formatCurrency(userShare)} Agora AUSD • Received from ${exp.payer}`
+                : `+${formatCurrency(userShare)} • Received from ${exp.payer}`,
+              type: "settlement",
+              direction: "in",
+              amount: userShare,
+              timestamp: ts,
+              txHash: exp.txHash,
+              recipient: "You",
+              status: "Received"
+            });
+          }
+        }
+      });
+    });
+
+    // 4. Sample mode fallback Lisbon item if in sample mode
     if (workspaceMode === "sample") {
-      items.push({
+      recordItem({
         id: "sample-settle-lisbon",
         title: "-$180.00 • Lisbon Trip Settlement",
         type: "settlement",
+        direction: "out",
         amount: 18000,
         timestamp: Date.now() - 3600000 * 4,
         recipient: "Elena Vance",
@@ -218,8 +389,20 @@ export default function GlobalHub() {
       });
     }
 
+    // Chronological order: newest transactions first down to oldest
     return items.sort((a, b) => b.timestamp - a.timestamp);
-  }, [mounted, workspaceMode, isDeveloperMode, client?.account?.address, user?.wallet?.address, testnetBalance, virtualBalance]);
+  }, [
+    mounted, 
+    workspaceMode, 
+    isDeveloperMode, 
+    currentUserName,
+    client?.account?.address, 
+    user?.wallet?.address, 
+    testnetBalance, 
+    virtualBalance, 
+    activeTabsList,
+    activityNonce
+  ]);
 
   const filteredActivities = useMemo(() => {
     if (activityFilter === "all") return recentActivities;
@@ -857,12 +1040,12 @@ export default function GlobalHub() {
                   className="p-3.5 rounded-2xl border border-slate-100 dark:border-white/5 hover:border-indigo-500/30 hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-all flex items-center justify-between cursor-pointer group"
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                      act.type === "topup"
-                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                        : "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
+                      act.direction === "out"
+                        ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+                        : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
                     }`}>
-                      {act.type === "topup" ? <ArrowDownLeft className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                      {act.direction === "out" ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownLeft className="w-4 h-4" />}
                     </div>
                     <div>
                       <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
@@ -1078,12 +1261,12 @@ export default function GlobalHub() {
                     className="p-3.5 rounded-2xl border border-slate-100 dark:border-white/5 hover:border-indigo-500/30 hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-all flex items-center justify-between cursor-pointer group"
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                        act.type === "topup"
-                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                          : "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${
+                        act.direction === "out"
+                          ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+                          : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
                       }`}>
-                        {act.type === "topup" ? <ArrowDownLeft className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                        {act.direction === "out" ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownLeft className="w-4 h-4" />}
                       </div>
                       <div>
                         <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">

@@ -309,7 +309,14 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
     } else {
       await new Promise((r) => setTimeout(r, 1800));
     }
-    settleTab(tabId, activeUser, debtAmount, confirmedTxHash);
+    settleTab(
+      tabId, 
+      activeUser, 
+      debtAmount, 
+      confirmedTxHash, 
+      recipientDisplay, 
+      creditorTransfers.map(t => ({ name: t.creditorName, amount: t.amountCents }))
+    );
     setIsProcessing(false);
     setIsSuccess(true);
     
