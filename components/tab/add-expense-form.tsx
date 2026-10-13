@@ -477,6 +477,7 @@ export function AddExpenseForm({ onSuccess, members = ["David"], currentUser, ta
       createdAt: Date.now(),
       splitType: splitType === 'percentage' || splitType === 'shares' ? 'exact' : splitType,
       splits: splitsMap,
+      participants: splitBetween,
       category,
       originalCurrency: currency,
       originalAmount: currency !== "USD" ? rawNumericAmount : undefined

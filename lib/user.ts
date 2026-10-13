@@ -1083,9 +1083,12 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense, skipBal
           
           // Only participating members matter if splits exist
           const participatingMembers = hasSplits 
-            ? members.filter(m => expense.splits && expense.splits[m.name] !== undefined && expense.splits[m.name] > 0)
-            : expense.participants
-              ? members.filter(m => expense.participants!.includes(m.name))
+            ? members.filter(m => {
+                const matchKey = expense.splits ? Object.keys(expense.splits).find(k => k.trim().toLowerCase() === m.name.trim().toLowerCase()) : null;
+                return matchKey !== null && matchKey !== undefined && (expense.splits![matchKey] || 0) > 0;
+              })
+            : expense.participants && expense.participants.length > 0
+              ? members.filter(m => expense.participants!.some(p => p.trim().toLowerCase() === m.name.trim().toLowerCase()))
               : members;
           
           const splitCount = Math.max(1, participatingMembers.length);
@@ -1094,10 +1097,15 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense, skipBal
 
           const updatedMembers = members.map(m => {
             let memberOwes = 0;
-            if (hasSplits && expense.splits && expense.splits[m.name] !== undefined) {
-              memberOwes = expense.splits[m.name];
+            if (hasSplits && expense.splits) {
+              const matchKey = Object.keys(expense.splits).find(k => k.trim().toLowerCase() === m.name.trim().toLowerCase());
+              if (matchKey !== undefined) {
+                memberOwes = expense.splits[matchKey] || 0;
+              }
             } else if (!hasSplits) {
-              const isParticipant = expense.participants ? expense.participants.includes(m.name) : true;
+              const isParticipant = expense.participants && expense.participants.length > 0
+                ? expense.participants.some(p => p.trim().toLowerCase() === m.name.trim().toLowerCase())
+                : true;
               if (isParticipant) {
                 const extraPenny = remainderPennies > 0 ? 1 : 0;
                 if (remainderPennies > 0) remainderPennies--;
@@ -1128,16 +1136,20 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense, skipBal
             const oldMem = members.find(om => om.name === m.name);
             if (!oldMem) return;
             let memberOwes = 0;
-            if (hasSplits && expense.splits && expense.splits[m.name] !== undefined) {
-              memberOwes = expense.splits[m.name];
+            if (hasSplits && expense.splits) {
+              const matchKey = Object.keys(expense.splits).find(k => k.trim().toLowerCase() === m.name.trim().toLowerCase());
+              if (matchKey !== undefined) {
+                memberOwes = expense.splits[matchKey] || 0;
+              }
             } else if (!hasSplits) {
-              const isParticipant = expense.participants ? expense.participants.includes(m.name) : true;
+              const isParticipant = expense.participants && expense.participants.length > 0
+                ? expense.participants.some(p => p.trim().toLowerCase() === m.name.trim().toLowerCase())
+                : true;
               if (isParticipant) {
                 const baseShare = Math.floor(expense.amount / splitCount);
                 const rp = expense.amount - (baseShare * splitCount);
                 let extraPenny = 0;
-                // re-simulate exact logic
-                const idx = participatingMembers.findIndex(pm => pm.name === m.name);
+                const idx = participatingMembers.findIndex(pm => pm.name.toLowerCase() === m.name.toLowerCase());
                 if (idx !== -1 && idx < rp) extraPenny = 1;
                 memberOwes = baseShare + extraPenny;
               }

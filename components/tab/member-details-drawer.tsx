@@ -45,32 +45,106 @@ export function MemberDetailsDrawer({
   const isCreditor = member.balance > 0;
   const isDebtor = member.balance < 0;
 
-  // Calculate total paid across all expenses
+  // Calculate total paid and itemized activity purely for this member
   const { totalPaidCents, memberExpenses } = useMemo(() => {
     let totalPaid = 0;
-    const involved: { expense: StoredExpense; memberShare: number; isPayer: boolean }[] = [];
+    const involved: { 
+      expense: StoredExpense; 
+      memberShare: number; 
+      isPayer: boolean;
+      isSettlement?: boolean;
+      settlementRole?: "payer" | "creditor";
+    }[] = [];
 
     expenses.forEach(exp => {
-      const isPayer = exp.payer.toLowerCase() === member.name.toLowerCase();
+      const isSettlement = Boolean(
+        exp.isSettlement ||
+        exp.id.startsWith("settle-") ||
+        exp.desc?.toLowerCase().includes("settled balance") ||
+        exp.desc?.toLowerCase().includes("settled up") ||
+        exp.desc?.toLowerCase().includes("debt settled") ||
+        exp.desc?.toLowerCase().includes("settle")
+      );
+
+      const isPayer = exp.payer.trim().toLowerCase() === member.name.trim().toLowerCase();
+
+      if (isSettlement) {
+        // SETTLEMENT TRANSACTION
+        if (isPayer) {
+          totalPaid += exp.amount;
+          involved.push({
+            expense: exp,
+            memberShare: exp.amount,
+            isPayer: true,
+            isSettlement: true,
+            settlementRole: "payer"
+          });
+          return;
+        }
+
+        // Check if this member is a creditor getting paid
+        let creditShare = 0;
+        if (exp.splits && Object.keys(exp.splits).length > 0) {
+          const matchKey = Object.keys(exp.splits).find(k => k.trim().toLowerCase() === member.name.trim().toLowerCase());
+          if (matchKey !== undefined) {
+            creditShare = exp.splits[matchKey] || 0;
+          }
+        } else if (Array.isArray(exp.participants) && exp.participants.length > 0) {
+          const isParticipant = exp.participants.some(p => p.trim().toLowerCase() === member.name.trim().toLowerCase());
+          if (isParticipant) {
+            const creditorCount = exp.participants.filter(p => p.trim().toLowerCase() !== exp.payer.trim().toLowerCase()).length;
+            creditShare = Math.round(exp.amount / Math.max(1, creditorCount));
+          }
+        }
+
+        if (creditShare > 0) {
+          involved.push({
+            expense: exp,
+            memberShare: creditShare,
+            isPayer: false,
+            isSettlement: true,
+            settlementRole: "creditor"
+          });
+        }
+        return;
+      }
+
+      // REGULAR EXPENSE
       if (isPayer) {
         totalPaid += exp.amount;
       }
 
-      // Check member's share
       let memberShare = 0;
-      if (exp.splitType === "exact" && exp.splits) {
-        memberShare = exp.splits[member.name] || 0;
-      } else {
-        // Equal split estimation
-        const splitCount = exp.splits ? Object.keys(exp.splits).length : memberCount;
-        memberShare = Math.round(exp.amount / Math.max(1, splitCount));
+
+      // 1. If explicit splits are recorded on the expense
+      if (exp.splits && Object.keys(exp.splits).length > 0) {
+        const matchKey = Object.keys(exp.splits).find(k => k.trim().toLowerCase() === member.name.trim().toLowerCase());
+        if (matchKey !== undefined) {
+          memberShare = exp.splits[matchKey] || 0;
+        } else {
+          memberShare = 0;
+        }
+      } 
+      // 2. If explicit participants list is recorded on the expense
+      else if (Array.isArray(exp.participants) && exp.participants.length > 0) {
+        const isParticipant = exp.participants.some(p => p.trim().toLowerCase() === member.name.trim().toLowerCase());
+        if (isParticipant) {
+          memberShare = Math.round(exp.amount / exp.participants.length);
+        } else {
+          memberShare = 0;
+        }
+      }
+      // 3. Fallback: If neither splits nor participants exist, do not assume newly joined members owe
+      else {
+        memberShare = 0;
       }
 
       if (isPayer || memberShare > 0) {
         involved.push({
           expense: exp,
           memberShare,
-          isPayer
+          isPayer,
+          isSettlement: false
         });
       }
     });
@@ -189,29 +263,66 @@ export function MemberDetailsDrawer({
                 </p>
               ) : (
                 <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                  {memberExpenses.map(({ expense, memberShare, isPayer }) => (
-                    <div
-                      key={expense.id}
-                      className="p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-between text-xs"
-                    >
-                      <div className="min-w-0 flex-1 mr-2">
-                        <p className="font-semibold text-slate-900 dark:text-white truncate">
-                          {expense.desc}
-                        </p>
-                        <span className="text-[10px] text-slate-400 dark:text-white/40">
-                          {isPayer ? "Paid the full bill" : "Shared expense"}
-                        </span>
+                  {memberExpenses.map(({ expense, memberShare, isPayer, isSettlement, settlementRole }) => {
+                    const isSettlementPayer = isSettlement && settlementRole === "payer";
+                    const isSettlementCreditor = isSettlement && settlementRole === "creditor";
+
+                    return (
+                      <div
+                        key={expense.id}
+                        className={`p-3 rounded-xl border flex items-center justify-between text-xs ${
+                          isSettlement
+                            ? "bg-emerald-50/50 dark:bg-emerald-500/10 border-emerald-500/20"
+                            : "bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10"
+                        }`}
+                      >
+                        <div className="min-w-0 flex-1 mr-2">
+                          <p className={`font-semibold truncate ${
+                            isSettlement ? "text-emerald-950 dark:text-emerald-200" : "text-slate-900 dark:text-white"
+                          }`}>
+                            {expense.desc}
+                          </p>
+                          <span className={`text-[10px] ${
+                            isSettlement ? "text-emerald-600 dark:text-emerald-400 font-medium" : "text-slate-400 dark:text-white/40"
+                          }`}>
+                            {isSettlementPayer 
+                              ? "Debt Settlement • Settled in Full" 
+                              : isSettlementCreditor 
+                                ? `Debt Cleared • Received from ${expense.payer}`
+                                : isPayer 
+                                  ? "Paid the full bill" 
+                                  : "Shared expense"}
+                          </span>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className={`font-bold block tabular-nums ${
+                            isSettlementCreditor 
+                              ? "text-emerald-600 dark:text-emerald-400" 
+                              : "text-slate-900 dark:text-white"
+                          }`}>
+                            {isSettlementCreditor 
+                              ? `+${formatCurrency(memberShare)}` 
+                              : formatCurrency(isPayer ? expense.amount : memberShare)}
+                          </span>
+                          <span className={`text-[10px] font-semibold ${
+                            isSettlement 
+                              ? "text-emerald-600 dark:text-emerald-400" 
+                              : isPayer 
+                                ? "text-emerald-600 dark:text-emerald-400" 
+                                : "text-slate-400"
+                          }`}>
+                            {isSettlementPayer 
+                              ? "Settled" 
+                              : isSettlementCreditor 
+                                ? "Received" 
+                                : isPayer 
+                                  ? "Payer" 
+                                  : "Share"}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <span className="font-bold text-slate-900 dark:text-white block">
-                          {isPayer ? formatCurrency(expense.amount) : formatCurrency(memberShare)}
-                        </span>
-                        <span className={`text-[10px] font-semibold ${isPayer ? "text-emerald-600" : "text-slate-400"}`}>
-                          {isPayer ? "Payer" : "Share"}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
