@@ -5,19 +5,12 @@ import { usePathname } from "next/navigation";
 import { ThemeToggle } from "../theme-toggle";
 import { Settings } from "lucide-react";
 import { useUserProfile } from "../../lib/user";
-import { useAvailableBalance } from "../../lib/balance";
 import { useEffect, useState } from "react";
-import { ArrowDownToLine } from "lucide-react";
-import { CashOutDrawer } from "../tab/cash-out-drawer";
-import { sounds } from "../../lib/sounds";
-import { formatCurrency } from "../../lib/utils";
 
 export function GlobalNav() {
   const pathname = usePathname();
   const profile = useUserProfile();
-  const { totalCents: settledBalance, availableCents: withdrawableAmount, heldCents: totalOutstandingDebt } = useAvailableBalance(profile.name || "David");
   const [mounted, setMounted] = useState(false);
-  const [showCashOutModal, setShowCashOutModal] = useState(false);
   
   useEffect(() => setMounted(true), []);
 
@@ -36,37 +29,6 @@ export function GlobalNav() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          {mounted && settledBalance > 0 && withdrawableAmount > 0 && (
-            <>
-              <button 
-                onClick={() => {
-                  sounds.playClick();
-                  setShowCashOutModal(true);
-                }}
-                className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-[11px] sm:text-xs font-bold shadow-md shadow-emerald-500/25 transition-all cursor-pointer mr-1"
-                title={`Withdraw ${formatCurrency(withdrawableAmount)} settled funds`}
-              >
-                <ArrowDownToLine className="w-3.5 h-3.5" /> 
-                <span className="hidden sm:inline">Withdraw </span>
-                {formatCurrency(withdrawableAmount)}
-              </button>
-              <CashOutDrawer 
-                isOpen={showCashOutModal}
-                onClose={() => setShowCashOutModal(false)}
-              />
-            </>
-          )}
-
-          {mounted && settledBalance > 0 && withdrawableAmount === 0 && (
-            <button 
-              className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-white/40 text-[11px] sm:text-xs font-bold cursor-not-allowed mr-1 border border-slate-200 dark:border-white/5"
-              title={`Cannot withdraw ${formatCurrency(settledBalance)} while you have ${formatCurrency(totalOutstandingDebt)} in outstanding debt across other tabs.`}
-            >
-              <ArrowDownToLine className="w-3.5 h-3.5 opacity-50" /> 
-              <span className="hidden sm:inline">Locked </span>
-              {formatCurrency(settledBalance)}
-            </button>
-          )}
 
 
           <ThemeToggle />
