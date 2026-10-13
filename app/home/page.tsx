@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode, Settings, Search, Filter, Crown, CheckCircle2, TrendingDown, TrendingUp, ArrowDownToLine, Coins, Sparkles, Award, Fingerprint, Copy, CreditCard, Clock, ArrowDownLeft, ArrowUpRight, Activity } from "lucide-react";
+import { User, Users, Receipt, Plus, ArrowRight, Bell, QrCode, Settings, Search, Filter, Crown, CheckCircle2, TrendingDown, TrendingUp, ArrowDownToLine, Coins, Sparkles, Award, Fingerprint, Copy, CreditCard, Clock, ArrowDownLeft, ArrowUpRight, Activity, ExternalLink } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { TransactionOverlay, TransactionState } from "../../components/ui/transaction-overlay";
 import { formatCurrency, formatDistanceToNow } from "../../lib/utils";
@@ -1059,9 +1059,24 @@ export default function GlobalHub() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                    <span>View Receipt</span>
-                    <span>→</span>
+                  <div className="flex items-center gap-2">
+                    {isDeveloperMode && (
+                      <a
+                        href={`https://testnet.monadvision.com/tx/${act.txHash || "0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0"}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="px-2.5 py-1 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 text-[10px] font-mono font-bold border border-purple-500/20 flex items-center gap-1 transition-all"
+                        title="View on MonadVision Explorer"
+                      >
+                        <span>Monad Tx</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                    <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                      <span>{isDeveloperMode ? "Receipt" : "View Receipt"}</span>
+                      <span>→</span>
+                    </span>
                   </div>
                 </div>
               ))}
@@ -1280,9 +1295,24 @@ export default function GlobalHub() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                      <span>View Receipt</span>
-                      <span>→</span>
+                    <div className="flex items-center gap-2">
+                      {isDeveloperMode && (
+                        <a
+                          href={`https://testnet.monadvision.com/tx/${act.txHash || "0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0"}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="px-2.5 py-1 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 text-[10px] font-mono font-bold border border-purple-500/20 flex items-center gap-1 transition-all"
+                          title="View on MonadVision Explorer"
+                        >
+                          <span>Monad Tx</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                      <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                        <span>{isDeveloperMode ? "Receipt" : "View Receipt"}</span>
+                        <span>→</span>
+                      </span>
                     </div>
                   </div>
                 ))

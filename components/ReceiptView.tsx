@@ -7,6 +7,8 @@ import { CheckCircle2, Share, ExternalLink, Check, X, ShieldCheck } from "lucide
 import { QRCodeSVG } from "qrcode.react";
 import { MonadLogo, AgoraLogo } from "./ui/partner-logo";
 import { useDeveloperMode } from "../lib/user";
+import { toast } from "sonner";
+import { sounds } from "../lib/sounds";
 
 export function ReceiptView({ 
   isOpen, 
@@ -49,21 +51,28 @@ export function ReceiptView({
     type: resolvedType,
     ts: String(Date.now()),
     from: currentPath,
+    txHash: txHash
   });
   if (recipient) queryParams.set("recipient", recipient);
   if (isTopUp) queryParams.set("method", "bank");
 
+  const receiptUrl = `${origin}/receipt?${queryParams.toString()}`;
+
   const verificationPayload = isDeveloperMode 
     ? explorerUrl 
-    : `${origin}/receipt?${queryParams.toString()}`;
+    : receiptUrl;
 
-  const handleShare = () => {
-    const text = isDeveloperMode
-      ? `${isTopUp ? "Claimed" : "Settled"} ${formatCurrency(displayAmount)} AUSD via MeshTab: Payment ID #4891029 on Monad Testnet`
-      : `${isTopUp ? "Added" : "Settled"} ${formatCurrency(displayAmount)} via MeshTab: Payment ID #4891029`;
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleShare = async () => {
+    sounds.playClick();
+    const shareLink = isDeveloperMode ? explorerUrl : receiptUrl;
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      await navigator.clipboard.writeText(shareLink);
+      setCopied(true);
+      toast.success(isDeveloperMode ? "Monad Explorer Link Copied!" : "Receipt Link Copied!", {
+        description: shareLink
+      });
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   if (!mounted || typeof document === "undefined") return null;
@@ -180,6 +189,29 @@ export function ReceiptView({
                 {isDeveloperMode ? "Scan for Explorer" : "Digital Receipt Seal"}
               </span>
             </div>
+
+            {/* Direct Blockchain Explorer or Digital Receipt Link */}
+            {isDeveloperMode ? (
+              <a
+                href={explorerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full mb-2.5 py-2.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-purple-500/20 transition-all cursor-pointer"
+              >
+                <span>View on MonadVision Explorer</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            ) : (
+              <a
+                href={receiptUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full mb-2.5 py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-black dark:bg-white dark:hover:bg-slate-100 text-white dark:text-black font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
+              >
+                <span>Open Full Digital Receipt</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            )}
 
             {/* Action Buttons */}
             <div className="flex w-full gap-2.5 pt-1">

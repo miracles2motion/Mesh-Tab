@@ -47,6 +47,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     const serverSyncedAt = Date.now();
+    const splitsMap = Object.fromEntries(payload.creditors.map(c => [c.name, c.amount]));
+    const creditorParticipants = payload.creditors.map(c => c.name);
+
     const expenseRecord = {
       expenseId: payload.settleId,
       description: payload.description,
@@ -54,11 +57,30 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       originalAmount: payload.amount,
       originalCurrency: "USD",
       timestamp: payload.timestamp || serverSyncedAt,
+      createdAt: payload.timestamp || serverSyncedAt,
       isSettlement: true,
       txHash: payload.txHash,
       payers: [{ name: payload.payer, amount: payload.amount }],
       borrowers: payload.creditors.map(c => ({ name: c.name, amount: c.amount })),
-      serverSyncedAt
+      splits: splitsMap,
+      splitType: "exact",
+      participants: [payload.payer, ...creditorParticipants],
+      category: "other",
+      serverSyncedAt,
+      metadata: {
+        id: payload.settleId,
+        desc: payload.description,
+        amount: payload.amount,
+        payer: payload.payer,
+        isSettlement: true,
+        txHash: payload.txHash,
+        splits: splitsMap,
+        splitType: "exact",
+        participants: [payload.payer, ...creditorParticipants],
+        category: "other",
+        createdAt: payload.timestamp || serverSyncedAt,
+        serverSyncedAt
+      }
     };
 
     // Construct deltas: Debtor balance increases by +amount, creditors' balance decreases by -deduct

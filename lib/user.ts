@@ -985,6 +985,24 @@ export function resolveExpenseTimestamp(item: any): number {
   }
 
   if (typeof item.time === "string" && item.time.trim()) {
+    const raw = item.time.trim().toLowerCase();
+    if (raw.includes("just now")) {
+      return Date.now();
+    }
+    if (raw.includes("yesterday")) {
+      const match = raw.match(/(\d+):(\d+)\s*(am|pm)/);
+      if (match) {
+        let hour = parseInt(match[1], 10);
+        const min = parseInt(match[2], 10);
+        if (match[3] === "pm" && hour < 12) hour += 12;
+        if (match[3] === "am" && hour === 12) hour = 0;
+        const d = new Date();
+        d.setDate(d.getDate() - 1);
+        d.setHours(hour, min, 0, 0);
+        return d.getTime();
+      }
+      return Date.now() - 86400000;
+    }
     const parsed = Date.parse(item.time);
     if (!isNaN(parsed) && parsed > 0) {
       return parsed;
@@ -1558,7 +1576,15 @@ export function settleTab(
   } catch (e) {}
 
   // 3. Add settlement entry to tab expenses with creditor splits
-  const settleId = `settle-${Date.now()}`;
+  const now = Date.now();
+  const existingExpenses = getStoredExpenses(tabId);
+  const maxExistingTs = existingExpenses.reduce((max, exp) => {
+    const t = resolveExpenseTimestamp(exp);
+    return t > max ? t : max;
+  }, 0);
+  const effectiveSettleTs = Math.max(now, maxExistingTs + 1000);
+
+  const settleId = `settle-${effectiveSettleTs}`;
   const splitsMap: Record<string, number> = {};
   creditorsPaid.forEach(c => { splitsMap[c.name] = c.amount; });
 
@@ -1567,7 +1593,7 @@ export function settleTab(
     payer: currentUserName,
     amount: amount,
     desc: "Settled balance in AUSD (Monad)",
-    createdAt: Date.now(),
+    createdAt: effectiveSettleTs,
     isSettlement: true,
     splits: splitsMap,
     participants: creditorsPaid.map(c => c.name),
@@ -1585,7 +1611,7 @@ export function settleTab(
     recipient: targetRecipient,
     creditors: creditorsPaid,
     txHash,
-    timestamp: Date.now(),
+    timestamp: effectiveSettleTs,
     type: "settlement",
     direction: "out"
   }, mode);
@@ -1606,7 +1632,7 @@ export function settleTab(
           creditors: creditorsPaid,
           description: "Settled balance in AUSD (Monad)",
           txHash,
-          timestamp: Date.now()
+          timestamp: effectiveSettleTs
         }
       });
     });

@@ -99,6 +99,9 @@ export function FeedList({ expenses, currentUserName, isLoading = false }: FeedL
         const tsB = resolveExpenseTimestamp(b);
         const tsA = resolveExpenseTimestamp(a);
         if (tsB !== tsA) return tsB - tsA;
+        const bIsSettle = Boolean(b.isSettlement || b.id.startsWith("settle-") || b.desc.toLowerCase().includes("settle"));
+        const aIsSettle = Boolean(a.isSettlement || a.id.startsWith("settle-") || a.desc.toLowerCase().includes("settle"));
+        if (bIsSettle !== aIsSettle) return bIsSettle ? 1 : -1;
         return String(b.id || "").localeCompare(String(a.id || ""));
       });
   }, [expenses, selectedFilter, searchQuery]);
@@ -332,9 +335,23 @@ export function FeedList({ expenses, currentUserName, isLoading = false }: FeedL
                             )
                           )}
                         </div>
-                        <span className={`font-extrabold text-base sm:text-lg tabular-nums ml-2 shrink-0 ${isSettlement ? "text-emerald-600 dark:text-emerald-400" : "text-slate-900 dark:text-white"}`}>
-                          {isSettlement ? `+${formatCurrency(item.amount)}` : formatCurrency(item.amount)}
-                        </span>
+                        {(() => {
+                          const isOutbound = isSettlement && currentUserName && (
+                            item.payer.toLowerCase() === currentUserName.toLowerCase() ||
+                            item.payer.toLowerCase() === "you"
+                          );
+                          return (
+                            <span className={`font-extrabold text-base sm:text-lg tabular-nums ml-2 shrink-0 ${
+                              isSettlement 
+                                ? (isOutbound ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400")
+                                : "text-slate-900 dark:text-white"
+                            }`}>
+                              {isSettlement 
+                                ? (isOutbound ? `-${formatCurrency(item.amount)}` : `+${formatCurrency(item.amount)}`) 
+                                : formatCurrency(item.amount)}
+                            </span>
+                          );
+                        })()}
                       </div>
                       <div className="flex justify-between items-center text-xs">
                         <span className={isSettlement ? "text-emerald-700/80 dark:text-emerald-300/70 font-medium" : "text-slate-500 dark:text-white/50"}>

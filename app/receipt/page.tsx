@@ -57,7 +57,7 @@ function ReceiptContent() {
     hour12: true
   });
 
-  const txHash = "0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0";
+  const txHash = searchParams.get("txHash") || "0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0";
 
   const handleCopyLink = () => {
     if (typeof window !== "undefined") {
