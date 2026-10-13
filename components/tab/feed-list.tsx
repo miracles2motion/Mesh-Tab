@@ -24,6 +24,9 @@ export interface ExpenseItem {
   syncStatus?: "synced" | "pending" | "failed";
   isSettlement?: boolean;
   txHash?: string;
+  splits?: Record<string, number>;
+  borrowers?: { name: string; amount: number }[];
+  participants?: string[];
 }
 
 interface FeedListProps {
@@ -340,14 +343,39 @@ export function FeedList({ expenses, currentUserName, isLoading = false }: FeedL
                             item.payer.toLowerCase() === currentUserName.toLowerCase() ||
                             item.payer.toLowerCase() === "you"
                           );
+                          let displayAmt = item.amount;
+                          let isRecipient = false;
+                          if (isSettlement && !isOutbound && currentUserName) {
+                            if (item.splits && Object.keys(item.splits).length > 0) {
+                              const matchKey = Object.keys(item.splits).find(k => {
+                                const cleanK = k.trim().toLowerCase();
+                                return cleanK === currentUserName.toLowerCase() || cleanK === "you";
+                              });
+                              if (matchKey && item.splits[matchKey] !== undefined) {
+                                displayAmt = item.splits[matchKey];
+                                isRecipient = true;
+                              }
+                            } else if (item.borrowers && Array.isArray(item.borrowers)) {
+                              const bMatch = item.borrowers.find((b: any) => {
+                                const cleanB = b.name?.trim().toLowerCase();
+                                return cleanB === currentUserName.toLowerCase() || cleanB === "you";
+                              });
+                              if (bMatch && bMatch.amount !== undefined) {
+                                displayAmt = bMatch.amount;
+                                isRecipient = true;
+                              }
+                            }
+                          }
                           return (
                             <span className={`font-extrabold text-base sm:text-lg tabular-nums ml-2 shrink-0 ${
                               isSettlement 
-                                ? (isOutbound ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400")
+                                ? (isOutbound 
+                                    ? "text-rose-600 dark:text-rose-400" 
+                                    : (isRecipient ? "text-emerald-600 dark:text-emerald-400" : "text-emerald-700/80 dark:text-emerald-300/80"))
                                 : "text-slate-900 dark:text-white"
                             }`}>
                               {isSettlement 
-                                ? (isOutbound ? `-${formatCurrency(item.amount)}` : `+${formatCurrency(item.amount)}`) 
+                                ? (isOutbound ? `-${formatCurrency(item.amount)}` : (isRecipient ? `+${formatCurrency(displayAmt)}` : formatCurrency(item.amount))) 
                                 : formatCurrency(item.amount)}
                             </span>
                           );

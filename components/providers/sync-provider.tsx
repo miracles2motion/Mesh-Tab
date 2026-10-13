@@ -96,22 +96,30 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
                         const serverMapped = expData.expenses.map((e: any) => {
                           const isSettle = Boolean(e.isSettlement || e.expenseId?.startsWith("settle-") || e.description?.toLowerCase().includes("settled"));
+                          const resolvedSplits = (e.splits && Object.keys(e.splits).length > 0 ? e.splits : undefined) ||
+                            (e.metadata?.splits && Object.keys(e.metadata.splits).length > 0 ? e.metadata.splits : undefined) ||
+                            (Array.isArray(e.borrowers) && e.borrowers.length > 0 ? Object.fromEntries(e.borrowers.map((b: any) => [b.name, b.amount])) : undefined) ||
+                            (Array.isArray(e.metadata?.borrowers) && e.metadata.borrowers.length > 0 ? Object.fromEntries(e.metadata.borrowers.map((b: any) => [b.name, b.amount])) : undefined);
+                          const resolvedBorrowers = e.borrowers || e.metadata?.borrowers;
+                          const resolvedParticipants = e.participants || e.metadata?.participants || (e.borrowers ? e.borrowers.map((b: any) => b.name) : undefined);
+
                           return {
-                            id: e.expenseId || e.id,
-                            payer: e.payers?.[0]?.name || "Unknown",
-                            amount: e.finalAmountUsd || 0,
-                            desc: e.description || "",
-                            createdAt: e.createdAt || e.timestamp || Date.now(),
+                            id: e.expenseId || e.id || e.metadata?.id,
+                            payer: e.payers?.[0]?.name || e.metadata?.payer || "Unknown",
+                            amount: e.finalAmountUsd || e.amount || e.metadata?.amount || 0,
+                            desc: e.description || e.metadata?.desc || "",
+                            createdAt: e.createdAt || e.timestamp || e.metadata?.createdAt || Date.now(),
                             time: "Just now",
-                            splitType: e.splitType || "equal",
-                            splits: e.splits || (e.borrowers ? Object.fromEntries(e.borrowers.map((b: any) => [b.name, b.amount])) : undefined),
-                            participants: e.participants || (e.borrowers ? e.borrowers.map((b: any) => b.name) : undefined),
-                            category: e.category || "other",
+                            splitType: e.splitType || e.metadata?.splitType || "exact",
+                            splits: resolvedSplits,
+                            borrowers: resolvedBorrowers,
+                            participants: resolvedParticipants,
+                            category: e.category || e.metadata?.category || "other",
                             originalCurrency: e.originalCurrency || "USD",
                             originalAmount: e.originalAmount,
                             syncStatus: "synced" as const,
                             isSettlement: isSettle,
-                            txHash: e.txHash
+                            txHash: e.txHash || e.metadata?.txHash
                           };
                         });
 

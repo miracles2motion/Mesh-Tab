@@ -259,6 +259,13 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
 
                 if (e.metadata) {
                   const resolvedMeta = resolveExpenseTimestamp(e.metadata) || expTimestamp;
+                  const mergedSplits = (e.metadata.splits && Object.keys(e.metadata.splits).length > 0 ? e.metadata.splits : undefined) ||
+                    (e.splits && Object.keys(e.splits).length > 0 ? e.splits : undefined) ||
+                    (Array.isArray(e.borrowers) && e.borrowers.length > 0 ? Object.fromEntries(e.borrowers.map((b: any) => [b.name, b.amount])) : undefined) ||
+                    (Array.isArray(e.metadata.borrowers) && e.metadata.borrowers.length > 0 ? Object.fromEntries(e.metadata.borrowers.map((b: any) => [b.name, b.amount])) : undefined);
+                  const mergedBorrowers = e.metadata.borrowers || e.borrowers;
+                  const mergedParticipants = e.metadata.participants || e.participants || (e.borrowers ? e.borrowers.map((b: any) => b.name) : undefined);
+
                   return { 
                     ...e.metadata, 
                     id: e.metadata.id || e.expenseId,
@@ -267,6 +274,9 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
                     syncStatus: "synced" as const,
                     isSettlement: Boolean(e.metadata.isSettlement || e.isSettlement || e.expenseId?.startsWith("settle-") || e.metadata.desc?.toLowerCase().includes("settled")),
                     txHash: e.metadata.txHash || e.txHash,
+                    splits: mergedSplits,
+                    borrowers: mergedBorrowers,
+                    participants: mergedParticipants,
                   };
                 }
                 const isSettle = Boolean(e.isSettlement || e.expenseId?.startsWith("settle-") || e.description?.toLowerCase().includes("settled"));
@@ -332,10 +342,18 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
                           if (splitKey) {
                             peerShare = exp.splits[splitKey];
                           }
+                        } else if (exp.borrowers && Array.isArray(exp.borrowers)) {
+                          const bMatch = exp.borrowers.find((b: any) => {
+                            const cleanB = b.name?.trim().toLowerCase();
+                            return cleanB === currentName || cleanB === "you";
+                          });
+                          if (bMatch) {
+                            peerShare = bMatch.amount || 0;
+                          }
                         } else {
-                          const isParticipant = !exp.participants || exp.participants.length === 0 ||
-                            exp.participants.some(p => p.trim().toLowerCase() === currentName || p.trim().toLowerCase() === "you");
-                          if (isParticipant) {
+                          // Only if current user is the sole creditor in a 1:1 settlement
+                          const creditors = (exp.participants || []).filter(p => p.trim().toLowerCase() !== exp.payer.trim().toLowerCase());
+                          if (creditors.length === 1 && (creditors[0].trim().toLowerCase() === currentName || creditors[0].trim().toLowerCase() === "you")) {
                             peerShare = exp.amount;
                           }
                         }

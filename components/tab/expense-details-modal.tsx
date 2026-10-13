@@ -4,13 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, Receipt, Clock, User, ArrowRight, Trash2, AlertTriangle, Loader2, Edit2, Check, ExternalLink, CheckCircle2, ShieldCheck } from "lucide-react";
 import { formatCurrency } from "../../lib/utils";
-import { useUserProfile, getWorkspaceMode, getStoredTabMembers, getStoredExpenses, StoredExpense, deleteStoredExpense, updateStoredExpenseDescription, useDeveloperMode } from "../../lib/user";
+import { useUserProfile, getWorkspaceMode, getStoredTabMembers, getStoredExpenses, getStoredSettlements, StoredExpense, deleteStoredExpense, updateStoredExpenseDescription, useDeveloperMode } from "../../lib/user";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
 import { MonadLogo, PythLogo } from "../ui/partner-logo";
 import { EXPENSE_CATEGORIES } from "./add-expense-form";
 import { LiveTime } from "../ui/live-time";
 import { ReceiptView } from "../ReceiptView";
+import { computeDebtorCreditorSettlements } from "./settlement-drawer";
 
 interface ExpenseDetailsProps {
   onClose?: () => void;
@@ -97,32 +98,50 @@ export function ExpenseDetails({ onClose, expenseId, tabId }: ExpenseDetailsProp
           amount: splitAmt,
           isCreditor: true
         }));
-    } else if (foundCustomExpense?.participants && foundCustomExpense.participants.length > 0) {
-      const creditorNames = foundCustomExpense.participants.filter(p => p.toLowerCase() !== payer.toLowerCase());
-      if (creditorNames.length > 0) {
-        const share = Math.round(amount / creditorNames.length);
-        dynamicSplits = creditorNames.map(name => ({
-          name,
-          amount: share,
+    } else if (foundCustomExpense?.borrowers && Array.isArray(foundCustomExpense.borrowers) && foundCustomExpense.borrowers.length > 0) {
+      dynamicSplits = foundCustomExpense.borrowers
+        .filter((b: any) => b.name.toLowerCase() !== payer.toLowerCase())
+        .map((b: any) => ({
+          name: b.name,
+          amount: b.amount,
           isCreditor: true
         }));
-      } else {
-        dynamicSplits = [{ name: "Tab Creditors", amount, isCreditor: true }];
-      }
     } else {
-      const tabMembers = getStoredTabMembers(tabId, currentUserName);
-      const otherMembers = tabMembers.filter(m => m.name.toLowerCase() !== payer.toLowerCase());
-      const creditors = otherMembers.filter(m => (m.balance ?? 0) > 0);
-      const targetList = creditors.length > 0 ? creditors : otherMembers;
-      if (targetList.length > 0) {
-        const share = Math.round(amount / targetList.length);
-        dynamicSplits = targetList.map(m => ({
-          name: m.name,
-          amount: share,
+      // Check stored settlements in user ledger
+      const stored = getStoredSettlements(mode);
+      const match = stored.find(s => s.id === expenseId || (s.txHash && foundCustomExpense?.txHash && s.txHash === foundCustomExpense.txHash));
+      if (match && match.creditors && match.creditors.length > 0) {
+        dynamicSplits = match.creditors.map(c => ({
+          name: c.name,
+          amount: c.amount,
           isCreditor: true
         }));
       } else {
-        dynamicSplits = [{ name: "Tab Creditors", amount, isCreditor: true }];
+        const creditorNames = (foundCustomExpense?.participants || []).filter(p => p.toLowerCase() !== payer.toLowerCase());
+        if (creditorNames.length === 1) {
+          // Exactly one creditor was paid 100% of the settlement
+          dynamicSplits = [{ name: creditorNames[0], amount, isCreditor: true }];
+        } else if (creditorNames.length > 1) {
+          // Multi-creditor batch settlement: reconstruct from tab members if available
+          const tabMembers = getStoredTabMembers(tabId, currentUserName);
+          const computed = computeDebtorCreditorSettlements(tabMembers, payer, amount);
+          if (computed.length > 0 && computed.length === creditorNames.length) {
+            dynamicSplits = computed.map(c => ({
+              name: c.creditorName,
+              amount: c.amountCents,
+              isCreditor: true
+            }));
+          } else {
+            // NEVER divide equally. Show each recipient with their cleared status
+            dynamicSplits = creditorNames.map(name => ({
+              name,
+              amount: 0,
+              isCreditor: true
+            }));
+          }
+        } else {
+          dynamicSplits = [{ name: "Tab Creditors", amount, isCreditor: true }];
+        }
       }
     }
   } else if (foundCustomExpense?.splits && Object.keys(foundCustomExpense.splits).length > 0) {
@@ -432,7 +451,7 @@ export function ExpenseDetails({ onClose, expenseId, tabId }: ExpenseDetailsProp
                   
                   <div className="flex flex-col items-end">
                     <span className="font-extrabold text-sm tabular-nums text-emerald-600 dark:text-emerald-400">
-                      +{formatCurrency(split.amount)}
+                      {split.amount > 0 ? `+${formatCurrency(split.amount)}` : "Settled"}
                     </span>
                     <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
                       <Check className="w-3 h-3 text-emerald-500" /> Debt Cleared
@@ -550,7 +569,13 @@ export function ExpenseDetails({ onClose, expenseId, tabId }: ExpenseDetailsProp
       <ReceiptView
         isOpen={showReceipt}
         onClose={() => setShowReceipt(false)}
-        amount={details.amount}
+        amount={(() => {
+          if (isSettlement && currentUserName && details.payer.toLowerCase() !== currentUserName.toLowerCase()) {
+            const mySplit = dynamicSplits.find(s => s.name.toLowerCase() === currentUserName.toLowerCase() || s.name.toLowerCase() === "you");
+            if (mySplit && mySplit.amount > 0) return mySplit.amount;
+          }
+          return details.amount;
+        })()}
         recipient={details.payer}
         txHash={details.txHash}
         type="settlement"

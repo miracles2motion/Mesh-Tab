@@ -919,6 +919,7 @@ export interface StoredExpense {
   time?: string;
   splitType?: "equal" | "exact";
   splits?: Record<string, number>; // memberName -> amount in cents
+  borrowers?: { name: string; amount: number }[];
   participants?: string[]; // frozen roster at creation time
   category?: ExpenseCategory;
   originalCurrency?: string; // e.g. "EUR", "GBP", "NGN", "JPY"
@@ -1608,6 +1609,7 @@ export function settleTab(
     createdAt: effectiveSettleTs,
     isSettlement: true,
     splits: splitsMap,
+    borrowers: creditorsPaid.map(c => ({ name: c.name, amount: c.amount })),
     participants: creditorsPaid.map(c => c.name),
     txHash
   }, true);

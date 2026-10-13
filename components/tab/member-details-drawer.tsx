@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Sheet } from "../ui/sheet";
 import { Button } from "../ui/button";
 import { formatCurrency } from "../../lib/utils";
-import { StoredExpense } from "../../lib/user";
+import { StoredExpense, getStoredSettlements, getWorkspaceMode } from "../../lib/user";
 import { Check, ArrowUpRight, ArrowDownLeft, Receipt, Crown, Clock, X, BellRing, Sparkles } from "lucide-react";
 import { MonadLogo, AgoraLogo } from "../ui/partner-logo";
 
@@ -89,11 +89,26 @@ export function MemberDetailsDrawer({
           if (matchKey !== undefined) {
             creditShare = exp.splits[matchKey] || 0;
           }
-        } else if (Array.isArray(exp.participants) && exp.participants.length > 0) {
-          const isParticipant = exp.participants.some(p => p.trim().toLowerCase() === member.name.trim().toLowerCase());
-          if (isParticipant) {
+        } else if (exp.borrowers && Array.isArray(exp.borrowers)) {
+          const bMatch = exp.borrowers.find((b: any) => b.name?.trim().toLowerCase() === member.name.trim().toLowerCase());
+          if (bMatch) {
+            creditShare = bMatch.amount || 0;
+          }
+        } else {
+          const mode = getWorkspaceMode();
+          const stored = getStoredSettlements(mode);
+          const match = stored.find(s => s.id === exp.id || (s.txHash && exp.txHash && s.txHash === exp.txHash));
+          if (match && match.creditors) {
+            const cMatch = match.creditors.find(c => c.name.trim().toLowerCase() === member.name.trim().toLowerCase());
+            if (cMatch) {
+              creditShare = cMatch.amount || 0;
+            }
+          } else if (Array.isArray(exp.participants) && exp.participants.length > 0) {
+            const isParticipant = exp.participants.some(p => p.trim().toLowerCase() === member.name.trim().toLowerCase());
             const creditorCount = exp.participants.filter(p => p.trim().toLowerCase() !== exp.payer.trim().toLowerCase()).length;
-            creditShare = Math.round(exp.amount / Math.max(1, creditorCount));
+            if (isParticipant && creditorCount === 1) {
+              creditShare = exp.amount;
+            }
           }
         }
 

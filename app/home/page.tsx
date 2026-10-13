@@ -392,10 +392,27 @@ export default function GlobalHub() {
               userShare = exp.splits[splitKey];
             }
           }
+          if (!userShare && exp.borrowers && Array.isArray(exp.borrowers)) {
+            const bMatch = exp.borrowers.find((b: any) => isUserMatch(b.name));
+            if (bMatch) {
+              userShare = bMatch.amount || 0;
+            }
+          }
+          if (!userShare) {
+            const matchStored = storedSettlements.find(s => s.id === exp.id || (s.txHash && exp.txHash && s.txHash === exp.txHash));
+            if (matchStored && matchStored.creditors) {
+              const cMatch = matchStored.creditors.find(c => isUserMatch(c.name));
+              if (cMatch) {
+                userShare = cMatch.amount || 0;
+              }
+            }
+          }
           if (!userShare && (!exp.splits || Object.keys(exp.splits).length === 0)) {
+            // ONLY assign full exp.amount if this is a single 1:1 settlement, never on batch multi-creditor settlement!
+            const creditors = (exp.participants || []).filter(p => !isUserMatch(p) && p.toLowerCase() !== exp.payer.toLowerCase());
             const isParticipant = !exp.participants || exp.participants.length === 0 || 
               exp.participants.some(p => isUserMatch(p));
-            if (isParticipant) {
+            if (isParticipant && creditors.length === 1 && isUserMatch(creditors[0])) {
               userShare = exp.amount;
             }
           }
