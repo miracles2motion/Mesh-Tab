@@ -174,6 +174,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
   const [isSuccess, setIsSuccess] = useState(false);
   const [lastTxHash, setLastTxHash] = useState<string | undefined>(undefined);
   const [justToppedUp, setJustToppedUp] = useState(false);
+  const [settledSnapshot, setSettledSnapshot] = useState<{ amount: number; recipient: string } | null>(null);
 
   const defaultPayCurrency = tabId.includes("lisbon") ? "EUR" : "USD";
   const [payCurrency, setPayCurrency] = useState<string>(defaultPayCurrency);
@@ -219,6 +220,9 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
     }
 
     setIsProcessing(true);
+    const finalAmountToSettle = debtAmount;
+    const finalRecipient = recipientDisplay;
+    setSettledSnapshot({ amount: finalAmountToSettle, recipient: finalRecipient });
 
     let confirmedTxHash: string | undefined = undefined;
     if (workspaceMode === "testnet" && paymentMethod === "ausd") {
@@ -312,9 +316,9 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
     settleTab(
       tabId, 
       activeUser, 
-      debtAmount, 
+      finalAmountToSettle, 
       confirmedTxHash, 
-      recipientDisplay, 
+      finalRecipient, 
       creditorTransfers.map(t => ({ name: t.creditorName, amount: t.amountCents }))
     );
     setIsProcessing(false);
@@ -324,20 +328,26 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
     sounds.playSuccessChime();
     fireSettlementConfetti();
     toast.success("Payment Successful!", {
-      description: `Your balance of ${formatCurrency(debtAmount)} has been cleared.`
+      description: `Your balance of ${formatCurrency(finalAmountToSettle)} has been cleared.`
     });
   };
 
   if (isSuccess) {
+    const receiptAmount = (settledSnapshot?.amount && settledSnapshot.amount > 0)
+      ? settledSnapshot.amount
+      : (debtAmount > 0 ? debtAmount : (workspaceMode === "sample" && tabId === "lisbon-24" ? 18000 : 0));
+    const receiptRecipient = settledSnapshot?.recipient || recipientDisplay;
+
     return (
       <ReceiptView 
         isOpen={true} 
         onClose={() => { 
           setIsSuccess(false); 
+          setSettledSnapshot(null);
           onClose(); 
         }} 
-        amount={debtAmount > 0 ? debtAmount : (workspaceMode === "sample" && tabId === "lisbon-24" ? 18000 : 0)} 
-        recipient={recipientDisplay}
+        amount={receiptAmount} 
+        recipient={receiptRecipient}
         txHash={lastTxHash}
       />
     );
