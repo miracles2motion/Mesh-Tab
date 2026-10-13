@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, Receipt, Clock, User, ArrowRight, Trash2, AlertTriangle, Loader2, Edit2, Check, ExternalLink, CheckCircle2, ShieldCheck } from "lucide-react";
-import { formatCurrency } from "../../lib/utils";
+import { formatCurrency, formatOriginalCurrency } from "../../lib/utils";
 import { useUserProfile, getWorkspaceMode, getStoredTabMembers, getStoredExpenses, getStoredSettlements, StoredExpense, deleteStoredExpense, updateStoredExpenseDescription, useDeveloperMode } from "../../lib/user";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
@@ -309,7 +309,7 @@ export function ExpenseDetails({ onClose, expenseId, tabId }: ExpenseDetailsProp
         {foundCustomExpense?.originalCurrency && foundCustomExpense.originalCurrency !== "USD" && (
           <div className="mb-4 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 flex items-center gap-2 text-xs">
             <span className="text-indigo-900 dark:text-indigo-300 font-semibold">
-              Original: {foundCustomExpense.originalCurrency} {foundCustomExpense.originalAmount?.toFixed(2)}
+              Original: {formatOriginalCurrency(foundCustomExpense.originalCurrency, foundCustomExpense.originalAmount, foundCustomExpense.amount)}
             </span>
             <span className="text-slate-300 dark:text-white/20">•</span>
             {isDeveloperMode ? (

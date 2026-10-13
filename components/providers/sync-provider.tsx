@@ -116,7 +116,9 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
                             participants: resolvedParticipants,
                             category: e.category || e.metadata?.category || "other",
                             originalCurrency: e.originalCurrency || "USD",
-                            originalAmount: e.originalAmount,
+                            originalAmount: (typeof e.metadata?.originalAmount === "number" && e.metadata.originalAmount > 0)
+                              ? e.metadata.originalAmount
+                              : e.originalAmount,
                             syncStatus: "synced" as const,
                             isSettlement: isSettle,
                             txHash: e.txHash || e.metadata?.txHash

@@ -292,7 +292,9 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
                   participants: e.participants || (e.borrowers ? e.borrowers.map((b: any) => b.name) : undefined),
                   category: e.category || "other",
                   originalCurrency: e.originalCurrency || "USD",
-                  originalAmount: e.originalAmount,
+                  originalAmount: (typeof e.metadata?.originalAmount === "number" && e.metadata.originalAmount > 0)
+                    ? e.metadata.originalAmount
+                    : e.originalAmount,
                   syncStatus: "synced" as const,
                   isSettlement: isSettle,
                   txHash: e.txHash

@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Receipt, ShieldCheck, Activity, ChevronRight, CheckCircle2, Search, X, CloudUpload } from "lucide-react";
-import { formatCurrency, formatDistanceToNow } from "../../lib/utils";
+import { formatCurrency, formatDistanceToNow, formatOriginalCurrency } from "../../lib/utils";
 import Image from "next/image";
 import { MonadLogo } from "../ui/partner-logo";
 import Link from "next/link";
@@ -333,7 +333,7 @@ export function FeedList({ expenses, currentUserName, isLoading = false }: FeedL
                           ) : (
                             item.originalCurrency && item.originalCurrency !== "USD" && (
                               <span className="px-2 py-0.2 rounded-md text-[10px] font-bold bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/20 shrink-0">
-                                {item.originalCurrency} {item.originalAmount?.toFixed(0)}
+                                {formatOriginalCurrency(item.originalCurrency, item.originalAmount, item.amount)}
                               </span>
                             )
                           )}

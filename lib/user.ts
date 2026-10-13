@@ -1170,7 +1170,9 @@ export function saveStoredExpense(tabId: string, expense: StoredExpense, skipBal
                 mode: "testnet",
                 expenseId: expense.id,
                 description: expense.desc,
-                originalAmount: expense.amount,
+                originalAmount: typeof expense.originalAmount === "number" && expense.originalAmount > 0
+                  ? expense.originalAmount
+                  : (expense.amount / 100),
                 originalCurrency: expense.originalCurrency || "USD",
                 finalAmountUsd: expense.amount,
                 timestamp: expense.createdAt || Date.now(),
