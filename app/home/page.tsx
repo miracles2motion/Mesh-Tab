@@ -212,8 +212,46 @@ export default function GlobalHub() {
       status: string;
     }> = [];
 
-    const seenIds = new Set<string>();
-    const seenTxHashes = new Set<string>();
+    const seenItemKeys = new Set<string>();
+
+    const candidateTabs = [...activeTabsList];
+    try {
+      const storedTabsList = getStoredTabs();
+      storedTabsList.forEach(st => {
+        if (!candidateTabs.some(ct => ct.id === st.id)) {
+          candidateTabs.push(st as any);
+        }
+      });
+    } catch {}
+
+    const userWallets = [
+      client?.account?.address?.toLowerCase(),
+      user?.wallet?.address?.toLowerCase(),
+      (typeof window !== "undefined" ? localStorage.getItem("meshTab_walletAddress")?.toLowerCase() : null)
+    ].filter(Boolean) as string[];
+
+    const userAliases = new Set<string>([
+      "you",
+      currentUserName.trim().toLowerCase()
+    ]);
+    candidateTabs.forEach(tab => {
+      try {
+        const members = getStoredTabMembers(tab.id, currentUserName);
+        members.forEach(m => {
+          if (m.walletAddress && userWallets.includes(m.walletAddress.toLowerCase())) {
+            userAliases.add(m.name.trim().toLowerCase());
+          }
+        });
+      } catch {}
+    });
+
+    const isUserMatch = (nameOrAddress?: string): boolean => {
+      if (!nameOrAddress) return false;
+      const clean = nameOrAddress.trim().toLowerCase();
+      if (userAliases.has(clean)) return true;
+      if (userWallets.some(w => clean === w || clean.startsWith(w.slice(0, 6)))) return true;
+      return false;
+    };
 
     const recordItem = (item: {
       id: string;
@@ -226,10 +264,11 @@ export default function GlobalHub() {
       recipient?: string;
       status: string;
     }) => {
-      if (item.txHash && seenTxHashes.has(item.txHash.toLowerCase())) return;
-      if (seenIds.has(item.id)) return;
-      seenIds.add(item.id);
-      if (item.txHash) seenTxHashes.add(item.txHash.toLowerCase());
+      // Deduplicate safely by type, direction, base id, and amount (never blanket-drop on shared batch txHash)
+      const baseId = item.id.replace(/^settle-(in|out)-/, "").replace(new RegExp(`-${currentUserName}$`), "");
+      const dedupeKey = `${item.type}-${item.direction}-${baseId}-${item.amount}`;
+      if (seenItemKeys.has(dedupeKey)) return;
+      seenItemKeys.add(dedupeKey);
       items.push(item);
     };
 
@@ -253,15 +292,13 @@ export default function GlobalHub() {
     // 2. Explicit Stored Settlements (from getStoredSettlements)
     const storedSettlements = getStoredSettlements(workspaceMode);
     storedSettlements.forEach(s => {
-      const isOutbound = s.direction === "out" || 
-        s.payer.trim().toLowerCase() === currentUserName.trim().toLowerCase() ||
-        s.payer.trim().toLowerCase() === "you";
+      const isOutbound = s.direction === "out" || isUserMatch(s.payer);
 
       if (isOutbound) {
         // Money leaving
         const displayRecipient = s.recipient || s.tabName || "Group Members";
         recordItem({
-          id: s.id,
+          id: `settle-out-${s.id}`,
           title: isDeveloperMode
             ? `-${formatCurrency(s.amount)} Agora AUSD • Settled to ${displayRecipient}`
             : `-${formatCurrency(s.amount)} • Settled to ${displayRecipient}`,
@@ -275,33 +312,45 @@ export default function GlobalHub() {
         });
       } else {
         // Money coming in
-        recordItem({
-          id: s.id,
-          title: isDeveloperMode
-            ? `+${formatCurrency(s.amount)} Agora AUSD • Settled by ${s.payer}`
-            : `+${formatCurrency(s.amount)} • Settled by ${s.payer}`,
-          type: "settlement",
-          direction: "in",
-          amount: s.amount,
-          timestamp: s.timestamp,
-          txHash: s.txHash,
-          recipient: "You",
-          status: "Received"
-        });
+        if (s.creditors && Array.isArray(s.creditors) && s.creditors.length > 0) {
+          const matchedCreditor = s.creditors.find(c => isUserMatch(c.name));
+          if (matchedCreditor) {
+            recordItem({
+              id: `settle-in-${s.id}-${matchedCreditor.name}`,
+              title: isDeveloperMode
+                ? `+${formatCurrency(matchedCreditor.amount)} Agora AUSD • Settled by ${s.payer}`
+                : `+${formatCurrency(matchedCreditor.amount)} • Settled by ${s.payer}`,
+              type: "settlement",
+              direction: "in",
+              amount: matchedCreditor.amount,
+              timestamp: s.timestamp,
+              txHash: s.txHash,
+              recipient: "You",
+              status: "Received"
+            });
+          }
+        } else {
+          const isRecipient = !s.recipient || isUserMatch(s.recipient) || s.recipient.toLowerCase() === "you";
+          if (isRecipient) {
+            recordItem({
+              id: `settle-in-${s.id}`,
+              title: isDeveloperMode
+                ? `+${formatCurrency(s.amount)} Agora AUSD • Settled by ${s.payer}`
+                : `+${formatCurrency(s.amount)} • Settled by ${s.payer}`,
+              type: "settlement",
+              direction: "in",
+              amount: s.amount,
+              timestamp: s.timestamp,
+              txHash: s.txHash,
+              recipient: "You",
+              status: "Received"
+            });
+          }
+        }
       }
     });
 
     // 3. Scan all stored tabs & active tabs for settlement expenses
-    const candidateTabs = [...activeTabsList];
-    try {
-      const storedTabsList = getStoredTabs();
-      storedTabsList.forEach(st => {
-        if (!candidateTabs.some(ct => ct.id === st.id)) {
-          candidateTabs.push(st as any);
-        }
-      });
-    } catch {}
-
     candidateTabs.forEach(tab => {
       const tabExpenses = getStoredExpenses(tab.id);
       tabExpenses.forEach(exp => {
@@ -315,19 +364,14 @@ export default function GlobalHub() {
         if (!isSettle) return;
 
         const ts = resolveExpenseTimestamp(exp) || exp.createdAt || Date.now();
-        const isUserPayer = 
-          exp.payer.trim().toLowerCase() === currentUserName.trim().toLowerCase() ||
-          exp.payer.trim().toLowerCase() === "you";
+        const isUserPayer = isUserMatch(exp.payer);
 
         if (isUserPayer) {
           // Outbound money: user settled their debt in this tab
-          const recipientName = exp.participants?.filter(p => 
-            p.trim().toLowerCase() !== currentUserName.trim().toLowerCase() && 
-            p.trim().toLowerCase() !== "you"
-          ).join(", ") || tab.name;
+          const recipientName = exp.participants?.filter(p => !isUserMatch(p)).join(", ") || tab.name;
 
           recordItem({
-            id: exp.id,
+            id: `settle-out-${exp.id}`,
             title: isDeveloperMode
               ? `-${formatCurrency(exp.amount)} Agora AUSD • ${tab.name} Settlement`
               : `-${formatCurrency(exp.amount)} • ${tab.name} Settlement`,
@@ -342,22 +386,23 @@ export default function GlobalHub() {
         } else {
           // Inbound money: another user settled debt that pays current user
           let userShare = 0;
-          if (exp.splits) {
-            const splitKey = Object.keys(exp.splits).find(k => 
-              k.trim().toLowerCase() === currentUserName.trim().toLowerCase() || 
-              k.trim().toLowerCase() === "you"
-            );
+          if (exp.splits && Object.keys(exp.splits).length > 0) {
+            const splitKey = Object.keys(exp.splits).find(k => isUserMatch(k));
             if (splitKey) {
               userShare = exp.splits[splitKey];
             }
           }
           if (!userShare && (!exp.splits || Object.keys(exp.splits).length === 0)) {
-            userShare = exp.amount;
+            const isParticipant = !exp.participants || exp.participants.length === 0 || 
+              exp.participants.some(p => isUserMatch(p));
+            if (isParticipant) {
+              userShare = exp.amount;
+            }
           }
 
           if (userShare > 0) {
             recordItem({
-              id: exp.id,
+              id: `settle-in-${exp.id}-${currentUserName}`,
               title: isDeveloperMode
                 ? `+${formatCurrency(userShare)} Agora AUSD • Received from ${exp.payer}`
                 : `+${formatCurrency(userShare)} • Received from ${exp.payer}`,
@@ -374,7 +419,7 @@ export default function GlobalHub() {
       });
     });
 
-    // 4. Sample mode fallback Lisbon item if in sample mode
+    // 4. Sample mode fallback Lisbon item strictly if in sample mode
     if (workspaceMode === "sample") {
       recordItem({
         id: "sample-settle-lisbon",
@@ -1060,9 +1105,9 @@ export default function GlobalHub() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {isDeveloperMode && (
+                    {isDeveloperMode && act.txHash && (
                       <a
-                        href={`https://testnet.monadvision.com/tx/${act.txHash || "0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0"}`}
+                        href={`https://testnet.monadvision.com/tx/${act.txHash}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
@@ -1296,9 +1341,9 @@ export default function GlobalHub() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {isDeveloperMode && (
+                      {isDeveloperMode && act.txHash && (
                         <a
-                          href={`https://testnet.monadvision.com/tx/${act.txHash || "0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0"}`}
+                          href={`https://testnet.monadvision.com/tx/${act.txHash}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}

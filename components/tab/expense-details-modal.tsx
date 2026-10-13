@@ -334,15 +334,17 @@ export function ExpenseDetails({ onClose, expenseId, tabId }: ExpenseDetailsProp
                 </p>
                 <p className="text-[10px] font-mono text-slate-500 dark:text-white/60 truncate">
                   {isDeveloperMode 
-                    ? `${(details.txHash || "0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0").slice(0, 10)}...${(details.txHash || "0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0").slice(-8)}`
+                    ? (details.txHash
+                        ? `${details.txHash.slice(0, 10)}...${details.txHash.slice(-8)}`
+                        : "Cryptographically Verified Ledger")
                     : "Cryptographically Verified & Encrypted"}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              {isDeveloperMode && (
+              {isDeveloperMode && details.txHash && (
                 <a
-                  href={`https://testnet.monadvision.com/tx/${details.txHash || "0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0"}`}
+                  href={`https://testnet.monadvision.com/tx/${details.txHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"

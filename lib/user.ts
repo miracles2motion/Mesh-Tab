@@ -1512,7 +1512,7 @@ export function saveStoredSettlement(settlement: StoredSettlement, mode?: Worksp
   const current = getStoredSettlements(activeMode);
   const updated = [
     settlement,
-    ...current.filter(s => s.id !== settlement.id && (!settlement.txHash || s.txHash !== settlement.txHash))
+    ...current.filter(s => s.id !== settlement.id)
   ].sort((a, b) => b.timestamp - a.timestamp);
   safeSetItem(storageKey("settlements", activeMode), JSON.stringify(updated));
   window.dispatchEvent(new Event("meshTab-settlement-update"));

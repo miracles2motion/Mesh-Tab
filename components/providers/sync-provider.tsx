@@ -5,6 +5,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
 import { flushOutbox } from "@/lib/sync-engine";
 import { useWorkspaceMode, mergePulledTabs } from "@/lib/user";
+import { storageKey } from "@/lib/storage-keys";
 
 export function SyncProvider({ children }: { children: React.ReactNode }) {
   const { ready, authenticated, user, getAccessToken } = usePrivy();
@@ -73,6 +74,65 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
             const data = await res.json();
             if (data.success && data.tabs) {
               mergePulledTabs(data.tabs, walletAddress);
+
+              // Automatically sync expenses for user tabs so settlements & receipts are always up-to-date across peers
+              let hasNewExpenses = false;
+              await Promise.all(
+                data.tabs.map(async (tab: any) => {
+                  try {
+                    const expRes = await fetch(`/api/tab/${tab.id}/expenses?mode=${mode}`, {
+                      headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "x-wallet-address": walletAddress
+                      },
+                      cache: "no-store"
+                    });
+                    if (expRes.ok) {
+                      const expData = await expRes.json();
+                      if (expData.success && Array.isArray(expData.expenses)) {
+                        const expStorageKey = storageKey("expenses", mode, tab.id);
+                        const rawLocal = localStorage.getItem(expStorageKey);
+                        const localList = rawLocal ? JSON.parse(rawLocal) : [];
+
+                        const serverMapped = expData.expenses.map((e: any) => {
+                          const isSettle = Boolean(e.isSettlement || e.expenseId?.startsWith("settle-") || e.description?.toLowerCase().includes("settled"));
+                          return {
+                            id: e.expenseId || e.id,
+                            payer: e.payers?.[0]?.name || "Unknown",
+                            amount: e.finalAmountUsd || 0,
+                            desc: e.description || "",
+                            createdAt: e.createdAt || e.timestamp || Date.now(),
+                            time: "Just now",
+                            splitType: e.splitType || "equal",
+                            splits: e.splits || (e.borrowers ? Object.fromEntries(e.borrowers.map((b: any) => [b.name, b.amount])) : undefined),
+                            participants: e.participants || (e.borrowers ? e.borrowers.map((b: any) => b.name) : undefined),
+                            category: e.category || "other",
+                            originalCurrency: e.originalCurrency || "USD",
+                            originalAmount: e.originalAmount,
+                            syncStatus: "synced" as const,
+                            isSettlement: isSettle,
+                            txHash: e.txHash
+                          };
+                        });
+
+                        const localPending = localList.filter((le: any) =>
+                          le.syncStatus === "pending" && !serverMapped.some((sm: any) => sm.id === le.id)
+                        );
+                        const merged = [...serverMapped, ...localPending].sort((a: any, b: any) => {
+                          const tsB = b.createdAt || 0;
+                          const tsA = a.createdAt || 0;
+                          return tsB - tsA;
+                        });
+                        localStorage.setItem(expStorageKey, JSON.stringify(merged));
+                        hasNewExpenses = true;
+                      }
+                    }
+                  } catch {}
+                })
+              );
+              if (hasNewExpenses) {
+                window.dispatchEvent(new Event("meshTab-expenses-update"));
+              }
             }
           }
         }

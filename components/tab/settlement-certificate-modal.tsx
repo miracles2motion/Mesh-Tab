@@ -9,7 +9,7 @@ import { MonadLogo, AgoraLogo } from "../ui/partner-logo";
 import { sounds } from "../../lib/sounds";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
-import { useDeveloperMode } from "../../lib/user";
+import { useDeveloperMode, useWorkspaceMode } from "../../lib/user";
 
 interface SettlementCertificateModalProps {
   isOpen: boolean;
@@ -18,6 +18,7 @@ interface SettlementCertificateModalProps {
   tabId: string;
   grossVolume: number; // in cents
   memberCount: number;
+  txHash?: string;
 }
 
 export function SettlementCertificateModal({
@@ -26,10 +27,12 @@ export function SettlementCertificateModal({
   tabName,
   tabId,
   grossVolume,
-  memberCount
+  memberCount,
+  txHash: customTxHash
 }: SettlementCertificateModalProps) {
   const [copied, setCopied] = useState(false);
   const { isDeveloperMode } = useDeveloperMode();
+  const { mode: workspaceMode } = useWorkspaceMode();
 
   if (!isOpen) return null;
 
@@ -37,10 +40,10 @@ export function SettlementCertificateModal({
   const capitalSaved = grossVolume - capitalMoved;
   const savedPercent = grossVolume > 0 ? ((capitalSaved / grossVolume) * 100).toFixed(1) : "0.0";
 
-  const txHash = "0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0";
-  const explorerUrl = `https://testnet.monadvision.com/tx/${txHash}`;
+  const txHash = customTxHash || (workspaceMode === "sample" ? "0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0" : undefined);
+  const explorerUrl = txHash ? `https://testnet.monadvision.com/tx/${txHash}` : undefined;
   const origin = typeof window !== "undefined" ? window.location.origin : "https://meshtab.app";
-  const qrTarget = isDeveloperMode 
+  const qrTarget = (isDeveloperMode && explorerUrl) 
     ? explorerUrl 
     : `${origin}/receipt?id=4891029&tab=${encodeURIComponent(tabName)}&amt=${grossVolume}&type=settlement`;
 
@@ -48,7 +51,7 @@ export function SettlementCertificateModal({
     ? `🎉 ${tabName} is 100% Settled on MeshTab!
 • Total Spend: ${formatCurrency(grossVolume)} across ${memberCount} friends
 • Capital Moved: ${formatCurrency(capitalMoved)} (${savedPercent}% volume cleared with zero transfer fees)
-• Settled on Monad in Agora AUSD: #${txHash.substring(0, 10)}`
+• Settled on Monad in Agora AUSD: #${txHash ? txHash.substring(0, 10) : "Finalized"}`
     : `🎉 ${tabName} is 100% Settled on MeshTab!
 • Total Spend: ${formatCurrency(grossVolume)} across ${memberCount} friends
 • Capital Moved: ${formatCurrency(capitalMoved)} (${savedPercent}% volume cleared with zero transfer fees)
@@ -153,7 +156,7 @@ export function SettlementCertificateModal({
             </div>
             <div className="flex justify-between py-1">
               <span>Verified Ledger Tx:</span>
-              {isDeveloperMode ? (
+              {isDeveloperMode && txHash && explorerUrl ? (
                 <a
                   href={explorerUrl}
                   target="_blank"

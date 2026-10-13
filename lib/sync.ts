@@ -323,29 +323,48 @@ export function useTabSync(tabId: string, getAccessToken?: () => Promise<string 
                     if (isNew && isPeer) {
                       const isSettle = exp.id.startsWith("settle-") || exp.desc.toLowerCase().includes("settled balance") || exp.isSettlement;
                       if (isSettle) {
-                        saveStoredSettlement({
-                          id: exp.id,
-                          tabId,
-                          tabName,
-                          payer: exp.payer,
-                          amount: exp.amount,
-                          recipient: profile.name || "You",
-                          txHash: exp.txHash,
-                          timestamp: resolveExpenseTimestamp(exp) || Date.now(),
-                          type: "settlement",
-                          direction: "in"
-                        }, mode);
-                        addNotification({
-                          id: getSettlementNotifId(exp.id),
-                          type: "settlement",
-                          title: "Settlement Received",
-                          desc: `${exp.payer} settled $${(exp.amount / 100).toFixed(2)} in Agora AUSD on Monad.`,
-                          actor: exp.payer,
-                          tabId,
-                          tabName,
-                          amount: exp.amount,
-                          link: `/tab/${tabId}`
-                        });
+                        let peerShare = 0;
+                        if (exp.splits && Object.keys(exp.splits).length > 0) {
+                          const splitKey = Object.keys(exp.splits).find(k => {
+                            const cleanK = k.trim().toLowerCase();
+                            return cleanK === currentName || cleanK === "you";
+                          });
+                          if (splitKey) {
+                            peerShare = exp.splits[splitKey];
+                          }
+                        } else {
+                          const isParticipant = !exp.participants || exp.participants.length === 0 ||
+                            exp.participants.some(p => p.trim().toLowerCase() === currentName || p.trim().toLowerCase() === "you");
+                          if (isParticipant) {
+                            peerShare = exp.amount;
+                          }
+                        }
+
+                        if (peerShare > 0) {
+                          saveStoredSettlement({
+                            id: `${exp.id}-${currentName || "user"}`,
+                            tabId,
+                            tabName,
+                            payer: exp.payer,
+                            amount: peerShare,
+                            recipient: profile.name || "You",
+                            txHash: exp.txHash,
+                            timestamp: resolveExpenseTimestamp(exp) || Date.now(),
+                            type: "settlement",
+                            direction: "in"
+                          }, mode);
+                          addNotification({
+                            id: getSettlementNotifId(`${exp.id}-${currentName || "user"}`),
+                            type: "settlement",
+                            title: "Settlement Received",
+                            desc: `${exp.payer} settled $${(peerShare / 100).toFixed(2)} in Agora AUSD on Monad.`,
+                            actor: exp.payer,
+                            tabId,
+                            tabName,
+                            amount: peerShare,
+                            link: `/tab/${tabId}`
+                          });
+                        }
                       } else {
                         addNotification({
                           id: getExpenseNotifId(exp.id),

@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, Share, ExternalLink, Check, X, ShieldCheck } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { MonadLogo, AgoraLogo } from "./ui/partner-logo";
-import { useDeveloperMode } from "../lib/user";
+import { useDeveloperMode, useWorkspaceMode } from "../lib/user";
 import { toast } from "sonner";
 import { sounds } from "../lib/sounds";
 
@@ -26,6 +26,7 @@ export function ReceiptView({
   type?: "settlement" | "topup" | "deposit";
 }) {
   const { developerMode: isDeveloperMode } = useDeveloperMode();
+  const { mode: workspaceMode } = useWorkspaceMode();
   const [copied, setCopied] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -40,8 +41,9 @@ export function ReceiptView({
   const isTopUp = type === "topup" || type === "deposit" || (!recipient && amount >= 50000);
   const resolvedType = isTopUp ? "deposit" : (type || "settlement");
 
-  const txHash = customTxHash || "0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0";
-  const explorerUrl = `https://testnet.monadvision.com/tx/${txHash}`;
+  // Only fallback to Lisbon benchmark hash strictly if in sample mode. Never hardcode 16.77 on testnet!
+  const txHash = customTxHash || (workspaceMode === "sample" ? "0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0" : undefined);
+  const explorerUrl = txHash ? `https://testnet.monadvision.com/tx/${txHash}` : undefined;
   const origin = typeof window !== "undefined" ? window.location.origin : "https://meshtab.app";
   const currentPath = typeof window !== "undefined" ? window.location.pathname : "/home";
 
@@ -50,25 +52,25 @@ export function ReceiptView({
     amt: String(displayAmount),
     type: resolvedType,
     ts: String(Date.now()),
-    from: currentPath,
-    txHash: txHash
+    from: currentPath
   });
+  if (txHash) queryParams.set("txHash", txHash);
   if (recipient) queryParams.set("recipient", recipient);
   if (isTopUp) queryParams.set("method", "bank");
 
   const receiptUrl = `${origin}/receipt?${queryParams.toString()}`;
 
-  const verificationPayload = isDeveloperMode 
+  const verificationPayload = (isDeveloperMode && explorerUrl)
     ? explorerUrl 
     : receiptUrl;
 
   const handleShare = async () => {
     sounds.playClick();
-    const shareLink = isDeveloperMode ? explorerUrl : receiptUrl;
+    const shareLink = (isDeveloperMode && explorerUrl) ? explorerUrl : receiptUrl;
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       await navigator.clipboard.writeText(shareLink);
       setCopied(true);
-      toast.success(isDeveloperMode ? "Monad Explorer Link Copied!" : "Receipt Link Copied!", {
+      toast.success(isDeveloperMode && explorerUrl ? "Monad Explorer Link Copied!" : "Receipt Link Copied!", {
         description: shareLink
       });
       setTimeout(() => setCopied(false), 2000);
@@ -157,7 +159,7 @@ export function ReceiptView({
                     {isDeveloperMode ? "Verified Monad Testnet Tx" : "Cryptographically Verified"}
                   </span>
                 </div>
-                {isDeveloperMode ? (
+                {isDeveloperMode && txHash && explorerUrl ? (
                   <a 
                     href={explorerUrl}
                     target="_blank"
@@ -186,12 +188,12 @@ export function ReceiptView({
                 className="w-24 h-24"
               />
               <span className="text-[9px] text-slate-500 font-bold mt-1">
-                {isDeveloperMode ? "Scan for Explorer" : "Digital Receipt Seal"}
+                {isDeveloperMode && explorerUrl ? "Scan for Explorer" : "Digital Receipt Seal"}
               </span>
             </div>
 
             {/* Direct Blockchain Explorer or Digital Receipt Link */}
-            {isDeveloperMode ? (
+            {isDeveloperMode && explorerUrl ? (
               <a
                 href={explorerUrl}
                 target="_blank"

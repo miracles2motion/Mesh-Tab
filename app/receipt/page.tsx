@@ -14,13 +14,14 @@ import {
   CreditCard
 } from "lucide-react";
 import { toast } from "sonner";
-import { useDeveloperMode } from "@/lib/user";
+import { useDeveloperMode, useWorkspaceMode } from "@/lib/user";
 import { sounds } from "@/lib/sounds";
 
 function ReceiptContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isDeveloperMode } = useDeveloperMode();
+  const { mode: workspaceMode } = useWorkspaceMode();
   const [copied, setCopied] = useState(false);
   const [hasProfile, setHasProfile] = useState(false);
 
@@ -57,7 +58,7 @@ function ReceiptContent() {
     hour12: true
   });
 
-  const txHash = searchParams.get("txHash") || "0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0";
+  const txHash = searchParams.get("txHash") || (workspaceMode === "sample" ? "0xafd413d0ebd3e9da42b92fe61a3f737a3a437108cf367c159d6861712bc829f0" : undefined);
 
   const handleCopyLink = () => {
     if (typeof window !== "undefined") {
@@ -288,7 +289,7 @@ function ReceiptContent() {
           )}
 
           {/* Developer-Only Blockchain Telemetry Section */}
-          {isDeveloperMode && (
+          {isDeveloperMode && txHash && (
             <div className="mt-4 pt-4 border-t border-purple-500/20 bg-purple-500/5 rounded-2xl p-3.5 space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300">
