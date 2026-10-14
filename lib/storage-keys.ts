@@ -23,6 +23,11 @@ export function storageKey(entity: string, mode: WorkspaceMode, id?: string): st
          : activeMode === "testnet" ? "meshTab_testnet_settledPayoutBalance"
          : "meshTab_clean_settledPayoutBalance";
   }
+  if (entity === "settlements") {
+    return activeMode === "sample" ? "meshTab_sample_settlements"
+         : activeMode === "testnet" ? "meshTab_testnet_settlements"
+         : "meshTab_clean_settlements";
+  }
   if (entity === "virtualBalance") {
     // M1 split virtual balance
     return activeMode === "sample" ? "meshTab_sample_virtualBalance"
