@@ -185,7 +185,7 @@ export function AddFundsDrawer({ isOpen, onClose, onSuccess, suggestedAmountCent
     }
 
     // Prompt native device biometrics only if passkey is enrolled and not bypassed
-    if (!bypassBiometrics && isPasskeyEnrolled(user)) {
+    if (isTestnet && !bypassBiometrics && isPasskeyEnrolled(user)) {
       const authRes = await authenticateWithBiometrics("Authorize Instant Deposit");
       if (authRes.canceled) {
         toast.info("Deposit Canceled", { description: "Biometric authentication was canceled." });

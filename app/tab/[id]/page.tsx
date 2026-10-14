@@ -132,10 +132,13 @@ function DashboardContent() {
   const [paymentTxState, setPaymentTxState] = useState<TransactionState>("idle");
 
   const handlePayment = async () => {
-    const authRes = await authenticateWithBiometrics("Authorize Tab Debt Settlement");
-    if (authRes.canceled) {
-      toast.info("Payment Canceled", { description: "Biometric authentication was canceled." });
-      return;
+    // Biometric authorization is testnet-only. Demo (sample / clean slate) is pure simulation.
+    if (isTestnetMode) {
+      const authRes = await authenticateWithBiometrics("Authorize Tab Debt Settlement");
+      if (authRes.canceled) {
+        toast.info("Payment Canceled", { description: "Biometric authentication was canceled." });
+        return;
+      }
     }
 
     setIsPaymentDrawerOpen(false);
@@ -237,10 +240,13 @@ function DashboardContent() {
   }, [searchParams, params?.id, router]);
 
   const handleRunNetting = async () => {
-    const authRes = await authenticateWithBiometrics("Authorize Debt Ring Netting");
-    if (authRes.canceled) {
-      toast.info("Netting Canceled", { description: "Biometric authentication was canceled." });
-      return;
+    // Biometric authorization is testnet-only. Demo (sample / clean slate) is pure simulation.
+    if (isTestnetMode) {
+      const authRes = await authenticateWithBiometrics("Authorize Debt Ring Netting");
+      if (authRes.canceled) {
+        toast.info("Netting Canceled", { description: "Biometric authentication was canceled." });
+        return;
+      }
     }
 
     setNettingTxState("processing");
