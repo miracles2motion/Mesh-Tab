@@ -70,7 +70,7 @@ export function CashOutDrawer({
     }
 
     // Prompt native device biometrics only if passkey is enrolled and not bypassed
-    if (!bypassBiometrics && isPasskeyEnrolled(user)) {
+    if (workspaceMode === "testnet" && !bypassBiometrics && isPasskeyEnrolled(user)) {
       const authRes = await authenticateWithBiometrics("Authorize Bank Withdrawal");
       if (authRes.canceled) {
         toast.info("Withdrawal Canceled", { description: "Biometric authentication was canceled." });

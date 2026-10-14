@@ -211,7 +211,7 @@ export function SettlementDrawer({ isOpen, onClose, debtAmount, tabId = "lisbon-
     }
 
     // Prompt native device biometrics only if passkey is enrolled and not bypassed
-    if (!bypassBiometrics && isPasskeyEnrolled(user)) {
+    if (workspaceMode === "testnet" && !bypassBiometrics && isPasskeyEnrolled(user)) {
       const authRes = await authenticateWithBiometrics("Authorize Settlement Payment");
       if (authRes.canceled) {
         toast.info("Payment Canceled", { description: "Biometric authentication was canceled." });
